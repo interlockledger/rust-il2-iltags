@@ -29,7 +29,11 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+#[cfg(test)]
 mod tests;
+
+pub mod array;
+pub mod vec;
 
 pub trait Reader {
     fn read(&mut self) -> Result<u8, ()>;
@@ -45,52 +49,6 @@ pub trait Reader {
     }
 }
 
-pub struct ByteArrayReader<'a> {
-    array: &'a[u8],
-    offset: usize
-}
-
-impl<'a> ByteArrayReader<'a> {
-
-    pub fn new(buff: &'a [u8]) -> ByteArrayReader<'a> {
-        ByteArrayReader{
-            array: buff,
-            offset: 0
-        }
-    }
-
-    pub fn get_offset(&self) -> usize {
-        self.offset
-    }
-
-    pub fn set_offset(&mut self, offset: usize) {
-        if offset < self.array.len() {
-            self.offset = offset
-        } else {
-            self.offset = self.array.len()
-        }
-    }
-
-    pub fn get_array(&self) -> &[u8] {
-        self.array
-    }
-}
-
-impl<'a> Reader for ByteArrayReader<'a> {
-    
-    fn read(&mut self) -> Result<u8, ()> {
-        if self.offset < self.array.len() {
-            let r = self.array[self.offset];
-            self.offset += 1;
-            Ok(r)
-        } else {
-            Err(())
-        }
-    }
-
-    // TODO It is possible to implement a better read_all
-}
-
 pub trait Writer {
     fn write(&mut self, value: u8) -> Result<(), ()>;
 
@@ -102,49 +60,4 @@ pub trait Writer {
         }
         Ok(())
     }
-}
-
-pub struct ByteArrayWriter<'a> {
-    array: &'a mut [u8],
-    offset: usize,
-}
-
-impl<'a> ByteArrayWriter<'a> {
-    fn new(buff: &'a mut [u8]) -> ByteArrayWriter {
-        ByteArrayWriter {
-            array: buff,
-            offset: 0
-        }
-    }
-
-    pub fn get_offset(&self) -> usize {
-        self.offset
-    }
-
-    pub fn set_offset(&mut self, offset: usize) {
-        if offset < self.array.len() {
-            self.offset = offset
-        } else {
-            self.offset = self.array.len()
-        }
-    }
-
-    pub fn get_array(&mut self) -> &mut [u8] {
-        self.array
-    }
-}
-
-impl<'a> Writer for ByteArrayWriter<'a> {
-
-    fn write(&mut self, value: u8) -> Result<(), ()> {
-        if self.offset < self.array.len() {
-            self.array[self.offset] = value;
-            self.offset += 1;
-            Ok(())
-        } else {
-            Err(())
-        }
-    }
-
-    // TODO Add a better implementation for write_all()
 }

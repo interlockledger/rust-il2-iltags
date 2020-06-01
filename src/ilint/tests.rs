@@ -29,21 +29,16 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#[cfg(test)]
-
  use super::*;
 
-#[cfg(test)]
 pub struct SampleILInt {
     pub value: u64,
     pub encoded_size: usize,
     pub encoded: [u8; 10],
 }
 
-#[cfg(test)]
 const FILLER: u8 = 0xA5;
 
-#[cfg(test)]
 const SAMPLE_VALUES: [SampleILInt; 10] = 
     [SampleILInt {
         value : 0xF7, 

@@ -29,7 +29,63 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#[test]
-fn it_works() {
-    assert_eq!(2 + 2, 4);
+use super::{Writer};
+
+#[cfg(test)]
+mod tests;
+
+pub struct VecWriter<'a> {
+    vector: &'a mut Vec<u8>,
+    offset: usize,
+}
+
+impl<'a> VecWriter<'a> {
+
+    pub fn new(vec: &mut Vec<u8>) -> VecWriter {
+        VecWriter{
+            vector: vec,
+            offset: 0
+        }
+    }
+
+    pub fn get_offset(&self) -> usize {
+        self.offset
+    }
+
+    pub fn set_offset(&mut self, offset: usize) {
+        if offset < self.vector.len() {
+            self.offset = offset
+        } else {
+            self.offset = self.vector.len()
+        }
+    }
+
+    pub fn get_array(&mut self) -> &mut Vec<u8> {
+        self.vector
+    }    
+}
+
+impl<'a> Writer for VecWriter<'a> {
+ 
+    fn write(&mut self, value: u8) -> Result<(), ()> {
+
+        if self.offset == self.vector.len() {
+            self.vector.push(value);
+            self.offset += 1;
+        } else {
+            self.vector[self.offset] = value;
+            self.offset += 1;
+        }
+        Ok(())
+    }
+
+    fn write_all(&mut self, buff: &[u8]) -> Result<(), ()> {
+
+        let new_offset = self.offset + buff.len();
+        if new_offset > self.vector.len() {
+            self.vector.resize(new_offset, 0);
+        }
+        self.vector[self.offset..new_offset].copy_from_slice(buff);
+        Ok(())
+    }
 }

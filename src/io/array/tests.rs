@@ -29,7 +29,49 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+use super::*;
+use super::super::tests::fill_sample;
+ 
 #[test]
-fn it_works() {
-    assert_eq!(2 + 2, 4);
+fn test_bytearrayreader_new() {
+    let mut src: [u8; 8] = [0; 8];
+    
+    fill_sample(&mut src);
+    let ba = ByteArrayReader::new(&src);
+    
+    assert_eq!(ba.get_offset(), 0);
+    assert_eq!(ba.get_array(), src);
+
+    let ba = ByteArrayReader::new(&src[0..1]);
+    assert_eq!(ba.get_offset(), 0);
+    assert_eq!(ba.get_array(), &src[0..1]);
 }
+
+#[test]
+fn test_bytearrayreader_get_set_offset() {
+    let mut src: [u8; 8] = [0; 8];
+    
+    fill_sample(&mut src);
+    let mut ba = ByteArrayReader::new(&src);
+    
+    for i in 0..src.len() {
+        ba.set_offset(i);
+        assert_eq!(ba.get_offset(), i);
+    }
+ }
+
+#[test]
+fn test_bytearrayreader_reader_read() {
+    let mut src: [u8; 8] = [0; 8];
+    
+    fill_sample(&mut src);
+    let mut ba = ByteArrayReader::new(&src);
+    
+    for i in 0..src.len() {
+        match ba.read() {
+            Ok(v) => assert_eq!(v, src[i]),
+            _ => panic!("Unexpected read error!")
+        }
+    }
+    assert!(ba.read().is_err());
+ }
