@@ -1,0 +1,12 @@
+[package]
+name = "il2-iltags"
+version = "0.1.0"
+description = "InterlockLedger's ILTag implementation in Rust."
+authors = ["InterlockLedger Network", "Fabio Jun Takada Chino", "Cesar Luiz Ferracin"]
+edition = "2018"
+license-file = "LICENSE"
+keywords = ["interlockledger", "blockchain"]
+categories = ["cryptography::cryptocurrencies", "encoding"]
+
+[dependencies]
+
