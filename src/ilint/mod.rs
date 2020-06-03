@@ -100,7 +100,7 @@ pub fn encoded_size(value: u64) -> usize {
 /// * `Err(())`: If the buffer is too small to hold the encoded value.
 /// 
 #[allow(unused)]
-pub fn encode(value: u64, writer: &mut dyn Writer) -> Result<usize, ()> {
+pub fn encode(value: u64, writer: &mut dyn Writer) -> Result<(), ()> {
     
     let size = encoded_size(value);
     if size == 1 {
@@ -121,7 +121,7 @@ pub fn encode(value: u64, writer: &mut dyn Writer) -> Result<usize, ()> {
             }
         }
     }
-    Ok(size)
+    Ok(())
 }
 
 /// Determines the size of the ILInt based on its header (the 
@@ -158,7 +158,7 @@ pub fn decoded_size(header : u8) -> usize {
 /// * The size of the ILInt in bytes.
 /// 
 #[allow(unused)]
-pub fn decode(reader: &mut dyn Reader) -> Result<(u64, usize), DecodeError> {
+pub fn decode(reader: &mut dyn Reader) -> Result<u64, DecodeError> {
 
     let header = match reader.read() {
         Ok(v) => v,
@@ -166,7 +166,7 @@ pub fn decode(reader: &mut dyn Reader) -> Result<(u64, usize), DecodeError> {
     };
     let size = decoded_size(header);
     if size == 1 {
-        Ok((header as u64, 1))
+        Ok(header as u64)
     } else {
         let mut v:u64 = 0;
         for i in 1 .. size {
@@ -179,7 +179,7 @@ pub fn decode(reader: &mut dyn Reader) -> Result<(u64, usize), DecodeError> {
         if v > 0xFFFFFFFFFFFFFF07 {
             Err(DecodeError::Overflow)
         } else {
-            Ok((v + ILINT_BASE_U64, size))
+            Ok(v + ILINT_BASE_U64)
         }
     }
 }

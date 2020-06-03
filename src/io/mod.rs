@@ -108,45 +108,49 @@ impl<'a> Reader for ReadReader<'a> {
     }
 }
 
+macro_rules! data_reader_read_be_bytes {
+    ($self: ident, $type: ident, $tmp: expr) => {
+        match $self.read_all(&mut $tmp) {
+            Ok(()) => Ok($type::from_be_bytes($tmp)),
+            _ => Err(())
+        }
+    };
+}
+
+/// The DataReader is a Reader that implements some
+/// data functions.
 pub trait DataReader: Reader {
 
     fn as_reader(&mut self) -> &mut dyn Reader;
 
     fn read_u16(&mut self) -> Result<u16, ()> {
         let mut tmp: [u8; 2] = [0; 2];
-        self.read_all(&mut tmp)?;
-        Ok(u16::from_be_bytes(tmp))
+        data_reader_read_be_bytes!(self, u16, tmp)
     }
 
     fn read_u32(&mut self) -> Result<u32, ()> {
         let mut tmp: [u8; 4] = [0; 4];
-        self.read_all(&mut tmp)?;
-        Ok(u32::from_be_bytes(tmp))
+        data_reader_read_be_bytes!(self, u32, tmp)
     }
 
     fn read_u64(&mut self) -> Result<u64, ()> {
         let mut tmp: [u8; 8] = [0; 8];
-        self.read_all(&mut tmp)?;
-        Ok(u64::from_be_bytes(tmp))
+        data_reader_read_be_bytes!(self, u64, tmp)
     }
 
     fn read_ilint(&mut self) -> Result<u64, ()> {
         match decode(self.as_reader()) {
-            Ok((value, size)) => Ok(value),
+            Ok(value) => Ok(value),
             _ => Err(())
         }
     }
 
     fn read_f32(&mut self) -> Result<f32, ()> {
-        let mut tmp: [u8; 4] = [0; 4];
-        self.read_all(&mut tmp)?;
-        Ok(f32::from_be_bytes(tmp))
+        Ok(f32::from_bits(self.read_u32()?))
     }
 
     fn read_f64(&mut self) -> Result<f64, ()> {
-        let mut tmp: [u8; 8] = [0; 8];
-        self.read_all(&mut tmp)?;
-        Ok(f64::from_be_bytes(tmp))        
+        Ok(f64::from_bits(self.read_u64()?))
     }
 
     fn read_i16(&mut self) -> Result<i16, ()> {
@@ -160,14 +164,65 @@ pub trait DataReader: Reader {
     fn read_i64(&mut self) -> Result<i64, ()> {
         Ok(self.read_u64()? as i64)
     }
+
+    fn read_string(&mut self, size: usize) -> Result<String, ()> {
+        let mut tmp: Vec<u8> = Vec::with_capacity(size);
+        tmp.resize(size, 0);
+        self.read_all(tmp.as_mut_slice())?;
+        match String::from_utf8(tmp) {
+            Ok(s) => Ok(s),
+            _ => Err(())
+        }
+    }
+}
+
+macro_rules! data_writer_write_be_bytes {
+    ($self: ident, $value: expr) => {
+        $self.write_all(&$value.to_be_bytes())
+    };
 }
 
 pub trait DataWriter: Writer {
     
-    fn write_u16(&mut self, value: u16) -> Result<(), ()>;
-    fn write_u32(&mut self, value: u32) -> Result<(), ()>;
-    fn write_u64(&mut self, value: u64) -> Result<(), ()>;
-    fn write_ilint(&mut self, value: u64) -> Result<(), ()>;
-    fn write_f32(&mut self, value: f32) -> Result<(), ()>;
-    fn write_f64(&mut self, value: f64) -> Result<(), ()>;
+    fn as_writer(&mut self) -> &mut dyn Writer;
+
+    fn write_u16(&mut self, value: u16) -> Result<(), ()> {
+        data_writer_write_be_bytes!(self, value)
+    }
+
+    fn write_u32(&mut self, value: u32) -> Result<(), ()> {
+        data_writer_write_be_bytes!(self, value)
+    }
+
+    fn write_u64(&mut self, value: u64) -> Result<(), ()> {
+        data_writer_write_be_bytes!(self, value)
+    }
+
+    fn write_ilint(&mut self, value: u64) -> Result<(), ()> {
+        encode(value, self.as_writer())
+    }
+
+    fn write_f32(&mut self, value: f32) -> Result<(), ()> {
+        data_writer_write_be_bytes!(self, value)
+    }
+    
+    fn write_f64(&mut self, value: f64) -> Result<(), ()> {
+        data_writer_write_be_bytes!(self, value)
+    }
+
+    fn write_i16(&mut self, value: i16) -> Result<(), ()> {
+        self.write_u16(value as u16)
+    }
+
+    fn write_i32(&mut self, value: i32) -> Result<(), ()> {
+        self.write_u32(value as u32)
+    }
+
+    fn write_i64(&mut self, value: i64) -> Result<(), ()> {
+        self.write_u64(value as u64)
+    }
+
+    fn write_string(&mut self, value: &String) -> Result<(), ()> {
+        self.write_all(value.as_bytes())
+    }    
 }
