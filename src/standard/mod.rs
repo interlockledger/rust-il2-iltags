@@ -29,41 +29,33 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-pub mod ilint;
-pub mod io;
-pub mod standard;
 
-#[cfg(test)]
-mod tests;
+// Implicit tags
+pub const IL_NULL_TAG_ID: u64 = 0;
+pub const IL_BOOL_TAG_ID: u64 = 1;
+pub const IL_INT8_TAG_ID: u64 = 2;
+pub const IL_UINT8_TAG_ID: u64 = 3;
+pub const IL_INT16_TAG_ID: u64 = 4;
+pub const IL_UINT16_TAG_ID: u64 = 5;
+pub const IL_INT32_TAG_ID: u64 = 6;
+pub const IL_UINT32_TAG_ID: u64 = 7;
+pub const IL_INT64_TAG_ID: u64 = 8;
+pub const IL_UINT64_TAG_ID: u64 = 9;
+pub const IL_ILINT_TAG_ID: u64 = 10;
+pub const IL_BIN32_TAG_ID: u64 = 11;
+pub const IL_BIN64_TAG_ID: u64 = 12;
+pub const IL_BIN128_TAG_ID: u64 = 13;
 
-use io::{Reader,Writer};
-
-pub const IMPLICITY_ID_MAX: u64 = 0x0F;
-pub const RESERVED_ID_MAX: u64 = 0x1F;
-
-pub trait ILTag {
-    fn get_id(&self) -> u64;
-    
-    fn is_implicity(&self) -> bool {
-        self.get_id() < IMPLICITY_ID_MAX
-    }
-
-    fn is_reserved(&self) -> bool {
-        self.get_id() < RESERVED_ID_MAX
-    }
-
-    fn payload_size(&self) -> usize;
-
-    fn size(&self) -> usize;
-
-    fn serialize_value(&self, writer: &mut dyn Writer) -> Result<(),()>;
-
-    fn serialize(&self, writer: &mut dyn Writer) -> Result<(),()>;
-
-    fn deserialize_value(&mut self, factory: &dyn ILTagFactory, reader: &mut dyn Reader) -> Result<(),()>;
-}
-
-pub trait ILTagFactory {
-
-    fn create_tag(&self, tag_id: u64) -> Box<dyn ILTag>;
-}
+// Reserved tags
+pub const IL_BYTES_TAG_ID: u64 = 16;
+pub const IL_STRING_TAG_ID: u64 = 17;
+pub const IL_BINT_TAG_ID: u64 = 18;
+pub const IL_BDEC_TAG_ID: u64 = 19;
+pub const IL_ILINTARRAY_TAG_ID: u64 = 20;
+pub const IL_ILTAGARRAY_TAG_ID: u64 = 21;
+pub const IL_ILTAGSEQ_TAG_ID: u64 = 22;
+pub const IL_RANGE_TAG_ID: u64 = 23;
+pub const IL_VERSION_TAG_ID: u64 = 24;
+pub const IL_OID_TAG_ID: u64 = 25;
+pub const IL_DICTIONARY_TAG_ID: u64 = 30;
+pub const IL_STRING_DICTIONARY_TAG_ID: u64 = 31;
