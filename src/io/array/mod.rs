@@ -77,6 +77,16 @@ impl<'a> Reader for ByteArrayReader<'a> {
         }
     }
 
+    fn read_all(&mut self, buff:&mut [u8]) -> Result<(), ()> {
+        for i in 0..buff.len() {
+            match self.read() {
+                Ok(v) => buff[i] = v,
+                Err(()) => return Err(())
+            }
+        }
+        Ok(())
+    }
+
     // TODO It is possible to implement a better read_all
 }
 
@@ -120,6 +130,15 @@ impl<'a> Writer for ByteArrayWriter<'a> {
         } else {
             Err(())
         }
+    }
+
+    fn write_all(&mut self, buff: &[u8]) -> Result<(), ()> {
+        for b in buff {
+            if self.write(*b).is_err(){
+                return Err(())
+            }
+        }
+        Ok(())
     }
 
     // TODO Add a better implementation for write_all()
