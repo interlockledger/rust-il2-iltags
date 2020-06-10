@@ -31,25 +31,26 @@
  */
 use super::*;
 use super::super::tests::fill_sample;
- 
+
+//Tests for ByteArrayReader
 #[test]
 fn test_bytearrayreader_new() {
-    let mut src: [u8; 8] = [0; 8];
+    let mut src= [0u8; 8];
     
     fill_sample(&mut src);
-    let ba = ByteArrayReader::new(&src);
+    let mut ba = ByteArrayReader::new(&src);
     
     assert_eq!(ba.get_offset(), 0);
     assert_eq!(ba.get_array(), src);
 
-    let ba = ByteArrayReader::new(&src[0..1]);
+    ba = ByteArrayReader::new(&src[0..1]);
     assert_eq!(ba.get_offset(), 0);
     assert_eq!(ba.get_array(), &src[0..1]);
 }
 
 #[test]
 fn test_bytearrayreader_get_set_offset() {
-    let mut src: [u8; 8] = [0; 8];
+    let mut src= [0u8; 8];
     
     fill_sample(&mut src);
     let mut ba = ByteArrayReader::new(&src);
@@ -62,7 +63,7 @@ fn test_bytearrayreader_get_set_offset() {
 
 #[test]
 fn test_bytearrayreader_reader_read() {
-    let mut src: [u8; 8] = [0; 8];
+    let mut src= [0u8; 8];
     
     fill_sample(&mut src);
     let mut ba = ByteArrayReader::new(&src);
@@ -75,3 +76,80 @@ fn test_bytearrayreader_reader_read() {
     }
     assert!(ba.read().is_err());
  }
+
+#[test]
+fn test_bytearrayreader_reader_readall() {
+    let  src:[u8;8] = [0; 8];
+
+    let mut ba = ByteArrayReader::new( &src);
+
+    let mut buffer:[u8;8] = [0; 8];
+
+    match ba.read_all(&mut buffer) {
+        Ok(v) => assert_eq!(v, ()),
+        _ => panic!("Unexpected read_all error!")
+    }
+}
+
+//Tests for ByteArrayWriter
+#[test]
+fn test_bytearraywriter_new() {
+    let mut src1:[u8;8] = [0; 8];
+    let mut src2= src1;
+    let mut ba1 = ByteArrayWriter::new( &mut src1);
+    assert_eq!(ba1.get_offset(), 0);
+    assert_eq!(ba1.get_array(), &mut src2);
+
+    let mut src3:[u8;8] = [0; 8];
+    for i in 0..src3.len() {
+        src3[i] = i as u8;
+    }
+    let mut src4= src3;
+    let mut ba2 = ByteArrayWriter::new(&mut src3[0..1]);
+    assert_eq!(ba2.get_offset(), 0);
+    assert_eq!(ba2.get_array(), &mut src4[0..1]);
+}
+
+#[test]
+fn test_bytearraywriter_get_set_offset() {
+    let mut src= [0u8; 8];
+    let src2 = src;
+    fill_sample(&mut src);
+
+    let mut ba = ByteArrayWriter::new(&mut src);
+
+    for i in 0..src2.len() {
+        ba.set_offset(i);
+        assert_eq!(ba.get_offset(), i);
+    }
+}
+
+#[test]
+fn test_bytearraywriter_writer_write() {
+    let mut src= [0u8; 8];
+    let mut baw = ByteArrayWriter::new(&mut src);
+
+    let mut src2= [0u8; 8];
+    fill_sample(&mut src2);
+
+    for i in 0..src2.len() {
+        match baw.write(src2[i]) {
+            Ok(_0) => assert_eq!(src2[i], baw.array[i]),
+            _ => panic!("Unexpected read error!")
+        }
+    }
+}
+
+#[test]
+fn test_bytearraywriter_writer_writeall() {
+    let mut src= [0u8; 8];
+    let mut baw = ByteArrayWriter::new(&mut src);
+
+    let mut src2= [0u8; 8];
+    fill_sample(&mut src2);
+
+    match baw.write_all(&mut src2) {
+        Ok(_0) => assert_eq!(src2, baw.get_array()),
+        _ => panic!("Unexpected read_all error!")
+    }
+}
