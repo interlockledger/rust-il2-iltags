@@ -63,6 +63,10 @@ impl<'a> ByteArrayReader<'a> {
     pub fn get_array(&self) -> &[u8] {
         self.array
     }
+
+    pub fn available(&self) -> usize {
+        self.array.len() - self.offset
+    }
 }
 
 impl<'a> Reader for ByteArrayReader<'a> {
@@ -77,17 +81,17 @@ impl<'a> Reader for ByteArrayReader<'a> {
         }
     }
 
-    fn read_all(&mut self, buff:&mut [u8]) -> Result<(), ()> {
-        for i in 0..buff.len() {
-            match self.read() {
-                Ok(v) => buff[i] = v,
-                Err(()) => return Err(())
-            }
+    fn read_all(&mut self, buff:&mut [u8]) -> Result<()> {
+        
+        if self.available() >= buff.len() {
+            buff.copy_from_slice(
+                &self.array[self.offset .. buff.len()]);
+            self.offset += buff.len();
+            Ok(())
+        } else {
+            Err(ErrorKind::UnableToReadData)
         }
-        Ok(())
     }
-
-    // TODO It is possible to implement a better read_all
 }
 
 pub struct ByteArrayWriter<'a> {
@@ -118,12 +122,16 @@ impl<'a> ByteArrayWriter<'a> {
     pub fn get_array(&mut self) -> &mut [u8] {
         self.array
     }
+
+    pub fn available(&self) -> usize {
+        self.array.len() - self.offset
+    }    
 }
 
 impl<'a> Writer for ByteArrayWriter<'a> {
 
     fn write(&mut self, value: u8) -> Result<()> {
-        if self.offset < self.array.len() {
+        if self.available() > 0 {
             self.array[self.offset] = value;
             self.offset += 1;
             Ok(())
@@ -132,14 +140,15 @@ impl<'a> Writer for ByteArrayWriter<'a> {
         }
     }
 
-    fn write_all(&mut self, buff: &[u8]) -> Result<(), ()> {
-        for b in buff {
-            if self.write(*b).is_err(){
-                return Err(())
-            }
-        }
-        Ok(())
-    }
+    fn write_all(&mut self, buff: &[u8]) -> Result<()> {
 
-    // TODO Add a better implementation for write_all()
+        if self.available() >= buff.len() {
+            let target = &mut self.array[self.offset .. buff.len()];
+            target.copy_from_slice(buff);
+            self.offset += buff.len();
+            Ok(())
+        } else {
+            Err(ErrorKind::UnableToWriteData)
+        }
+    }
 }
