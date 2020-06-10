@@ -29,7 +29,7 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-use super::{Reader, Writer};
+use super::{Reader, Writer,Result,ErrorKind};
 
 #[cfg(test)]
 mod tests;
@@ -67,13 +67,13 @@ impl<'a> ByteArrayReader<'a> {
 
 impl<'a> Reader for ByteArrayReader<'a> {
     
-    fn read(&mut self) -> Result<u8, ()> {
+    fn read(&mut self) -> Result<u8> {
         if self.offset < self.array.len() {
             let r = self.array[self.offset];
             self.offset += 1;
             Ok(r)
         } else {
-            Err(())
+            Err(ErrorKind::UnableToReadData)
         }
     }
 
@@ -86,7 +86,7 @@ pub struct ByteArrayWriter<'a> {
 }
 
 impl<'a> ByteArrayWriter<'a> {
-    fn new(buff: &'a mut [u8]) -> ByteArrayWriter {
+    pub fn new(buff: &'a mut [u8]) -> ByteArrayWriter {
         ByteArrayWriter {
             array: buff,
             offset: 0
@@ -112,13 +112,13 @@ impl<'a> ByteArrayWriter<'a> {
 
 impl<'a> Writer for ByteArrayWriter<'a> {
 
-    fn write(&mut self, value: u8) -> Result<(), ()> {
+    fn write(&mut self, value: u8) -> Result<()> {
         if self.offset < self.array.len() {
             self.array[self.offset] = value;
             self.offset += 1;
             Ok(())
         } else {
-            Err(())
+            Err(ErrorKind::UnableToWriteData)
         }
     }
 

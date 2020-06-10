@@ -34,23 +34,19 @@ mod tests;
 
 use super::io::{Reader, Writer};
 
+pub enum ErrorKind {
+    ValueOverflow,
+    IOError(crate::io::ErrorKind),
+}
+
+pub type Result<T> = std::result::Result<T, ErrorKind>;
+
 /// LInt base value. All values smaller than this value are encoded as
 /// a single byte.
-#[allow(unused)]
 pub const ILINT_BASE:u8 = 0xF8;
 
 /// Value of ILINT_BASE as U64.
-#[allow(unused)]
 pub const ILINT_BASE_U64:u64 = ILINT_BASE as u64;
-
-/// ILInt decoding errors.
-#[allow(unused)]
-pub enum DecodeError {
-    /// Buffer
-    Corrupted,
-    /// The encoded value is larger than 26^4 -1.
-    Overflow,
-}
 
 /// Returns the size of the given value encoded as an ILInt.
 /// 
@@ -62,7 +58,6 @@ pub enum DecodeError {
 /// 
 /// * The number of bytes required to encode the value.
 /// 
-#[allow(unused)]
 pub fn encoded_size(value: u64) -> usize {
 
     if value < ILINT_BASE_U64 {
@@ -99,25 +94,27 @@ pub fn encoded_size(value: u64) -> usize {
 /// * `Ok(size)`: The number of bytes used.
 /// * `Err(())`: If the buffer is too small to hold the encoded value.
 /// 
-#[allow(unused)]
-pub fn encode(value: u64, writer: &mut dyn Writer) -> Result<(), ()> {
+pub fn encode(value: u64, writer: &mut dyn Writer) -> Result<()> {
     
     let size = encoded_size(value);
     if size == 1 {
-        if writer.write(value as u8).is_err() {
-            return Err(());
+        match writer.write(value as u8) {
+            Ok(()) => (),
+            Err(e) => return Err(ErrorKind::IOError(e)),
         }
     } else {
         // Header
-        if writer.write((ILINT_BASE + ((size - 2) as u8)) as u8).is_err() {
-            return Err(());
+        match writer.write((ILINT_BASE + ((size - 2) as u8)) as u8) {
+            Ok(()) => (),
+            Err(e) => return Err(ErrorKind::IOError(e)),
         }
         let v = value - ILINT_BASE_U64;
         let mut shift = 8 * (size - 1);
-        for i in 1..size {
+        for _i in 1..size {
             shift -= 8;
-            if writer.write(((v >> shift) & 0xFF) as u8).is_err() {
-                return Err(());
+            match writer.write(((v >> shift) & 0xFF) as u8) {
+                Ok(()) => (),
+                Err(e) => return Err(ErrorKind::IOError(e)),
             }
         }
     }
@@ -136,7 +133,6 @@ pub fn encode(value: u64, writer: &mut dyn Writer) -> Result<(), ()> {
 /// 
 /// * The size of the ILInt in bytes.
 /// 
-#[allow(unused)]
 pub fn decoded_size(header : u8) -> usize {
     
     if header < ILINT_BASE {
@@ -157,27 +153,27 @@ pub fn decoded_size(header : u8) -> usize {
 /// 
 /// * The size of the ILInt in bytes.
 /// 
-#[allow(unused)]
-pub fn decode(reader: &mut dyn Reader) -> Result<u64, DecodeError> {
+pub fn decode(reader: &mut dyn Reader) -> Result<u64> {
 
     let header = match reader.read() {
         Ok(v) => v,
-        Err(()) => return Err(DecodeError::Corrupted)
+        Err(e) => return Err(ErrorKind::IOError(e)),
     };
+
     let size = decoded_size(header);
     if size == 1 {
         Ok(header as u64)
     } else {
         let mut v:u64 = 0;
-        for i in 1 .. size {
-            let r = match (reader.read()) {
+        for _i in 1 .. size {
+            let r = match reader.read() {
                 Ok(v) => v,
-                Err(()) => return Err(DecodeError::Corrupted)
+                Err(e) => return Err(ErrorKind::IOError(e)),
             };
             v = (v << 8) + (r as u64);
         }
         if v > 0xFFFFFFFFFFFFFF07 {
-            Err(DecodeError::Overflow)
+            Err(ErrorKind::ValueOverflow)
         } else {
             Ok(v + ILINT_BASE_U64)
         }

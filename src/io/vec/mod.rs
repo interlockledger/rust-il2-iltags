@@ -29,7 +29,7 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-use super::{Writer};
+use super::{Writer,Result};
 
 #[cfg(test)]
 mod tests;
@@ -67,7 +67,7 @@ impl<'a> VecWriter<'a> {
 
 impl<'a> Writer for VecWriter<'a> {
  
-    fn write(&mut self, value: u8) -> Result<(), ()> {
+    fn write(&mut self, value: u8) -> Result<()> {
 
         if self.offset == self.vector.len() {
             self.vector.push(value);
@@ -79,7 +79,7 @@ impl<'a> Writer for VecWriter<'a> {
         Ok(())
     }
 
-    fn write_all(&mut self, buff: &[u8]) -> Result<(), ()> {
+    fn write_all(&mut self, buff: &[u8]) -> Result<()> {
 
         let new_offset = self.offset + buff.len();
         if new_offset > self.vector.len() {
