@@ -1,23 +1,23 @@
 /*
  * BSD 3-Clause License
- * 
+ *
  * Copyright (c) 2020, InterlockLedger Network
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
+ *
  * * Redistributions of source code must retain the above copyright notice, this
  *   list of conditions and the following disclaimer.
- * 
+ *
  * * Redistributions in binary form must reproduce the above copyright notice,
  *   this list of conditions and the following disclaimer in the documentation
  *   and/or other materials provided with the distribution.
- * 
+ *
  * * Neither the name of the copyright holder nor the names of its
  *   contributors may be used to endorse or promote products derived from
  *   this software without specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -31,9 +31,9 @@
  */
 pub mod std;
 
-use ::std::any::{Any};
-use crate::ilint::{encoded_size};
-use crate::io::{DataReader,DataWriter};
+use crate::ilint::encoded_size;
+use crate::io::{DataReader, DataWriter};
+use ::std::any::Any;
 
 pub enum ErrorKind {
     UnknownTag,
@@ -83,7 +83,7 @@ pub trait ILTag: ILTagAsAny {
     /// Returns the total size of the tag in bytes.
     fn size(&self) -> usize {
         let mut size: usize = encoded_size(self.id());
-        if  !self.is_implicity() {
+        if !self.is_implicity() {
             size += encoded_size(self.payload_size() as u64);
         }
         size + self.payload_size()
@@ -91,13 +91,13 @@ pub trait ILTag: ILTagAsAny {
 
     fn serialize_value(&self, writer: &mut dyn DataWriter) -> Result<()>;
 
-    fn serialize(&self, writer: &mut dyn DataWriter) ->  Result<()> {
+    fn serialize(&self, writer: &mut dyn DataWriter) -> Result<()> {
         match writer.write_ilint(self.id()) {
             Ok(()) => (),
             Err(e) => return Err(ErrorKind::IOError(e)),
         }
-        if  !self.is_implicity() {
-            match writer.write_ilint(self.payload_size() as u64)  {
+        if !self.is_implicity() {
+            match writer.write_ilint(self.payload_size() as u64) {
                 Ok(()) => (),
                 Err(e) => return Err(ErrorKind::IOError(e)),
             }
@@ -105,7 +105,11 @@ pub trait ILTag: ILTagAsAny {
         self.serialize_value(writer)
     }
 
-    fn deserialize_value(&mut self, factory: &dyn ILTagFactory, reader: &mut dyn DataReader) -> Result<()> {
+    fn deserialize_value(
+        &mut self,
+        factory: &dyn ILTagFactory,
+        reader: &mut dyn DataReader,
+    ) -> Result<()> {
         if self.is_implicity() {
             panic!("The default implementation does not support implicity values.")
         }
@@ -116,12 +120,16 @@ pub trait ILTag: ILTagAsAny {
         self.deserialize_value_core(factory, size as usize, reader)
     }
 
-    fn deserialize_value_core(&mut self, factory: &dyn ILTagFactory, payload_size: usize, reader: &mut dyn DataReader) -> Result<()>;
+    fn deserialize_value_core(
+        &mut self,
+        factory: &dyn ILTagFactory,
+        payload_size: usize,
+        reader: &mut dyn DataReader,
+    ) -> Result<()>;
 }
 
 pub trait ILTagFactory {
-
-    fn as_ref(&self) ->  &dyn ILTagFactory;
+    fn as_ref(&self) -> &dyn ILTagFactory;
 
     fn create_tag(&self, tag_id: u64) -> Option<Box<dyn ILTag>>;
 
@@ -132,7 +140,7 @@ pub trait ILTagFactory {
         };
         let mut tag = match self.create_tag(tag_id) {
             Some(v) => v,
-            _ => return Err(ErrorKind::UnknownTag)
+            _ => return Err(ErrorKind::UnknownTag),
         };
         match tag.deserialize_value(self.as_ref(), reader) {
             Ok(()) => Ok(tag),
@@ -141,7 +149,7 @@ pub trait ILTagFactory {
     }
 }
 
-impl <T: ILTag> ILTagAsAny for T {
+impl<T: ILTag> ILTagAsAny for T {
     fn as_any(&self) -> &dyn Any {
         self
     }
@@ -158,27 +166,25 @@ pub struct RawTag {
 
 impl RawTag {
     pub fn new(id: u64) -> RawTag {
-        RawTag{
-            id: id,
+        RawTag {
+            id,
             payload: Vec::new(),
         }
     }
 
-    pub fn get_payload(&self) -> &Vec<u8>{
+    pub fn get_payload(&self) -> &Vec<u8> {
         &self.payload
     }
 
-    pub fn get_mut_payload(&mut self) -> &mut Vec<u8>{
+    pub fn get_mut_payload(&mut self) -> &mut Vec<u8> {
         &mut self.payload
     }
 }
 
 impl ILTag for RawTag {
-
     fn id(&self) -> u64 {
         self.id
     }
-    
     fn payload_size(&self) -> usize {
         self.payload.len()
     }
@@ -186,15 +192,21 @@ impl ILTag for RawTag {
     fn serialize_value(&self, writer: &mut dyn DataWriter) -> Result<()> {
         match writer.write_all(self.payload.as_slice()) {
             Ok(()) => Ok(()),
-            Err(e) => Err(ErrorKind::IOError(e))
+            Err(e) => Err(ErrorKind::IOError(e)),
         }
     }
 
-    fn deserialize_value_core(&mut self, _factory: &dyn ILTagFactory, payload_size: usize, reader: &mut dyn DataReader) -> Result<()> {
-        self.get_mut_payload().resize_with(payload_size, Default::default);
-        match reader.read_all(self.payload.as_mut_slice()){
+    fn deserialize_value_core(
+        &mut self,
+        _factory: &dyn ILTagFactory,
+        payload_size: usize,
+        reader: &mut dyn DataReader,
+    ) -> Result<()> {
+        self.get_mut_payload()
+            .resize_with(payload_size, Default::default);
+        match reader.read_all(self.payload.as_mut_slice()) {
             Ok(()) => Ok(()),
             Err(e) => Err(ErrorKind::IOError(e)),
         }
-    }    
+    }
 }

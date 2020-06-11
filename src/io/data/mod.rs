@@ -1,21 +1,17 @@
-
-
-use crate::ilint::{encode, decode};
-use super::{Reader, Writer, Result, ErrorKind};
+use super::{ErrorKind, Reader, Result, Writer};
+use crate::ilint::{decode, encode};
 
 macro_rules! data_reader_read_be_bytes {
-    ($self: ident, $type: ident) => ({
-        let mut tmp : [u8; std::mem::size_of::<$type>()] = 
-                [0; std::mem::size_of::<$type>()];
+    ($self: ident, $type: ident) => {{
+        let mut tmp: [u8; std::mem::size_of::<$type>()] = [0; std::mem::size_of::<$type>()];
         $self.read_all(&mut tmp)?;
         Ok($type::from_be_bytes(tmp))
-    })
+    }};
 }
 
 /// The DataReader is a Reader that implements some
 /// data functions.
 pub trait DataReader: Reader {
-
     fn as_reader(&mut self) -> &mut dyn Reader;
 
     fn read_u16(&mut self) -> Result<u16> {
@@ -34,7 +30,7 @@ pub trait DataReader: Reader {
         match decode(self.as_reader()) {
             Ok(value) => Ok(value),
             Err(crate::ilint::ErrorKind::IOError(e)) => Err(e),
-            _ => Err(ErrorKind::CorruptedData)
+            _ => Err(ErrorKind::CorruptedData),
         }
     }
 
@@ -59,12 +55,11 @@ pub trait DataReader: Reader {
     }
 
     fn read_string(&mut self, size: usize) -> Result<String> {
-        let mut tmp: Vec<u8> = Vec::with_capacity(size);
-        tmp.resize(size, 0);
+        let mut tmp: Vec<u8> = vec![0; size];
         self.read_all(tmp.as_mut_slice())?;
         match String::from_utf8(tmp) {
             Ok(s) => Ok(s),
-            _ => Err(ErrorKind::CorruptedData)
+            _ => Err(ErrorKind::CorruptedData),
         }
     }
 }
@@ -76,7 +71,6 @@ macro_rules! data_writer_write_be_bytes {
 }
 
 pub trait DataWriter: Writer {
-    
     fn as_writer(&mut self) -> &mut dyn Writer;
 
     fn write_u16(&mut self, value: u16) -> Result<()> {
@@ -102,7 +96,6 @@ pub trait DataWriter: Writer {
     fn write_f32(&mut self, value: f32) -> Result<()> {
         data_writer_write_be_bytes!(self, value)
     }
-    
     fn write_f64(&mut self, value: f64) -> Result<()> {
         data_writer_write_be_bytes!(self, value)
     }
@@ -119,7 +112,7 @@ pub trait DataWriter: Writer {
         self.write_u64(value as u64)
     }
 
-    fn write_string(&mut self, value: &String) -> Result<()> {
+    fn write_string(&mut self, value: &str) -> Result<()> {
         self.write_all(value.as_bytes())
-    }    
+    }
 }
