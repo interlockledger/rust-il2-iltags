@@ -1,23 +1,23 @@
 /*
  * BSD 3-Clause License
- * 
+ *
  * Copyright (c) 2020, InterlockLedger Network
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
+ *
  * * Redistributions of source code must retain the above copyright notice, this
  *   list of conditions and the following disclaimer.
- * 
+ *
  * * Redistributions in binary form must reproduce the above copyright notice,
  *   this list of conditions and the following disclaimer in the documentation
  *   and/or other materials provided with the distribution.
- * 
+ *
  * * Neither the name of the copyright holder nor the names of its
  *   contributors may be used to endorse or promote products derived from
  *   this software without specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -29,22 +29,21 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-use super::{Reader, Writer,Result,ErrorKind};
+use super::{ErrorKind, Reader, Result, Writer};
 
 #[cfg(test)]
 mod tests;
 
 pub struct ByteArrayReader<'a> {
-    array: &'a[u8],
-    offset: usize
+    array: &'a [u8],
+    offset: usize,
 }
 
 impl<'a> ByteArrayReader<'a> {
-
     pub fn new(buff: &'a [u8]) -> ByteArrayReader<'a> {
-        ByteArrayReader{
+        ByteArrayReader {
             array: buff,
-            offset: 0
+            offset: 0,
         }
     }
 
@@ -70,7 +69,6 @@ impl<'a> ByteArrayReader<'a> {
 }
 
 impl<'a> Reader for ByteArrayReader<'a> {
-    
     fn read(&mut self) -> Result<u8> {
         if self.offset < self.array.len() {
             let r = self.array[self.offset];
@@ -81,11 +79,9 @@ impl<'a> Reader for ByteArrayReader<'a> {
         }
     }
 
-    fn read_all(&mut self, buff:&mut [u8]) -> Result<()> {
-        
+    fn read_all(&mut self, buff: &mut [u8]) -> Result<()> {
         if self.available() >= buff.len() {
-            buff.copy_from_slice(
-                &self.array[self.offset .. buff.len()]);
+            buff.copy_from_slice(&self.array[self.offset..(self.offset + buff.len())]);
             self.offset += buff.len();
             Ok(())
         } else {
@@ -103,7 +99,7 @@ impl<'a> ByteArrayWriter<'a> {
     pub fn new(buff: &'a mut [u8]) -> ByteArrayWriter {
         ByteArrayWriter {
             array: buff,
-            offset: 0
+            offset: 0,
         }
     }
 
@@ -125,11 +121,10 @@ impl<'a> ByteArrayWriter<'a> {
 
     pub fn available(&self) -> usize {
         self.array.len() - self.offset
-    }    
+    }
 }
 
 impl<'a> Writer for ByteArrayWriter<'a> {
-
     fn write(&mut self, value: u8) -> Result<()> {
         if self.available() > 0 {
             self.array[self.offset] = value;
@@ -141,9 +136,8 @@ impl<'a> Writer for ByteArrayWriter<'a> {
     }
 
     fn write_all(&mut self, buff: &[u8]) -> Result<()> {
-
         if self.available() >= buff.len() {
-            let target = &mut self.array[self.offset .. buff.len()];
+            let target = &mut self.array[self.offset..(self.offset + buff.len())];
             target.copy_from_slice(buff);
             self.offset += buff.len();
             Ok(())
