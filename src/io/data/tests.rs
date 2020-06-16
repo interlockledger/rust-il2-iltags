@@ -30,3 +30,30 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 use super::*;
+use crate::io::ByteArrayReader;
+
+#[test]
+fn test_int_data_reader_u8() {
+    let data: [u8; 8] = [1, 2, 3, 4, 5, 6, 7, 8];
+    let mut r = ByteArrayReader::new(&data);
+
+    for exp in &data {
+        match IntDataReader::<u8>::read_int(&mut r) {
+            Ok(v) => assert_eq!(v, *exp),
+            _ => panic!(),
+        }
+    }
+}
+
+#[test]
+fn test_int_data_reader_i8() {
+    let data: [u8; 8] = [1, 2, 3, 4, 5, 6, 7, 0xFF];
+    let mut r = ByteArrayReader::new(&data);
+
+    for exp in &data {
+        match IntDataReader::<i8>::read_int(&mut r) {
+            Ok(v) => assert_eq!(v, *exp as i8),
+            _ => panic!(),
+        }
+    }
+}
