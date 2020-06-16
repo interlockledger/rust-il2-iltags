@@ -32,28 +32,78 @@
 use super::*;
 use crate::io::ByteArrayReader;
 
+macro_rules! test_int_data_reader_t {
+    ($type: ty, $sample : expr, $expected: expr) => {{
+        let mut r = ByteArrayReader::new($sample);
+
+        for exp_val in $expected {
+            match IntDataReader::<$type>::read_int(&mut r) {
+                Ok(v) => assert_eq!(v, *exp_val as $type),
+                _ => panic!(),
+            }
+        }
+        assert!(IntDataReader::<$type>::read_int(&mut r).is_err());
+    }};
+}
+
 #[test]
 fn test_int_data_reader_u8() {
-    let data: [u8; 8] = [1, 2, 3, 4, 5, 6, 7, 8];
-    let mut r = ByteArrayReader::new(&data);
-
-    for exp in &data {
-        match IntDataReader::<u8>::read_int(&mut r) {
-            Ok(v) => assert_eq!(v, *exp),
-            _ => panic!(),
-        }
-    }
+    let sample: [u8; 8] = [0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF];
+    let exp: [u8; 8] = [0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF];
+    test_int_data_reader_t!(u8, &sample, &exp);
 }
 
 #[test]
 fn test_int_data_reader_i8() {
-    let data: [u8; 8] = [1, 2, 3, 4, 5, 6, 7, 0xFF];
-    let mut r = ByteArrayReader::new(&data);
+    let sample: [u8; 8] = [0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF];
+    let exp: [i8; 8] = [0x01, 0x23, 0x45, 0x67, -0x77, -0x55, -0x33, -0x11];
+    test_int_data_reader_t!(i8, &sample, &exp);
+}
 
-    for exp in &data {
-        match IntDataReader::<i8>::read_int(&mut r) {
-            Ok(v) => assert_eq!(v, *exp as i8),
-            _ => panic!(),
-        }
-    }
+#[test]
+fn test_int_data_reader_u16() {
+    let sample: [u8; 8] = [0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF];
+    let exp: [u16; 4] = [0x0123, 0x4567, 0x89AB, 0xCDEF];
+    test_int_data_reader_t!(u16, &sample, &exp);
+}
+
+#[test]
+fn test_int_data_reader_i16() {
+    let sample: [u8; 8] = [0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF];
+    let exp: [i16; 4] = [0x0123, 0x4567, -0x7655, -0x3211];
+    test_int_data_reader_t!(i16, &sample, &exp);
+}
+
+#[test]
+fn test_int_data_reader_u32() {
+    let sample: [u8; 8] = [0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF];
+    let exp: [u32; 2] = [0x01234567, 0x89ABCDEF];
+    test_int_data_reader_t!(u32, &sample, &exp);
+}
+
+#[test]
+fn test_int_data_reader_i32() {
+    let sample: [u8; 8] = [0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF];
+    let exp: [i32; 2] = [0x01234567, -0x76543211];
+    test_int_data_reader_t!(i32, &sample, &exp);
+}
+
+#[test]
+fn test_int_data_reader_u64() {
+    let sample: [u8; 16] = [
+        0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF, 0xFE, 0xDC, 0xBA, 0x98, 0x76, 0x54, 0x32,
+        0x10,
+    ];
+    let exp: [u64; 2] = [0x0123456789ABCDEF, 0xFEDCBA9876543210];
+    test_int_data_reader_t!(u64, &sample, &exp);
+}
+
+#[test]
+fn test_int_data_reader_i64() {
+    let sample: [u8; 16] = [
+        0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF, 0xFE, 0xDC, 0xBA, 0x98, 0x76, 0x54, 0x32,
+        0x10,
+    ];
+    let exp: [i64; 2] = [0x0123456789ABCDEF, -0x123456789ABCDF0];
+    test_int_data_reader_t!(i64, &sample, &exp);
 }
