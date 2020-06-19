@@ -29,30 +29,38 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-//! This module implements some extension traits for Reader and Writer that
+//! This module implements extension traits for Reader and Writer that
 //! allows the manipulation of basic data types.
-
 #[cfg(test)]
 mod tests;
 
 use super::{ErrorKind, Reader, Result, Writer};
 use crate::ilint::{decode, encode};
 
+/// The trait `IntDataReader` defines the
+/// ability to extract signed and unsigned integer
+/// values from a [`Reader`]. Those values
+/// are always encoded in big endian format.
+///
+/// [`Reader`]: ../trait.Reader.html
+pub trait IntDataReader<T>: Reader {
+    /// Reads an integer from the Reader
+    ///
+    /// Returns:
+    ///
+    /// - Ok(T): The value read.
+    /// - Err(ErrorKind): In case of error.
+    fn read_int(&mut self) -> Result<T>;
+}
+
+/// This macro contains the base implementation of
+/// `IntDataReader.read_int()`.
 macro_rules! data_reader_read_be_bytes {
     ($self: ident, $type: ident) => {{
         let mut tmp: [u8; std::mem::size_of::<$type>()] = [0; std::mem::size_of::<$type>()];
         $self.read_all(&mut tmp)?;
         Ok($type::from_be_bytes(tmp))
     }};
-}
-
-/// The trait IntDataReader<T> implements defines the
-/// ability to read signed and unsigned integer types.
-///
-/// By default it is implemented for all Readers for
-/// u8, u16, u32, u64, i8, i16, i32 and i64.
-pub trait IntDataReader<T>: Reader {
-    fn read_int(&mut self) -> Result<T>;
 }
 
 impl<R: Reader> IntDataReader<u8> for R {
@@ -106,7 +114,18 @@ impl<R: Reader> IntDataReader<i64> for R {
     }
 }
 
+/// The trait `ILIntDataReader` defines the
+/// ability to extract an **ILInt** encoded value
+/// from a [`Reader`].
+///
+/// [`Reader`]: ../trait.Reader.html
 pub trait ILIntDataReader: Reader {
+    /// Reads an **ILInt** value.
+    ///
+    /// Returns:
+    ///
+    /// - Ok(T): The value read. It is always a **u64**.
+    /// - Err(ErrorKind): In case of error.    
     fn read_ilint(&mut self) -> Result<u64>;
 }
 
@@ -120,7 +139,19 @@ impl<R: Reader> ILIntDataReader for R {
     }
 }
 
+/// The trait `FloatDataReader` defines the
+/// ability to extract 32 and 64 bit floating
+/// point values from a [`Reader`]. Those values
+/// are always encoded in big endian IEEE 754-2008.
+///
+/// [`Reader`]: ../trait.Reader.html
 pub trait FloatDataReader<T>: Reader {
+    /// Reads an float value.
+    ///
+    /// Returns:
+    ///
+    /// - Ok(T): The value read.
+    /// - Err(ErrorKind): In case of error.    
     fn read_float(&mut self) -> Result<T>;
 }
 
@@ -138,11 +169,11 @@ impl<T: IntDataReader<u64>> FloatDataReader<f64> for T {
     }
 }
 
+/// The trait `StringDataReader` defines the
+/// ability to extract UTF-8 strings from a [`Reader`].
+///
+/// [`Reader`]: ../trait.Reader.html
 pub trait StringDataReader: Reader {
-    fn read_string(&mut self, size: usize) -> Result<String>;
-}
-
-impl<T: Reader> StringDataReader for T {
     fn read_string(&mut self, size: usize) -> Result<String> {
         let mut tmp: Vec<u8> = vec![0; size];
         self.read_all(tmp.as_mut_slice())?;
@@ -153,8 +184,23 @@ impl<T: Reader> StringDataReader for T {
     }
 }
 
-/// The DataReader is a Reader that implements some
-/// data functions.
+impl<T: Reader> StringDataReader for T {}
+
+/// The `DataReader` trait defines the combined ability
+/// to read signed and unsigned integer, floating point values.
+/// ILInt values and strings from a [`Reader`].
+///
+/// Since this trait requires the implementation of the same trait
+/// for multiple types, each variant can be invoked by its full
+/// qualified name as follows:
+///
+/// ```rust
+/// fn extract_and_print_u8(r: &mut dyn DataReader) {
+///     println!("{:?}", DataReader::<u8>::read_int(r));
+/// }
+/// ```
+///
+/// [`Reader`]: ../trait.Reader.html
 pub trait DataReader:
     IntDataReader<u8>
     + IntDataReader<u16>
@@ -171,13 +217,33 @@ pub trait DataReader:
 {
 }
 
+impl<T: Reader> DataReader for T {}
+
+/// This macro defines the core implementation of
+/// IntDataWriter.write_int().
 macro_rules! data_writer_write_be_bytes {
     ($self: ident, $value: expr) => {
         $self.write_all(&$value.to_be_bytes())
     };
 }
 
+/// The trait `IntDataWriter` defines the
+/// ability to write signed and unsigned integer
+/// values to a [`Writer`]. Those values
+/// are always encoded in big endian format.
+///
+/// [`Writer`]: ../trait.Writer.html
 pub trait IntDataWriter<T>: Writer {
+    /// Writes the value.
+    ///
+    /// Parameters:
+    ///
+    /// - `v`: The value to write.
+    ///
+    /// Returns:
+    ///
+    /// - Ok(()): On success.
+    /// - Err(ErrorKind): In case of error.
     fn write_int(&mut self, v: T) -> Result<()>;
 }
 
@@ -229,7 +295,22 @@ impl<T: Writer> IntDataWriter<i64> for T {
     }
 }
 
+/// The trait `ILIntDataWriter` defines the
+/// ability to write ILInt encoded
+/// values to a [`Writer`].
+///
+/// [`Writer`]: ../trait.Writer.html
 pub trait ILIntDataWriter: Writer {
+    /// Writes the value.
+    ///
+    /// Parameters:
+    ///
+    /// - `v`: The value to write.
+    ///
+    /// Returns:
+    ///
+    /// - Ok(()): On success.
+    /// - Err(ErrorKind): In case of error.
     fn write_ilint(&mut self, v: u64) -> Result<()>;
 }
 
@@ -243,7 +324,23 @@ impl<T: Writer> ILIntDataWriter for T {
     }
 }
 
+/// The trait `FloatDataWrite` defines the
+/// ability to write 32 and 64 bit floating
+/// point values to [`Writer`]. Those values
+/// are always encoded in big endian IEEE 754-2008.
+///
+/// [`Writer`]: ../trait.Writer.html
 pub trait FloatDataWriter<T>: Writer {
+    /// Writes the value.
+    ///
+    /// Parameters:
+    ///
+    /// - `v`: The value to write.
+    ///
+    /// Returns:
+    ///
+    /// - Ok(()): On success.
+    /// - Err(ErrorKind): In case of error.
     fn write_float(&mut self, v: T) -> Result<()>;
 }
 
@@ -259,7 +356,21 @@ impl<T: Writer> FloatDataWriter<f64> for T {
     }
 }
 
+/// The trait `StringDataWriter` defines the
+/// ability to write UTF-8 strings to [`Writer`].
+///
+/// [`Writer`]: ../trait.Writer.html
 pub trait StringDataWriter {
+    /// Writes the value.
+    ///
+    /// Parameters:
+    ///
+    /// - `v`: The value to write.
+    ///
+    /// Returns:
+    ///
+    /// - Ok(()): On success.
+    /// - Err(ErrorKind): In case of error.
     fn write_string(&mut self, value: &str) -> Result<()>;
 }
 
@@ -269,6 +380,11 @@ impl<T: Writer> StringDataWriter for T {
     }
 }
 
+/// The `DataWriter` trait defines the combined ability
+/// to write signed and unsigned integer, floating point values.
+/// ILInt values and strings to a [`Writer`].
+///
+/// [`Writer`]: ../trait.Writer.html
 pub trait DataWriter:
     IntDataWriter<u8>
     + IntDataWriter<u16>
@@ -284,3 +400,5 @@ pub trait DataWriter:
     + StringDataWriter
 {
 }
+
+impl<T: Writer> DataWriter for T {}

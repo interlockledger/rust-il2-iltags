@@ -32,7 +32,7 @@
 pub mod std;
 
 use crate::ilint::encoded_size;
-use crate::io::{DataReader, DataWriter};
+use crate::io::data::*;
 use ::std::any::Any;
 
 pub enum ErrorKind {
