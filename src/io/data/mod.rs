@@ -192,13 +192,7 @@ impl<T: Reader> StringDataReader for T {}
 ///
 /// Since this trait requires the implementation of the same trait
 /// for multiple types, each variant can be invoked by its full
-/// qualified name as follows:
-///
-/// ```rust
-/// fn extract_and_print_u8(r: &mut dyn DataReader) {
-///     println!("{:?}", DataReader::<u8>::read_int(r));
-/// }
-/// ```
+/// qualified name such as ``DataReader::<u8>::read_int(r)``.
 ///
 /// [`Reader`]: ../trait.Reader.html
 pub trait DataReader:

@@ -223,7 +223,7 @@ fn test_decode() {
         for bad_size in 0..size {
             let mut reader = ByteArrayReader::new(&encoded[0..bad_size]);
             match decode(&mut reader) {
-                Err(super::ErrorKind::IOError(e)) => {}
+                Err(super::ErrorKind::IOError(_)) => {}
                 _ => panic!("Corrupted data expected."),
             }
         }
