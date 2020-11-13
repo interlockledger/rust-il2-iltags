@@ -100,10 +100,15 @@ fn test_bytearrayreader_reader_readall() {
     let mut offs: usize = 0;
     let mut buff: [u8; 6] = [0; 6];
     for l in 0..7 {
-        let slice = &mut buff[0..l];
+        let count = if l <= ba.available() {
+            l
+        } else {
+            ba.available()
+        };
+        let slice = &mut buff[0..count];
         assert!(ba.read_all(slice).is_ok());
-        assert_eq!(&src[offs..(offs + l)], slice);
-        offs += l;
+        assert_eq!(&src[offs..(offs + count)], slice);
+        offs += count;
     }
 }
 
