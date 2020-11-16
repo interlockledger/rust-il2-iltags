@@ -29,12 +29,14 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+//! This module contains the implementation of the **IL2 ILTags** standard.
 pub mod std;
 
 use crate::ilint::encoded_size;
 use crate::io::data::{DataReader, DataWriter};
 use ::std::any::Any;
 
+/// Definition of the errors from this package.
 pub enum ErrorKind {
     UnknownTag,
     UnsupportedTag,
@@ -43,20 +45,44 @@ pub enum ErrorKind {
     Boxed(Box<dyn ::std::error::Error>),
 }
 
+/// Alias to errors from this package.
 pub type Result<T> = ::std::result::Result<T, ErrorKind>;
 
-pub const IMPLICITY_ID_MAX: u64 = 0x0F;
+/// Maximum tag id value for implicit tags.
+pub const IMPLICIT_ID_MAX: u64 = 0x0F;
 
+/// Maximum tag id value for reserved tags.
 pub const RESERVED_ID_MAX: u64 = 0x1F;
 
-pub fn is_implicity(id: u64) -> bool {
-    id < IMPLICITY_ID_MAX
+/// Verifies if a given tag id represents an implicit tag.
+/// 
+/// Arguments:
+///
+/// * `id`: The tag id to be verified;
+///
+/// Returns:
+///
+/// * true if the tag id is implicit or false otherwise.
+///
+pub fn is_implicit_tag(id: u64) -> bool {
+    id < IMPLICIT_ID_MAX
 }
 
-pub fn is_reserved(id: u64) -> bool {
+/// Verifies if a given tag id represents a reserved tag.
+/// 
+/// Arguments:
+///
+/// * `id`: The tag id to be verified;
+///
+/// Returns:
+///
+/// * true if the tag id is reserved or false otherwise.
+///
+pub fn is_reserved_tag(id: u64) -> bool {
     id < RESERVED_ID_MAX
 }
 
+/// This trait defines the ability to convert
 pub trait ILTagAsAny: Any {
     fn as_any(&self) -> &dyn Any;
 
@@ -67,14 +93,14 @@ pub trait ILTag: ILTagAsAny {
     /// Returns the ID of the tag.
     fn id(&self) -> u64;
 
-    /// Verifies if this tag is implicity
+    /// Verifies if this tag is implicity.
     fn is_implicity(&self) -> bool {
-        is_implicity(self.id())
+        is_implicit_tag(self.id())
     }
 
     /// Verifies if this tag is reserved.
     fn is_reserved(&self) -> bool {
-        is_reserved(self.id())
+        is_reserved_tag(self.id())
     }
 
     /// Retuns the size of the payload in bytes.
@@ -89,8 +115,30 @@ pub trait ILTag: ILTagAsAny {
         size + self.payload_size()
     }
 
+    /// Serializes the payload of this tag.
+    /// 
+    /// Arguments:
+    ///
+    /// * `writer`: The writer that will receive the encoded value;
+    ///
+    /// Returns:
+    ///
+    /// * `Ok()`: On success.
+    /// * `Err(())`: If the buffer is too small to hold the encoded value.
+    ///
     fn serialize_value(&self, writer: &mut dyn DataWriter) -> Result<()>;
 
+    /// Serializes this tag.
+    /// 
+    /// Arguments:
+    ///
+    /// * `writer`: The writer that will receive the encoded value;
+    ///
+    /// Returns:
+    ///
+    /// * `Ok()`: On success.
+    /// * `Err(())`: If the buffer is too small to hold the encoded value.
+    ///
     fn serialize(&self, writer: &mut dyn DataWriter) -> Result<()> {
         match writer.write_ilint(self.id()) {
             Ok(()) => (),
@@ -159,23 +207,43 @@ impl<T: ILTag> ILTagAsAny for T {
     }
 }
 
+/// This struct implements a raw tag. It can be used
+/// to store any non implicity tag.
 pub struct RawTag {
+    /// Id of the tag.
     id: u64,
+    /// The payload.
     payload: Vec<u8>,
 }
 
 impl RawTag {
-    pub fn new(id: u64) -> RawTag {
-        RawTag {
-            id,
-            payload: Vec::new(),
+    /// Creates a new instance of this struct.
+    /// 
+    /// Arguments:
+    ///
+    /// * `id`: The tag id;
+    ///
+    /// Returns:
+    ///
+    /// * `Ok(value)`: The new instace of the raw tag.
+    /// * `Err(ErrorKind::UnsupportedTag)`: If the tag id is unsupported.
+    pub fn new(id: u64) -> Result<RawTag> {
+        if is_implicit_tag(id) {
+            Err(ErrorKind::UnsupportedTag)
+        } else {
+            Ok(RawTag {
+                id,
+                payload: Vec::new(),
+            })
         }
     }
 
+    /// Returns an immutable reference to the payload.
     pub fn get_payload(&self) -> &Vec<u8> {
         &self.payload
     }
 
+    /// Returns a mutable reference to the payload.
     pub fn get_mut_payload(&mut self) -> &mut Vec<u8> {
         &mut self.payload
     }
