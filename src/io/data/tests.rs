@@ -171,3 +171,27 @@ fn test_float_data_reader_f64() {
     };
     assert!(FloatDataReader::<f64>::read_float(&mut r).is_err());
 }
+
+#[test]
+fn test_string_data_reader() {
+    // This frase is attibuted to Machado de Assis. It was
+    // choosen because it contains Latin characters that
+    // result in a multi-byte characters in UTF-8.
+    let sample: [u8; 30] = [
+        0x4c, 0xc3, 0xa1, 0x67, 0x72, 0x69, 0x6d, 0x61,
+        0x73, 0x20, 0x6e, 0xc3, 0xa3, 0x6f, 0x20, 0x73,
+        0xc3, 0xa3, 0x6f, 0x20, 0x61, 0x72, 0x67, 0x75,
+        0x6d, 0x65, 0x6e, 0x74, 0x6f, 0x73
+    ];
+    let expected = "Lágrimas não são argumentos";
+    
+    let mut r = ByteArrayReader::new(&sample);
+
+
+    match StringDataReader::read_string(&mut r, 30) {
+        Ok(v) => assert_eq!(expected, v),
+        _ => panic!()
+    };
+    assert!(StringDataReader::read_string(&mut r, 0).is_ok());
+    assert!(StringDataReader::read_string(&mut r, 1).is_err());
+}
