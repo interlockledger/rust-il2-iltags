@@ -195,3 +195,74 @@ fn test_string_data_reader() {
     assert!(StringDataReader::read_string(&mut r, 0).is_ok());
     assert!(StringDataReader::read_string(&mut r, 1).is_err());
 }
+
+#[test]
+fn test_data_reader() {
+    // This frase is attibuted to Machado de Assis. It was
+    // choosen because it contains Latin characters that
+    // result in a multi-byte characters in UTF-8.
+    let sample: [u8; 72] = [
+        0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 
+        0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 
+        0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 
+        0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f, 
+        0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 
+        0x28, 0x29,
+        0x4c, 0xc3, 0xa1, 0x67, 0x72, 0x69, 0x6d, 0x61,
+        0x73, 0x20, 0x6e, 0xc3, 0xa3, 0x6f, 0x20, 0x73,
+        0xc3, 0xa3, 0x6f, 0x20, 0x61, 0x72, 0x67, 0x75,
+        0x6d, 0x65, 0x6e, 0x74, 0x6f, 0x73
+    ];
+
+    let mut r = ByteArrayReader::new(&sample);
+    let dr: &mut dyn DataReader = &mut r; 
+
+    match dr.read_int() as Result<u8> {
+        Ok(v) =>  assert_eq!(0x00,  v),
+        _ => panic!()
+    }
+    match dr.read_int() as Result<u16> {
+        Ok(v) =>  assert_eq!(0x0102,  v),
+        _ => panic!()
+    }
+    match dr.read_int() as Result<u32> {
+        Ok(v) =>  assert_eq!(0x0304_0506,  v),
+        _ => panic!()
+    }
+    match dr.read_int() as Result<u64> {
+        Ok(v) =>  assert_eq!(0x0708_090A_0B0C_0D0E,  v),
+        _ => panic!()
+    }
+    match dr.read_int() as Result<i8> {
+        Ok(v) =>  assert_eq!(0x0f,  v),
+        _ => panic!()
+    }
+    match dr.read_int() as Result<i16> {
+        Ok(v) =>  assert_eq!(0x1011,  v),
+        _ => panic!()
+    }
+    match dr.read_int() as Result<i32> {
+        Ok(v) =>  assert_eq!(0x1213_1415,  v),
+        _ => panic!()
+    }
+    match dr.read_int() as Result<i64> {
+        Ok(v) =>  assert_eq!(0x1617_1819_1A1B_1C1D,  v),
+        _ => panic!()
+    }
+    match dr.read_float() as Result<f32> {
+        Ok(v) =>  assert_eq!(0.000000000000000000008424034,  v),
+        _ => panic!()
+    }
+    match dr.read_float() as Result<f64> {
+        Ok(v) =>  assert_eq!(0.0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000030657805298494026,  v),
+        _ => panic!()
+    }
+    match dr.read_string(30) {
+        Ok(v) =>  assert_eq!("Lágrimas não são argumentos", v),
+        _ => panic!()
+    }
+    match dr.read_int() as Result<u8> {
+        Ok(_) =>  panic!(),
+        _ => ()
+    }
+}
