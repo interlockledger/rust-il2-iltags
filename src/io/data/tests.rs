@@ -340,3 +340,41 @@ fn test_int_data_writer_i64() {
                         0x81, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF];
     test_int_data_writer_t!(i64, &sample, &exp);
 }
+
+#[test]
+fn test_float_data_writer_f32() {
+    let mut bin = Vec::<u8>::new();
+    let mut w =  VecWriter::new(&mut bin);
+    let exp: [u8; 8] = 
+                    [0x40, 0x49, 0x0f, 0xdb,
+                    0x40, 0x49, 0x0f, 0xdb,];
+
+    match FloatDataWriter::<f32>::write_float(&mut w, 3.14159274101257324 as f32) {
+        Ok(_) => (),
+        Err(_) => panic!()
+    }
+    match FloatDataWriter::<f32>::write_float(&mut w, 3.14159274101257324 as f32) {
+        Ok(_) => (),
+        Err(_) => panic!()
+    }
+    assert_eq!(exp, bin.as_slice());
+}
+
+#[test]
+fn test_float_data_writer_f64() {
+    let mut bin = Vec::<u8>::new();
+    let mut w =  VecWriter::new(&mut bin);
+    let exp: [u8; 16] = [
+        0x40, 0x09, 0x21, 0xfb, 0x54, 0x44, 0x2d, 0x18,
+        0x40, 0x09, 0x21, 0xfb, 0x54, 0x44, 0x2d, 0x18];
+
+    match FloatDataWriter::<f64>::write_float(&mut w, 3.1415926535897932384626433 as f64) {
+        Ok(_) => (),
+        Err(_) => panic!()
+    }
+    match FloatDataWriter::<f64>::write_float(&mut w, 3.1415926535897932384626433 as f64) {
+        Ok(_) => (),
+        Err(_) => panic!()
+    }
+    assert_eq!(exp, bin.as_slice());
+}
