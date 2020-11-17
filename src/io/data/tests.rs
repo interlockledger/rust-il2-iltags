@@ -30,7 +30,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 use super::*;
-use crate::io::ByteArrayReader;
+use crate::io::{ByteArrayReader, VecWriter};
 
 macro_rules! test_int_data_reader_t {
     ($type: ty, $sample : expr, $expected: expr) => {{
@@ -265,4 +265,78 @@ fn test_data_reader() {
         Ok(_) =>  panic!(),
         _ => ()
     }
+}
+
+macro_rules! test_int_data_writer_t {
+    ($type: ty, $sample : expr, $expected: expr) => {{
+        let mut bin = Vec::<u8>::new();
+        let mut w =  VecWriter::new(&mut bin);
+
+        for val in $sample {
+            match IntDataWriter::<$type>::write_int(&mut w, *val) {
+                Ok(_) => (),
+                _ => panic!(),
+            }
+        }
+        assert_eq!($expected.len(), bin.len());
+        assert_eq!($expected, bin.as_slice());
+    }};
+}
+
+#[test]
+fn test_int_data_writer_u8() {
+    let sample: [u8; 8] = [0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF];
+    let exp: [u8; 8] = [0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF];
+    test_int_data_writer_t!(u8, &sample, &exp);
+}
+
+#[test]
+fn test_int_data_writer_i8() {
+    let sample: [i8; 8] = [0x01, 0x23, 0x45, 0x67, -0x77, -0x55, -0x33, -0x11];
+    let exp: [u8; 8] = [0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF];
+    test_int_data_writer_t!(i8, &sample, &exp);
+}
+
+#[test]
+fn test_int_data_writer_u16() {
+    let sample: [u16; 4] = [0x0123, 0x4567, 0x89AB, 0xCDEF];
+    let exp: [u8; 8] = [0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF];
+    test_int_data_writer_t!(u16, &sample, &exp);
+}
+
+#[test]
+fn test_int_data_writer_i16() {
+    let sample: [i16; 4] = [0x0123, 0x4567, -0x7655, -0x3211];
+    let exp: [u8; 8] = [0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF];
+    test_int_data_writer_t!(i16, &sample, &exp);
+}
+
+#[test]
+fn test_int_data_writer_u32() {
+    let sample: [u32; 2] = [0x01234567, 0x89ABCDEF];
+    let exp: [u8; 8] = [0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF];
+    test_int_data_writer_t!(u32, &sample, &exp);
+}
+
+#[test]
+fn test_int_data_writer_i32() {
+    let sample: [i32; 2] = [0x01234567, -0x76543211];
+    let exp: [u8; 8] = [0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF];
+    test_int_data_writer_t!(i32, &sample, &exp);
+}
+
+#[test]
+fn test_int_data_writer_u64() {
+    let sample: [u64; 2] = [0x0123456789ABCDEF, 0x0123456789ABCDEF];
+    let exp: [u8; 16] = [0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF,
+                        0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF];
+    test_int_data_writer_t!(u64, &sample, &exp);
+}
+
+#[test]
+fn test_int_data_writer_i64() {
+    let sample: [i64; 2] = [0x0123456789ABCDEF, -0x7EDCBA9876543211];
+    let exp: [u8; 16] = [0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF,
+                        0x81, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF];
+    test_int_data_writer_t!(i64, &sample, &exp);
 }
