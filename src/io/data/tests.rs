@@ -143,3 +143,31 @@ fn test_ilint_data_reader(){
     }
     assert!(ILIntDataReader::read_ilint(&mut r).is_err());
 }
+
+#[test]
+fn test_float_data_reader_f32() {
+    let sample: [u8; 5] = [
+        0x40, 0x49, 0x0f, 0xdb, 
+        0x01
+    ];
+    let mut r = ByteArrayReader::new(&sample);
+    match FloatDataReader::<f32>::read_float(&mut r) {
+        Ok(v) => assert_eq!(3.14159274101257324, v),
+        _ => panic!()
+    };
+    assert!(FloatDataReader::<f32>::read_float(&mut r).is_err());
+}
+
+#[test]
+fn test_float_data_reader_f64() {
+    let sample: [u8; 9] = [
+        0x40, 0x09, 0x21, 0xfb, 0x54, 0x44, 0x2d, 0x18,
+        0x01
+    ];
+    let mut r = ByteArrayReader::new(&sample);
+    match FloatDataReader::<f64>::read_float(&mut r) {
+        Ok(v) => assert_eq!(3.1415926535897932384626433, v),
+        _ => panic!()
+    };
+    assert!(FloatDataReader::<f64>::read_float(&mut r).is_err());
+}
