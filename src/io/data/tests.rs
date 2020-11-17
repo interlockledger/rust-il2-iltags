@@ -378,3 +378,94 @@ fn test_float_data_writer_f64() {
     }
     assert_eq!(exp, bin.as_slice());
 }
+
+#[test]
+fn test_string_data_writer_f64() {
+    let mut bin = Vec::<u8>::new();
+    let mut w =  VecWriter::new(&mut bin);
+    let exp: [u8; 60] = [
+        0x4c, 0xc3, 0xa1, 0x67, 0x72, 0x69, 0x6d, 0x61,
+        0x73, 0x20, 0x6e, 0xc3, 0xa3, 0x6f, 0x20, 0x73,
+        0xc3, 0xa3, 0x6f, 0x20, 0x61, 0x72, 0x67, 0x75,
+        0x6d, 0x65, 0x6e, 0x74, 0x6f, 0x73,
+        0x4c, 0xc3, 0xa1, 0x67, 0x72, 0x69, 0x6d, 0x61,
+        0x73, 0x20, 0x6e, 0xc3, 0xa3, 0x6f, 0x20, 0x73,
+        0xc3, 0xa3, 0x6f, 0x20, 0x61, 0x72, 0x67, 0x75,
+        0x6d, 0x65, 0x6e, 0x74, 0x6f, 0x73];
+
+    match StringDataWriter::write_string(&mut w, "Lágrimas não são argumentos") {
+        Ok(_) => (),
+        Err(_) => panic!()
+    }
+    match StringDataWriter::write_string(&mut w, "Lágrimas não são argumentos") {
+        Ok(_) => (),
+        Err(_) => panic!()
+    }
+    assert_eq!(exp, bin.as_slice());
+}
+
+#[test]
+fn test_data_writer() {
+    let mut bin = Vec::<u8>::new();
+    let mut w =  VecWriter::new(&mut bin);
+    let exp: [u8; 72] = [
+        0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
+        0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10, 
+        0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 
+        0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1e, 0x1f,
+        0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 
+        0x28, 0x29,
+        0x4c, 0xc3, 0xa1, 0x67, 0x72, 0x69, 0x6d, 0x61,
+        0x73, 0x20, 0x6e, 0xc3, 0xa3, 0x6f, 0x20, 0x73,
+        0xc3, 0xa3, 0x6f, 0x20, 0x61, 0x72, 0x67, 0x75,
+        0x6d, 0x65, 0x6e, 0x74, 0x6f, 0x73];
+
+    let dw : &mut dyn DataWriter = &mut w;
+
+    match dw.write_int(0x01 as u8) {
+        Ok(_) => (),
+        Err(_) => panic!()
+    }
+    match dw.write_int(0x0203 as u16) {
+        Ok(_) => (),
+        Err(_) => panic!()
+    }
+    match dw.write_int(0x0405_0607 as u32) {
+        Ok(_) => (),
+        Err(_) => panic!()
+    }
+    match dw.write_int(0x0809_0A0B_0C0D_0E0F as u64) {
+        Ok(_) => (),
+        Err(_) => panic!()
+    }
+    match dw.write_int(0x10 as i8) {
+        Ok(_) => (),
+        Err(_) => panic!()
+    }
+    match dw.write_int(0x1112 as i16) {
+        Ok(_) => (),
+        Err(_) => panic!()
+    }
+    match dw.write_int(0x1314_1516 as i32) {
+        Ok(_) => (),
+        Err(_) => panic!()
+    }
+    match dw.write_int(0x1718_191A_1B1C_1D1E as i64) {
+        Ok(_) => (),
+        Err(_) => panic!()
+    }
+    match dw.write_float(0.000000000000000000008424034 as f32) {
+        Ok(_) => (),
+        Err(_) => panic!()
+    }
+    match dw.write_float(0.0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000030657805298494026 as f64) {
+        Ok(_) => (),
+        Err(_) => panic!()
+    }
+    match dw.write_string("Lágrimas não são argumentos") {
+        Ok(_) => (),
+        Err(_) => panic!()
+    }
+
+    assert_eq!(exp, bin.as_slice());
+}
