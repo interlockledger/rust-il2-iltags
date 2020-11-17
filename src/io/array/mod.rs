@@ -214,6 +214,7 @@ impl<'a> Writer for VecWriter<'a> {
             self.vector.resize(new_offset, 0);
         }
         self.vector[self.offset..new_offset].copy_from_slice(buff);
+        self.offset = new_offset;
         Ok(())
     }
 }

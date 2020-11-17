@@ -174,3 +174,43 @@ fn test_bytearraywriter_writer_writeall() {
         _ => panic!("Unexpected read_all error!"),
     }
 }
+
+#[test]
+fn test_vecwriter_writer_write() {
+    let mut src = Vec::<u8>::new();
+    let mut baw = VecWriter::new(&mut src);
+
+    let mut src2 = [0u8; 8];
+    fill_sample(&mut src2);
+
+    for sample in src2.iter() {
+        match baw.write(*sample) {
+            Ok(_) => (),
+            _ => panic!("Unexpected read_all error!"),
+        }
+    }
+    assert_eq!(src2, src.as_slice());
+}
+
+#[test]
+fn test_vecwriter_writer_write_all() {
+    let mut src = Vec::<u8>::new();
+    let mut baw = VecWriter::new(&mut src);
+
+    let mut src2 = [0u8; 8];
+    fill_sample(&mut src2);
+
+    match baw.write_all(&src2) {
+        Ok(_) => (),
+        _ => panic!("Unexpected read_all error!"),
+    }
+    match baw.write_all(&src2) {
+        Ok(_) => (),
+        _ => panic!("Unexpected read_all error!"),
+    }
+
+    let mut exp = [0u8; 16];
+    exp[0..8].copy_from_slice(&src2);
+    exp[8..16].copy_from_slice(&src2);
+    assert_eq!(exp, src.as_slice());
+}
