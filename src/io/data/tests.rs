@@ -405,6 +405,43 @@ fn test_string_data_writer_f64() {
 }
 
 #[test]
+fn test_ilint_data_writer(){
+    let expected: [u8; 45] = [
+        0xF7,
+        0xF8, 0x00,
+        0xF9, 0x01, 0x23,
+        0xFA, 0x01, 0x23, 0x45,
+        0xFB, 0x01, 0x23, 0x45, 0x67,
+        0xFC, 0x01, 0x23, 0x45, 0x67, 0x89,
+        0xFD, 0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 
+        0xFE, 0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD,
+        0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x07
+    ];
+    let sample: [u64; 9] = [
+        0xF7,
+        0xF8,
+        0x021B,
+        0x01243D,
+        0x0123465F,
+        0x0123456881,
+        0x012345678AA3,
+        0x123456789ACC5,
+        0xFFFFFFFFFFFFFFFF
+    ];
+
+    let mut bin = Vec::<u8>::new();
+    let mut w =  VecWriter::new(&mut bin);
+
+    for exp in sample.iter() {
+        match ILIntDataWriter::write_ilint(&mut w, *exp) {
+            Ok(_) => (),
+            _ => panic!()
+        };
+    }
+    assert_eq!(expected, bin.as_slice())
+}
+
+#[test]
 fn test_data_writer() {
     let mut bin = Vec::<u8>::new();
     let mut w =  VecWriter::new(&mut bin);
