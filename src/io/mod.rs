@@ -29,10 +29,7 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-
-//! This module implements the IO abstraction used by this library.
-//!
-//! It contain traits that define the expected interface used by
+//! This module implements the I/O abstraction used by this library.
 pub mod array;
 pub mod data;
 
@@ -58,29 +55,28 @@ pub enum ErrorKind {
 /// A specialized `Result` for operations of this module.
 pub type Result<T> = std::result::Result<T, ErrorKind>;
 
-/// The Reader trait is allows the extraction of bytes from the source.
+/// The `Reader` trait is allows the extraction of bytes from a source.
 ///
 /// It differs from most IO library as it defines all operations as
 /// all-or-nothing operations. No partial reads are allowed.
 ///
-/// It is very important to notice that implementations of this
-/// trait are not required to be thread safe.
+/// Implementations of this trait are not required to be thread-safe.
 pub trait Reader {
     /// Reads a single byte from the source.
     ///
     /// Returns:
-    ///     - Ok(v): The value read;
-    ///     - Err(ErrorKind): In case of error;
+    /// * `Ok(v)`: The value read;
+    /// * `Err(ErrorKind)`: In case of error;
     fn read(&mut self) -> Result<u8>;
 
     /// Reads some bytes from the source.
     ///
     /// Arguments:
-    ///     - `buff`: The output buffer;
+    /// * `buff`: The output buffer;
     ///
     /// Returns:
-    ///     - Ok(()): The value read;
-    ///     - Err(ErrorKind): In case of error;
+    /// * `Ok(())`: On success;
+    /// * `Err(ErrorKind)`: In case of error;
     fn read_all(&mut self, buff: &mut [u8]) -> Result<()> {
         for b in buff {
             *b = self.read()?;
@@ -88,18 +84,18 @@ pub trait Reader {
         Ok(())
     }
 
-    /// Skips some bytes.
+    /// Skips some bytes from the source.
     ///
     /// The default implementation just calls read() repeatedly,
     /// so each implementation is advised to provide a better
-    /// implementation if possible.
+    /// implementation of this method if possible.
     ///
     /// Arguments:
-    ///     - `count`: Number of byte to skip;
+    /// * `count`: Number of byte to skip;
     ///
     /// Returns:
-    ///     - Ok(()): The value read;
-    ///     - Err(ErrorKind): In case of error;
+    /// * `Ok(())`: On success;
+    /// * `Err(ErrorKind)`: In case of error;
     fn skip(&mut self, count: usize) -> Result<()> {
         for _i in 0..count {
             self.read()?;
@@ -108,16 +104,31 @@ pub trait Reader {
     }
 }
 
-/// The Writer trait allows the addition of bytes into the destination.
+/// The `Writer` trait allows the addition of bytes into the destination.
 ///
 /// It differs from most IO library as it defines all operations as
 /// all-or-nothing operations. No partial writes are allowed.
 ///
-/// It is very important to notice that implementations of this
-/// trait are not required to be thread safe.
+/// Implementations of this trait are not required to be thread-safe.
 pub trait Writer {
+    /// Writes a single byte.
+    /// 
+    /// Arguments:
+    /// * `value`: The value to be written;
+    ///
+    /// Returns:
+    /// * `Ok(())`: On success;
+    /// * `Err(ErrorKind)`: In case of error;
     fn write(&mut self, value: u8) -> Result<()>;
 
+    /// Writes a byte slice.
+    /// 
+    /// Arguments:
+    /// * `buff`: The value to be written;
+    ///
+    /// Returns:
+    /// * `Ok(())`: On success;
+    /// * `Err(ErrorKind)`: In case of error;
     fn write_all(&mut self, buff: &[u8]) -> Result<()> {
         for b in buff {
             self.write(*b)?;
@@ -126,12 +137,13 @@ pub trait Writer {
     }
 }
 
-/// LimitedReader implements a [`Reader`] that wraps another reader
-/// but defines a limited to the amount of bytes that can be
-/// extracted from the inner Reader.
+/// The `LimitedReader` implements a [`Reader`] that wraps another
+/// [`Reader`] but defines a limited to the amount of bytes that can be
+/// extracted from it.
 ///
 /// It is important to notice that LimitedReader will test the
-/// limits prior to the attempt to read the data.
+/// limits prior to the attempt to read the data, thus, failed
+/// attempts will not move the read cursor.
 ///
 /// [`Reader`]: trait.Reader.html
 pub struct LimitedReader<'a> {
@@ -143,8 +155,8 @@ impl<'a> LimitedReader<'a> {
     /// Creates a new instance of this struct.
     ///
     /// Parameters:
-    ///     - src: A mutable reference to the source Reader.
-    ///     - available: Number of bytes available for reading.
+    /// * `src`: A mutable reference to the source Reader.
+    /// * `available`: Number of bytes available for reading.
     pub fn new(src: &'a mut dyn Reader, available: usize) -> LimitedReader {
         LimitedReader {
             source: src,
@@ -156,12 +168,11 @@ impl<'a> LimitedReader<'a> {
     /// from the source.
     ///
     /// Parameters:
-    ///     - size: The number of bytes to read.
+    /// * `size`: The number of bytes to read.
     ///
     /// Returns:
-    ///     - Ok(()): If the given number of bytes is available.
-    ///     - Err(ErrorKind::UnableToReadData): If the specified number of
-    ///     bytes is not available.
+    /// * `Ok(())`: On success.
+    /// * `Err(ErrorKind)`: If the specified number of bytes is not available.
     pub fn can_read(&mut self, size: usize) -> Result<()> {
         if size < self.available {
             Ok(())
@@ -171,6 +182,8 @@ impl<'a> LimitedReader<'a> {
     }
 
     /// Returns the number of available bytes.
+    /// Returns:
+    /// * The number of available bytes.
     pub fn available(&self) -> usize {
         self.available
     }
@@ -178,9 +191,8 @@ impl<'a> LimitedReader<'a> {
     /// Skips the required number of bytes
     ///
     /// Returns:
-    ///     - Ok(()): If the given number of bytes is available.
-    ///     - Err(ErrorKind::UnableToReadData): If the specified number of
-    ///     bytes is not available.
+    /// * `Ok(())`: On success.
+    /// * `Err(ErrorKind)`: If the specified number of bytes is not available.
     pub fn goto_end(&mut self) -> Result<()> {
         if self.available > 0 {
             let ret = self.source.skip(self.available);
@@ -215,7 +227,7 @@ impl<'a> Reader for LimitedReader<'a> {
 }
 
 /// This struct implements a [`Reader`] that uses a
-/// std::io::Read as the source of bytes.
+/// `std::io::Read` as the source of bytes.
 ///
 /// [`Reader`]: trait.Reader.html
 pub struct ReadReader<'a, T: std::io::Read> {
@@ -226,7 +238,7 @@ impl<'a, T: std::io::Read> ReadReader<'a, T> {
     /// Creates a new instance of ReadReader.
     ///
     /// Parameters:
-    ///     - `src`: The source `Read`.
+    /// * `src`: The source of bytes.
     pub fn new(src: &'a mut T) -> ReadReader<'a, T> {
         ReadReader { source: src }
     }
@@ -261,7 +273,7 @@ impl<'a, T: std::io::Read + std::io::Seek> ReadSeekReader<'a, T> {
     /// Creates a new instance of ReadReader.
     ///
     /// Parameters:
-    ///     - `src`: The source `Read`.
+    /// * `src`: The source of bytes.
     pub fn new(src: &'a mut T) -> ReadSeekReader<'a, T> {
         ReadSeekReader { source: src }
     }
@@ -300,6 +312,10 @@ pub struct WriteWriter<'a> {
 }
 
 impl<'a> WriteWriter<'a> {
+    /// Creates a new instance of `WriteWriter`.
+    ///
+    /// Parameters:
+    /// * `dst`: The destination for the bytes.
     pub fn new(dst: &'a mut dyn std::io::Write) -> WriteWriter<'a> {
         WriteWriter { dest: dst }
     }

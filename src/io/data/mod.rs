@@ -44,12 +44,11 @@ use crate::ilint::{decode, encode};
 ///
 /// [`Reader`]: ../trait.Reader.html
 pub trait IntDataReader<T>: Reader {
-    /// Reads an integer from the Reader
+    /// Reads an integer of type `T` from the Reader
     ///
     /// Returns:
-    ///
-    /// - Ok(T): The value read.
-    /// - Err(ErrorKind): In case of error.
+    /// * `Ok(T)`: The value read.
+    /// * `Err(ErrorKind)`: In case of error.
     fn read_int(&mut self) -> Result<T>;
 }
 
@@ -123,9 +122,8 @@ pub trait ILIntDataReader: Reader {
     /// Reads an **ILInt** value.
     ///
     /// Returns:
-    ///
-    /// - Ok(T): The value read. It is always a **u64**.
-    /// - Err(ErrorKind): In case of error.    
+    /// * `Ok(T)`: The value read. It is always a **u64**.
+    /// * `Err(ErrorKind)`: In case of error.    
     fn read_ilint(&mut self) -> Result<u64>;
 }
 
@@ -150,8 +148,8 @@ pub trait FloatDataReader<T>: Reader {
     ///
     /// Returns:
     ///
-    /// - Ok(T): The value read.
-    /// - Err(ErrorKind): In case of error.    
+    /// * `Ok(T)`: The value read.
+    /// * `Err(ErrorKind)`: In case of error.    
     fn read_float(&mut self) -> Result<T>;
 }
 
@@ -231,13 +229,12 @@ pub trait IntDataWriter<T>: Writer {
     /// Writes the value.
     ///
     /// Parameters:
-    ///
-    /// - `v`: The value to write.
+    /// * `v`: The value to write.
     ///
     /// Returns:
     ///
-    /// - Ok(()): On success.
-    /// - Err(ErrorKind): In case of error.
+    /// * `Ok(())`: On success.
+    /// * `Err(ErrorKind)`: In case of error.
     fn write_int(&mut self, v: T) -> Result<()>;
 }
 
@@ -298,13 +295,11 @@ pub trait ILIntDataWriter: Writer {
     /// Writes the value.
     ///
     /// Parameters:
-    ///
-    /// - `v`: The value to write.
+    /// * `v`: The value to write.
     ///
     /// Returns:
-    ///
-    /// - Ok(()): On success.
-    /// - Err(ErrorKind): In case of error.
+    /// * `Ok(())`: On success.
+    /// * `Err(ErrorKind)`: In case of error.
     fn write_ilint(&mut self, v: u64) -> Result<()>;
 }
 
@@ -328,13 +323,11 @@ pub trait FloatDataWriter<T>: Writer {
     /// Writes the value.
     ///
     /// Parameters:
-    ///
-    /// - `v`: The value to write.
+    /// * `v`: The value to write.
     ///
     /// Returns:
-    ///
-    /// - Ok(()): On success.
-    /// - Err(ErrorKind): In case of error.
+    /// * `Ok(())`: On success.
+    /// * `Err(ErrorKind)`: In case of error.
     fn write_float(&mut self, v: T) -> Result<()>;
 }
 
@@ -358,13 +351,11 @@ pub trait StringDataWriter {
     /// Writes the value.
     ///
     /// Parameters:
-    ///
-    /// - `v`: The value to write.
+    /// * `v`: The value to write.
     ///
     /// Returns:
-    ///
-    /// - Ok(()): On success.
-    /// - Err(ErrorKind): In case of error.
+    /// * `Ok(())`: On success.
+    /// * `Err(ErrorKind)`: In case of error.
     fn write_string(&mut self, value: &str) -> Result<()>;
 }
 

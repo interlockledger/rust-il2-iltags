@@ -40,7 +40,7 @@ use super::{ErrorKind, Reader, Result, Writer};
 mod tests;
 
 /// `ByteArrayReader` implements a [`Reader`] that
-/// can extract bytes from a slice of an array or vector.
+/// can extract bytes from a slice of bytes.
 ///
 /// [`Reader`]: ../trait.Reader.html
 pub struct ByteArrayReader<'a> {
@@ -100,8 +100,7 @@ impl<'a> Reader for ByteArrayReader<'a> {
 }
 
 /// `ByteArrayWriter` implements a [`Writer`] that
-/// can add bytes into a slice of an array or vector
-/// with fixed size.
+/// can add bytes into a slice of bytes.
 ///
 /// [`Writer`]: ../trait.Writer.html
 pub struct ByteArrayWriter<'a> {
