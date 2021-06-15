@@ -276,48 +276,6 @@ impl<'a, T: std::io::Read> Reader for ReadReader<'a, T> {
     }
 }
 
-/// This struct implements a [`Reader`] that uses a
-/// std::io::Read + std::io::Seek as the source of bytes.
-///
-/// [`Reader`]: trait.Reader.html
-pub struct ReadSeekReader<'a, T: std::io::Read + std::io::Seek> {
-    source: &'a mut T,
-}
-
-impl<'a, T: std::io::Read + std::io::Seek> ReadSeekReader<'a, T> {
-    /// Creates a new instance of ReadReader.
-    ///
-    /// Parameters:
-    /// * `src`: The source of bytes.
-    pub fn new(src: &'a mut T) -> ReadSeekReader<'a, T> {
-        ReadSeekReader { source: src }
-    }
-}
-
-impl<'a, T: std::io::Read + std::io::Seek> Reader for ReadSeekReader<'a, T> {
-    fn read(&mut self) -> Result<u8> {
-        let mut buff: [u8; 1] = [0; 1];
-        match self.source.read_exact(&mut buff) {
-            Ok(()) => Ok(buff[0]),
-            Err(e) => Err(ErrorKind::IOError(e)),
-        }
-    }
-
-    fn read_all(&mut self, buff: &mut [u8]) -> Result<()> {
-        match self.source.read_exact(buff) {
-            Ok(()) => Ok(()),
-            Err(e) => Err(ErrorKind::IOError(e)),
-        }
-    }
-
-    fn skip(&mut self, count: usize) -> Result<()> {
-        match self.source.seek(std::io::SeekFrom::Current(count as i64)) {
-            Ok(_) => Ok(()),
-            Err(e) => Err(ErrorKind::IOError(e)),
-        }
-    }
-}
-
 /// This struct implements a [`Writer`] that uses a
 /// `std::io::Write` as the destination of bytes.
 ///
