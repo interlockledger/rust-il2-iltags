@@ -29,11 +29,158 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+use super::*;
 
-/// Fills the an array with values from
-#[cfg(test)]
-pub fn fill_sample(src: &mut [u8]) {
-    for i in 0..src.len() {
-        src[i] = i as u8;
+struct DummyReader {
+    pub available: usize,
+    pub read_count: usize,
+}
+
+impl DummyReader {
+    pub fn new(available: usize) -> DummyReader {
+        DummyReader {
+            available: available,
+            read_count: 0,
+        }
+    }
+
+    pub fn get_read_count(&self) -> usize {
+        self.read_count
+    }
+}
+
+impl Reader for DummyReader {
+    fn read(&mut self) -> Result<u8> {
+        if self.available > 0 {
+            self.available -= 1;
+            let r = self.read_count as u8;
+            self.read_count += 1;
+            Ok(r as u8)
+        } else {
+            Err(ErrorKind::UnableToReadData)
+        }
+    }
+}
+
+//=============================================================================
+// LimitedReader
+//-----------------------------------------------------------------------------
+#[test]
+fn test_limitedreader_new() {
+    let mut reader = DummyReader::new(10);
+    let limited = LimitedReader::new(&mut reader, 10);
+
+    assert_eq!(limited.available(), 10)
+}
+
+#[test]
+fn test_limitedreader_can_read() {
+    let mut reader = DummyReader::new(10);
+    let limited = LimitedReader::new(&mut reader, 10);
+
+    for i in 0..11 {
+        assert!(limited.can_read(i).is_ok());
+    }
+    match limited.can_read(11) {
+        Err(ErrorKind::UnableToReadData) => (),
+        _ => panic!("Unexpected response."),
+    }
+}
+
+#[test]
+fn test_limitedreader_available() {
+    let mut reader = DummyReader::new(10);
+
+    for i in 0..10 {
+        let limited = LimitedReader::new(&mut reader, i);
+        assert_eq!(limited.available(), i)
+    }
+}
+
+#[test]
+fn test_limitedreader_goto_end() {
+    for i in 0..10 {
+        let mut reader = DummyReader::new(10);
+        let mut limited = LimitedReader::new(&mut reader, i);
+        assert_eq!(limited.available(), i);
+        assert!(limited.goto_end().is_ok());
+        assert_eq!(limited.available(), 0);
+        assert_eq!(reader.get_read_count(), i);
+    }
+
+    let mut reader = DummyReader::new(10);
+    let mut limited = LimitedReader::new(&mut reader, 11);
+    match limited.goto_end() {
+        Err(ErrorKind::UnableToReadData) => (),
+        _ => panic!("Unexpected response."),
+    }
+    assert_eq!(limited.available(), 11);
+    assert_eq!(reader.get_read_count(), 10);
+}
+
+#[test]
+fn test_limitedreader_read() {
+    let mut reader = DummyReader::new(10);
+
+    {
+        let mut limited = LimitedReader::new(&mut reader, 5);
+        for i in 0..5 {
+            match limited.read() {
+                Ok(v) => assert_eq!(v, i),
+                _ => panic!("Unexpected error"),
+            }
+        }
+        match limited.read() {
+            Err(ErrorKind::UnableToReadData) => (),
+            _ => panic!("Unexpected error"),
+        }
+    }
+    assert_eq!(reader.get_read_count(), 5);
+}
+
+fn assert_sequence(value: &[u8], expected_size: usize) {
+    assert_eq!(value.len(), expected_size);
+    if value.len() > 0 {
+        let mut i = 0;
+        for x in value {
+            assert_eq!(*x, i as u8);
+            i += 1
+        }
+    }
+}
+
+#[test]
+fn test_limitedreader_read_all() {
+    let mut buff: [u8; 10] = [0; 10];
+
+    let mut reader = DummyReader::new(10);
+    let mut limited = LimitedReader::new(&mut reader, 5);
+    match limited.read_all(&mut buff[0..0]) {
+        Ok(()) => assert_sequence(&buff[0..0], 0),
+        _ => panic!("Unexpected error"),
+    }
+    match limited.read_all(&mut buff[0..1]) {
+        Ok(()) => assert_sequence(&buff[0..1], 1),
+        _ => panic!("Unexpected error"),
+    }
+    match limited.read_all(&mut buff[1..4]) {
+        Ok(()) => assert_sequence(&buff[0..4], 4),
+        _ => panic!("Unexpected error"),
+    }
+    match limited.read_all(&mut buff[4..6]) {
+        Err(ErrorKind::UnableToReadData) => (),
+        _ => panic!("Unexpected error"),
+    }
+    match limited.read_all(&mut buff[4..5]) {
+        Ok(()) => assert_sequence(&buff[0..5], 5),
+        _ => panic!("Unexpected error"),
+    }
+    match limited.read_all(&mut buff[0..0]) {
+        Ok(()) => assert_sequence(&buff[0..5], 5),
+        _ => panic!("Unexpected error"),
+    }
+    match limited.read_all(&mut buff[0..1]) {
+        Err(ErrorKind::UnableToReadData) => (),
+        _ => panic!("Unexpected error"),
     }
 }

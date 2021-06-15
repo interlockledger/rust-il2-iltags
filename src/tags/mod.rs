@@ -55,7 +55,7 @@ pub const IMPLICIT_ID_MAX: u64 = 0x0F;
 pub const RESERVED_ID_MAX: u64 = 0x1F;
 
 /// Verifies if a given tag id represents an implicit tag.
-/// 
+///
 /// Arguments:
 ///
 /// * `id`: The tag id to be verified;
@@ -69,7 +69,7 @@ pub fn is_implicit_tag(id: u64) -> bool {
 }
 
 /// Verifies if a given tag id represents a reserved tag.
-/// 
+///
 /// Arguments:
 ///
 /// * `id`: The tag id to be verified;
@@ -116,7 +116,7 @@ pub trait ILTag: ILTagAsAny {
     }
 
     /// Serializes the payload of this tag.
-    /// 
+    ///
     /// Arguments:
     ///
     /// * `writer`: The writer that will receive the encoded value;
@@ -129,7 +129,7 @@ pub trait ILTag: ILTagAsAny {
     fn serialize_value(&self, writer: &mut dyn DataWriter) -> Result<()>;
 
     /// Serializes this tag.
-    /// 
+    ///
     /// Arguments:
     ///
     /// * `writer`: The writer that will receive the encoded value;
@@ -218,7 +218,7 @@ pub struct RawTag {
 
 impl RawTag {
     /// Creates a new instance of this struct.
-    /// 
+    ///
     /// Arguments:
     ///
     /// * `id`: The tag id;

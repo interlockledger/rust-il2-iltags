@@ -34,6 +34,8 @@ pub mod array;
 pub mod data;
 
 #[cfg(test)]
+mod test_utils;
+#[cfg(test)]
 mod tests;
 
 pub use array::*;
@@ -70,6 +72,10 @@ pub trait Reader {
     fn read(&mut self) -> Result<u8>;
 
     /// Reads some bytes from the source.
+    ///
+    /// The default implementation just calls read() repeatedly,
+    /// so each implementation is advised to provide a better
+    /// implementation of this method if possible.
     ///
     /// Arguments:
     /// * `buff`: The output buffer;
@@ -112,7 +118,7 @@ pub trait Reader {
 /// Implementations of this trait are not required to be thread-safe.
 pub trait Writer {
     /// Writes a single byte.
-    /// 
+    ///
     /// Arguments:
     /// * `value`: The value to be written;
     ///
@@ -121,8 +127,11 @@ pub trait Writer {
     /// * `Err(ErrorKind)`: In case of error;
     fn write(&mut self, value: u8) -> Result<()>;
 
-    /// Writes a byte slice.
-    /// 
+    /// Writes a byte slice. As this default implementation
+    /// calls `write()` multiple times, so it is strongly recommended
+    /// that each implementation provides a more efficient version for
+    /// this method if possible.
+    ///
     /// Arguments:
     /// * `buff`: The value to be written;
     ///
@@ -141,9 +150,9 @@ pub trait Writer {
 /// [`Reader`] but defines a limited to the amount of bytes that can be
 /// extracted from it.
 ///
-/// It is important to notice that LimitedReader will test the
-/// limits prior to the attempt to read the data, thus, failed
-/// attempts will not move the read cursor.
+/// It is important to notice that `LimitedReader` will test the
+/// limits prior to the attempt to read the data, thus failed
+/// attempts will not consume data from the inner reader.
 ///
 /// [`Reader`]: trait.Reader.html
 pub struct LimitedReader<'a> {
@@ -173,22 +182,24 @@ impl<'a> LimitedReader<'a> {
     /// Returns:
     /// * `Ok(())`: On success.
     /// * `Err(ErrorKind)`: If the specified number of bytes is not available.
-    pub fn can_read(&mut self, size: usize) -> Result<()> {
-        if size < self.available {
-            Ok(())
-        } else {
+    pub fn can_read(&self, size: usize) -> Result<()> {
+        if size > self.available {
             Err(ErrorKind::UnableToReadData)
+        } else {
+            Ok(())
         }
     }
 
     /// Returns the number of available bytes.
+    ///
     /// Returns:
     /// * The number of available bytes.
     pub fn available(&self) -> usize {
         self.available
     }
 
-    /// Skips the required number of bytes
+    /// Skips the required number of bytes required to achive the end
+    /// of the specified limit.
     ///
     /// Returns:
     /// * `Ok(())`: On success.
