@@ -187,6 +187,63 @@ fn test_decoded_size() {
 }
 
 #[test]
+fn test_decode_body() {
+    for sample in &SAMPLE_VALUES {
+        let enc_size = sample.encoded_size;
+        if enc_size > 1 {
+            match decode_body(&sample.encoded[1..enc_size]) {
+                Ok(v) => {
+                    assert_eq!(v, sample.value);
+                }
+                _ => panic!(),
+            }
+        }
+    }
+
+    let sample: [u8; 9] = [0; 9];
+    match decode_body(&sample[0..0]) {
+        Err(ErrorKind::InvalidFormat) => (),
+        _ => panic!(),
+    }
+    match decode_body(&sample) {
+        Err(ErrorKind::InvalidFormat) => (),
+        _ => panic!(),
+    }
+}
+
+#[test]
+fn test_decode_from_bytes() {
+    for sample in &SAMPLE_VALUES {
+        match decode_from_bytes(&sample.encoded) {
+            Ok((v, size)) => {
+                assert_eq!(v, sample.value);
+                assert_eq!(size, sample.encoded_size);
+            }
+            _ => panic!(),
+        }
+        match decode_from_bytes(&sample.encoded[0..sample.encoded_size]) {
+            Ok((v, size)) => {
+                assert_eq!(v, sample.value);
+                assert_eq!(size, sample.encoded_size);
+            }
+            _ => panic!(),
+        }
+        if sample.encoded_size > 1 {
+            match decode_from_bytes(&sample.encoded[0..sample.encoded_size - 1]) {
+                Err(ErrorKind::InvalidFormat) => (),
+                _ => panic!(),
+            }
+        }
+    }
+
+    let sample: [u8; 0] = [0; 0];
+    match decode_from_bytes(&sample) {
+        Err(ErrorKind::InvalidFormat) => (),
+        _ => panic!(),
+    }
+}
+
+#[test]
 fn test_decode() {
     // All with 1 byte
     for i in 0..0xF8 {

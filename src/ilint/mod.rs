@@ -45,6 +45,7 @@ use super::io::{Reader, Writer};
 pub enum ErrorKind {
     /// The encoded value is larger than 2^64 - 1.
     ValueOverflow,
+    InvalidFormat,
     /// I/O error.
     IOError(crate::io::ErrorKind),
 }
@@ -141,6 +142,59 @@ pub fn decoded_size(header: u8) -> usize {
     }
 }
 
+/// Decodes the body of a multi-byte ILInt.
+///
+/// Arguments:
+/// * `body`: The multibyte
+///
+/// Returns:
+///
+/// * `Ok(u64)`: The value of the ILInt.
+/// * `Err(ErrorKind)`: In case of error.
+pub fn decode_body(body: &[u8]) -> Result<u64> {
+    let mut v: u64 = 0;
+
+    if body.is_empty() || body.len() > 8 {
+        Err(ErrorKind::InvalidFormat)
+    } else {
+        for x in body {
+            v = (v << 8) + (*x as u64);
+        }
+        if v > 0xFFFF_FFFF_FFFF_FF07 {
+            Err(ErrorKind::ValueOverflow)
+        } else {
+            Ok(v + ILINT_BASE_U64)
+        }
+    }
+}
+
+/// Decodes an ILInt from a byte slice.
+///
+/// Arguments:
+/// * `value`: The ILInt value.
+///
+/// Returns:
+///
+/// * `Ok((u64,usize))`: The value of the ILInt and the number of bytes used.
+/// * `Err(ErrorKind)`: In case of error.
+pub fn decode_from_bytes(value: &[u8]) -> Result<(u64, usize)> {
+    if value.is_empty() {
+        Err(ErrorKind::InvalidFormat)
+    } else {
+        let size = decoded_size(value[0]);
+        if size == 1 {
+            Ok((value[0] as u64, size))
+        } else if value.len() < size {
+            Err(ErrorKind::InvalidFormat)
+        } else {
+            match decode_body(&value[1..size]) {
+                Ok(v) => Ok((v, size)),
+                Err(x) => Err(x),
+            }
+        }
+    }
+}
+
 /// Decodes an ILInt value.
 ///
 /// Arguments:
@@ -158,23 +212,15 @@ pub fn decode(reader: &mut dyn Reader) -> Result<u64> {
         Ok(v) => v,
         Err(e) => return Err(ErrorKind::IOError(e)),
     };
-
     let size = decoded_size(header);
     if size == 1 {
         Ok(header as u64)
     } else {
-        let mut v: u64 = 0;
-        for _i in 1..size {
-            let r = match reader.read() {
-                Ok(v) => v,
-                Err(e) => return Err(ErrorKind::IOError(e)),
-            };
-            v = (v << 8) + (r as u64);
+        let mut tmp: [u8; 8] = [0; 8];
+        match reader.read_all(&mut tmp[0..size - 1]) {
+            Ok(()) => (),
+            Err(e) => return Err(ErrorKind::IOError(e)),
         }
-        if v > 0xFFFF_FFFF_FFFF_FF07 {
-            Err(ErrorKind::ValueOverflow)
-        } else {
-            Ok(v + ILINT_BASE_U64)
-        }
+        decode_body(&tmp[0..size - 1])
     }
 }
