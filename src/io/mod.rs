@@ -92,9 +92,9 @@ pub trait Reader {
 
     /// Skips some bytes from the source.
     ///
-    /// The default implementation just calls read() repeatedly,
-    /// so each implementation is advised to provide a better
-    /// implementation of this method if possible.
+    /// The default implementation just calls read_all() repeatedly
+    /// using 512 byte chunks. So it is recommended provide better
+    /// implementations whenever possible.
     ///
     /// Arguments:
     /// * `count`: Number of byte to skip;
@@ -103,8 +103,12 @@ pub trait Reader {
     /// * `Ok(())`: On success;
     /// * `Err(ErrorKind)`: In case of error;
     fn skip(&mut self, count: usize) -> Result<()> {
-        for _i in 0..count {
-            self.read()?;
+        let mut buff: [u8; 512] = [0; 512];
+        let mut r = count;
+        while r > 0 {
+            let chunk = std::cmp::min(r, buff.len());
+            self.read_all(&mut buff[0..chunk])?;
+            r -= chunk;
         }
         Ok(())
     }
