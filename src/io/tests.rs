@@ -29,6 +29,7 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+use super::test_utils::fill_sample;
 use super::*;
 
 struct DummyReader {
@@ -184,3 +185,90 @@ fn test_limitedreader_read_all() {
         _ => panic!("Unexpected error"),
     }
 }
+
+//=============================================================================
+// ReadReader
+//-----------------------------------------------------------------------------
+#[test]
+fn test_readreader_new() {
+    let mut sample: [u8; 10] = [0; 10];
+    fill_sample(&mut sample);
+    let mut buff: Vec<u8> = Vec::new();
+    buff.extend(sample.iter());
+    let mut mem_reader = std::io::Cursor::new(buff);
+
+    let mut reader = ReadReader::new(&mut mem_reader);
+    match reader.read() {
+        Ok(v) => assert_eq!(v, 0),
+        _ => panic!("Unexpected error!"),
+    }
+}
+
+#[test]
+fn test_readreader_read() {
+    let mut sample: [u8; 10] = [0; 10];
+    fill_sample(&mut sample);
+    let mut buff: Vec<u8> = Vec::new();
+    buff.extend(sample.iter());
+    let mut mem_reader = std::io::Cursor::new(buff);
+
+    let mut reader = ReadReader::new(&mut mem_reader);
+    for i in 0..10 {
+        match reader.read() {
+            Ok(v) => assert_eq!(v, i as u8),
+            _ => panic!("Unexpected error!"),
+        }
+    }
+    match reader.read() {
+        Err(ErrorKind::IOError(_)) => (),
+        _ => panic!("Unexpected error!"),
+    }
+}
+
+#[test]
+fn test_readreader_read_all() {
+    let mut sample: [u8; 10] = [0; 10];
+    fill_sample(&mut sample);
+    let mut buff: Vec<u8> = Vec::new();
+    buff.extend(sample.iter());
+    let mut mem_reader = std::io::Cursor::new(buff);
+
+    let mut read_buff: [u8; 15] = [0; 15];
+    let mut reader = ReadReader::new(&mut mem_reader);
+    match reader.read_all(&mut read_buff[0..0]) {
+        Ok(()) => (),
+        _ => panic!("Unexpected error!"),
+    }
+    match reader.read_all(&mut read_buff[0..5]) {
+        Ok(()) => assert_sequence(&read_buff[0..5], 5),
+        _ => panic!("Unexpected error!"),
+    }
+    match reader.read_all(&mut read_buff[5..9]) {
+        Ok(()) => assert_sequence(&read_buff[0..9], 9),
+        _ => panic!("Unexpected error!"),
+    }
+    match reader.read_all(&mut read_buff[9..11]) {
+        Err(ErrorKind::IOError(_)) => (),
+        _ => panic!("Unexpected error!"),
+    }
+    match reader.read_all(&mut read_buff[9..10]) {
+        Ok(()) => assert_sequence(&read_buff[0..10], 10),
+        _ => panic!("Unexpected error!"),
+    }
+    match reader.read_all(&mut read_buff[0..0]) {
+        Ok(()) => (),
+        _ => panic!("Unexpected error!"),
+    }
+    match reader.read_all(&mut read_buff[0..1]) {
+        Err(ErrorKind::IOError(_)) => (),
+        _ => panic!("Unexpected error!"),
+    }
+}
+
+//=============================================================================
+// ReadSeekReader
+//-----------------------------------------------------------------------------
+
+//=============================================================================
+// WriteWriter
+//-----------------------------------------------------------------------------
