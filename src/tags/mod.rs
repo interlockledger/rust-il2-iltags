@@ -31,10 +31,13 @@
  */
 //! This module contains the implementation of the **IL2 ILTags** standard.
 pub mod std;
+#[cfg(test)]
+mod tests;
 
 use crate::ilint::encoded_size;
 use crate::io::data::{DataReader, DataWriter};
 use ::std::any::Any;
+use ::std::collections::HashMap;
 
 /// Definition of the errors from this package.
 pub enum ErrorKind {
@@ -65,7 +68,7 @@ pub const RESERVED_ID_MAX: u64 = 0x1F;
 /// * true if the tag id is implicit or false otherwise.
 ///
 pub fn is_implicit_tag(id: u64) -> bool {
-    id < IMPLICIT_ID_MAX
+    id <= IMPLICIT_ID_MAX
 }
 
 /// Verifies if a given tag id represents a reserved tag.
@@ -79,17 +82,10 @@ pub fn is_implicit_tag(id: u64) -> bool {
 /// * true if the tag id is reserved or false otherwise.
 ///
 pub fn is_reserved_tag(id: u64) -> bool {
-    id < RESERVED_ID_MAX
+    id <= RESERVED_ID_MAX
 }
 
-/// This trait defines the ability to convert
-pub trait ILTagAsAny: Any {
-    fn as_any(&self) -> &dyn Any;
-
-    fn as_mut_any(&mut self) -> &mut dyn Any;
-}
-
-pub trait ILTag: ILTagAsAny {
+pub trait ILTag: Any {
     /// Returns the ID of the tag.
     fn id(&self) -> u64;
 
@@ -103,16 +99,16 @@ pub trait ILTag: ILTagAsAny {
         is_reserved_tag(self.id())
     }
 
-    /// Retuns the size of the payload in bytes.
-    fn payload_size(&self) -> usize;
+    /// Retuns the size of the serialized value in bytes.
+    fn value_size(&self) -> usize;
 
     /// Returns the total size of the tag in bytes.
     fn size(&self) -> usize {
         let mut size: usize = encoded_size(self.id());
         if !self.is_implicity() {
-            size += encoded_size(self.payload_size() as u64);
+            size += encoded_size(self.value_size() as u64);
         }
-        size + self.payload_size()
+        size + self.value_size()
     }
 
     /// Serializes the payload of this tag.
@@ -145,7 +141,7 @@ pub trait ILTag: ILTagAsAny {
             Err(e) => return Err(ErrorKind::IOError(e)),
         }
         if !self.is_implicity() {
-            match writer.write_ilint(self.payload_size() as u64) {
+            match writer.write_ilint(self.value_size() as u64) {
                 Ok(()) => (),
                 Err(e) => return Err(ErrorKind::IOError(e)),
             }
@@ -153,66 +149,142 @@ pub trait ILTag: ILTagAsAny {
         self.serialize_value(writer)
     }
 
+    /// Deserializes the value.
+    ///
+    /// Arguments:
+    ///
+    /// * `factory`: The current tag factory. It is used to create new inner tags if necessary.
+    /// * `value_size`: Size of the value in bytes;
+    /// * `reader`: The tag reader to be used;
+    ///
+    /// Returns:
+    ///
+    /// * `Ok()`: On success.
+    /// * `Err(())`: If the buffer is too small to hold the encoded value.
     fn deserialize_value(
         &mut self,
         factory: &dyn ILTagFactory,
-        reader: &mut dyn DataReader,
-    ) -> Result<()> {
-        if self.is_implicity() {
-            panic!("The default implementation does not support implicity values.")
-        }
-        let size = match reader.read_ilint() {
-            Ok(v) => v,
-            Err(e) => return Err(ErrorKind::IOError(e)),
-        };
-        self.deserialize_value_core(factory, size as usize, reader)
-    }
-
-    fn deserialize_value_core(
-        &mut self,
-        factory: &dyn ILTagFactory,
-        payload_size: usize,
+        value_size: usize,
         reader: &mut dyn DataReader,
     ) -> Result<()>;
+
+    /// Returns a reference as Any.
+    fn as_any(&self) -> &dyn Any;
+
+    /// Returns a mutable reference as Any.
+    fn as_mut_any(&mut self) -> &mut dyn Any;
 }
 
+/// Downcasts a ILTag trait to its concrete type.
+///
+/// Arguments:
+/// * `tag`: The tag to be downcast;
+///
+/// Returns:
+/// An option with a reference to the concrete type or None if
+/// the conversion is not possible.
+pub fn tag_downcast_ref<T: ILTag + Any>(tag: &dyn ILTag) -> Option<&T> {
+    tag.as_any().downcast_ref::<T>()
+}
+
+/// Downcasts a ILTag trait to its concrete type as a mutable reference.
+///
+/// Arguments:
+/// * `tag`: The tag to be downcast;
+///
+/// Returns:
+/// An option with a reference to the concrete type or None if
+/// the conversion is not possible.
+pub fn tag_downcast_mut<T: ILTag + Any>(tag: &mut dyn ILTag) -> Option<&mut T> {
+    tag.as_mut_any().downcast_mut::<T>()
+}
+
+/// This trait must be implemented by all tag creators.
+pub trait ILTagCreator {
+    /// Creates a new boxed instance of the the class.
+    ///
+    /// Arguments:
+    ///
+    /// * `tag_id`: The tag id.
+    ///
+    /// Returns:
+    /// * `Box<dyn ILTag>`: The new empty boxed tag.
+    fn create_empty_tag(&self, tag_id: u64) -> Box<dyn ILTag>;
+}
+
+/// This struct implements an engine that maps the ILTagCreators
+/// to the associated tag ID.
+pub struct ILTagCreatorEngine {
+    creators: HashMap<u64, Box<dyn ILTagCreator>>,
+    strict: bool,
+}
+
+impl ILTagCreatorEngine {
+    /// Creates a new instance of the ILTagCreatorEngine.
+    ///
+    /// Arguments:
+    /// * `strict`: Strict mode. If false, unknown tags will be mapped to RawTag
+    /// instances.
+    pub fn new(strict: bool) -> ILTagCreatorEngine {
+        ILTagCreatorEngine {
+            creators: HashMap::new(),
+            strict: strict,
+        }
+    }
+
+    /// Registers a new ILTagCreator.
+    ///
+    /// Arguments:
+    /// * `tag_id`: The tag id;
+    /// * `creator`: The new creator;
+    ///
+    /// Returns:
+    /// * `Some<Box<dyn ILTagCreator>>`: The previously registered creator for the specified id;
+    /// * `None`: If the id is not associated with a new creator;
+    pub fn register(
+        &mut self,
+        tag_id: u64,
+        creator: Box<dyn ILTagCreator>,
+    ) -> Option<Box<dyn ILTagCreator>> {
+        self.creators.insert(tag_id, creator)
+    }
+
+    /// Creates a new empty tag for the given id. It uses the registered creators
+    /// to perform the operation.
+    ///
+    /// Arguments:
+    /// * `tag_id`: The tag id;
+    ///
+    /// Returns:
+    /// * `Some<Box<dyn ILTag>>`: The new empty tag instance;
+    /// * `None`: If the tag id is unknown (only if strict mode is enabled);
+    pub fn create_tag(&self, tag_id: u64) -> Option<Box<dyn ILTag>> {
+        match self.creators.get(&tag_id) {
+            Some(c) => Some(c.create_empty_tag(tag_id)),
+            None => {
+                if self.strict {
+                    Some(Box::new(RawTag::new(tag_id)))
+                } else {
+                    None
+                }
+            }
+        }
+    }
+}
+
+/// This trait must be implemented by all tag factories.
 pub trait ILTagFactory {
     fn as_ref(&self) -> &dyn ILTagFactory;
 
     fn create_tag(&self, tag_id: u64) -> Option<Box<dyn ILTag>>;
 
-    fn deserialize(&self, reader: &mut dyn DataReader) -> Result<Box<dyn ILTag>> {
-        let tag_id = match reader.read_ilint() {
-            Ok(v) => v,
-            Err(e) => return Err(ErrorKind::IOError(e)),
-        };
-        let mut tag = match self.create_tag(tag_id) {
-            Some(v) => v,
-            _ => return Err(ErrorKind::UnknownTag),
-        };
-        match tag.deserialize_value(self.as_ref(), reader) {
-            Ok(()) => Ok(tag),
-            Err(e) => Err(e),
-        }
-    }
+    fn deserialize(&self, reader: &mut dyn DataReader) -> Result<Box<dyn ILTag>>;
 }
 
-impl<T: ILTag> ILTagAsAny for T {
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
-    fn as_mut_any(&mut self) -> &mut dyn Any {
-        self
-    }
-}
-
-/// This struct implements a raw tag. It can be used
-/// to store any non implicity tag.
+/// This struct implements a raw tag. It can be used to store any non
+/// explicit tag.
 pub struct RawTag {
-    /// Id of the tag.
     id: u64,
-    /// The payload.
     payload: Vec<u8>,
 }
 
@@ -220,22 +292,31 @@ impl RawTag {
     /// Creates a new instance of this struct.
     ///
     /// Arguments:
-    ///
     /// * `id`: The tag id;
     ///
     /// Returns:
-    ///
-    /// * `Ok(value)`: The new instace of the raw tag.
-    /// * `Err(ErrorKind::UnsupportedTag)`: If the tag id is unsupported.
-    pub fn new(id: u64) -> Result<RawTag> {
-        if is_implicit_tag(id) {
-            Err(ErrorKind::UnsupportedTag)
-        } else {
-            Ok(RawTag {
-                id,
-                payload: Vec::new(),
-            })
+    /// * The new instance of RawTag.
+    pub fn new(id: u64) -> RawTag {
+        assert!(!is_implicit_tag(id));
+        RawTag {
+            id,
+            payload: Vec::new(),
         }
+    }
+
+    /// Initializes a new RawTag with an initial value.
+    ///
+    /// Arguments:
+    /// * `id`: The tag id;
+    /// * `value`: A byte slice with the initial value;
+    ///
+    /// Returns:
+    /// * The new instance of RawTag.
+    pub fn with_value(id: u64, value: &[u8]) -> RawTag {
+        assert!(!is_implicit_tag(id));
+        let mut v: Vec<u8> = Vec::with_capacity(value.len());
+        v.extend_from_slice(value);
+        RawTag { id, payload: v }
     }
 
     /// Returns an immutable reference to the payload.
@@ -253,7 +334,7 @@ impl ILTag for RawTag {
     fn id(&self) -> u64 {
         self.id
     }
-    fn payload_size(&self) -> usize {
+    fn value_size(&self) -> usize {
         self.payload.len()
     }
 
@@ -264,17 +345,24 @@ impl ILTag for RawTag {
         }
     }
 
-    fn deserialize_value_core(
+    fn deserialize_value(
         &mut self,
         _factory: &dyn ILTagFactory,
-        payload_size: usize,
+        value_size: usize,
         reader: &mut dyn DataReader,
     ) -> Result<()> {
-        self.get_mut_payload()
-            .resize_with(payload_size, Default::default);
+        self.payload.resize(value_size, 0);
         match reader.read_all(self.payload.as_mut_slice()) {
             Ok(()) => Ok(()),
-            Err(e) => Err(ErrorKind::IOError(e)),
+            Err(x) => Err(ErrorKind::IOError(x)),
         }
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn as_mut_any(&mut self) -> &mut dyn Any {
+        self
     }
 }
