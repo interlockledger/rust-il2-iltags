@@ -31,8 +31,8 @@
  */
 //! This module implements extension traits for Reader and Writer that
 //! allows the manipulation of basic data types.
-#[cfg(test)]
-mod tests;
+//#[cfg(test)]
+//mod tests;
 
 use super::{ErrorKind, Reader, Result, Writer};
 use crate::ilint::{decode, encode};
@@ -43,7 +43,7 @@ use crate::ilint::{decode, encode};
 /// are always encoded in big endian format.
 ///
 /// [`Reader`]: ../trait.Reader.html
-pub trait IntDataReader<T>: Reader {
+pub trait IntDataReader<'a, T> {
     /// Reads an integer of type `T` from the Reader
     ///
     /// Returns:
@@ -62,31 +62,31 @@ macro_rules! data_reader_read_be_bytes {
     }};
 }
 
-impl<R: Reader> IntDataReader<u8> for R {
+impl<'a> IntDataReader<'a, u8> for dyn Reader<'a> {
     fn read_int(&mut self) -> Result<u8> {
         self.read()
     }
 }
 
-impl<R: Reader> IntDataReader<u16> for R {
+impl<'a> IntDataReader<'a, u16> for dyn Reader<'a> {
     fn read_int(&mut self) -> Result<u16> {
         data_reader_read_be_bytes!(self, u16)
     }
 }
 
-impl<R: Reader> IntDataReader<u32> for R {
+impl<'a> IntDataReader<'a, u32> for dyn Reader<'a> {
     fn read_int(&mut self) -> Result<u32> {
         data_reader_read_be_bytes!(self, u32)
     }
 }
 
-impl<R: Reader> IntDataReader<u64> for R {
+impl<'a> IntDataReader<'a, u64> for dyn Reader<'a> {
     fn read_int(&mut self) -> Result<u64> {
         data_reader_read_be_bytes!(self, u64)
     }
 }
 
-impl<R: Reader> IntDataReader<i8> for R {
+impl<'a> IntDataReader<'a, i8> for dyn Reader<'a> {
     fn read_int(&mut self) -> Result<i8> {
         match self.read() {
             Ok(v) => Ok(v as i8),
@@ -95,19 +95,19 @@ impl<R: Reader> IntDataReader<i8> for R {
     }
 }
 
-impl<R: Reader> IntDataReader<i16> for R {
+impl<'a> IntDataReader<'a, i16> for dyn Reader<'a> {
     fn read_int(&mut self) -> Result<i16> {
         data_reader_read_be_bytes!(self, i16)
     }
 }
 
-impl<R: Reader> IntDataReader<i32> for R {
+impl<'a> IntDataReader<'a, i32> for dyn Reader<'a> {
     fn read_int(&mut self) -> Result<i32> {
         data_reader_read_be_bytes!(self, i32)
     }
 }
 
-impl<R: Reader> IntDataReader<i64> for R {
+impl<'a> IntDataReader<'a, i64> for dyn Reader<'a> {
     fn read_int(&mut self) -> Result<i64> {
         data_reader_read_be_bytes!(self, i64)
     }
@@ -118,7 +118,7 @@ impl<R: Reader> IntDataReader<i64> for R {
 /// from a [`Reader`].
 ///
 /// [`Reader`]: ../trait.Reader.html
-pub trait ILIntDataReader: Reader {
+pub trait ILIntDataReader<'a> {
     /// Reads an **ILInt** value.
     ///
     /// Returns:
@@ -127,7 +127,7 @@ pub trait ILIntDataReader: Reader {
     fn read_ilint(&mut self) -> Result<u64>;
 }
 
-impl<R: Reader> ILIntDataReader for R {
+impl<'a> ILIntDataReader<'a> for dyn Reader<'a> {
     fn read_ilint(&mut self) -> Result<u64> {
         match decode(self) {
             Ok(value) => Ok(value),
@@ -143,7 +143,7 @@ impl<R: Reader> ILIntDataReader for R {
 /// are always encoded in big endian IEEE 754-2008.
 ///
 /// [`Reader`]: ../trait.Reader.html
-pub trait FloatDataReader<T>: Reader {
+pub trait FloatDataReader<'a, T> {
     /// Reads an float value.
     ///
     /// Returns:
@@ -153,14 +153,14 @@ pub trait FloatDataReader<T>: Reader {
     fn read_float(&mut self) -> Result<T>;
 }
 
-impl<T: IntDataReader<u32>> FloatDataReader<f32> for T {
+impl<'a> FloatDataReader<'a, f32> for dyn Reader<'a> {
     fn read_float(&mut self) -> Result<f32> {
         let tmp: u32 = self.read_int()?;
         Ok(f32::from_bits(tmp))
     }
 }
 
-impl<T: IntDataReader<u64>> FloatDataReader<f64> for T {
+impl<'a> FloatDataReader<'a, f64> for dyn Reader<'a> {
     fn read_float(&mut self) -> Result<f64> {
         let tmp: u64 = self.read_int()?;
         Ok(f64::from_bits(tmp))
@@ -171,7 +171,11 @@ impl<T: IntDataReader<u64>> FloatDataReader<f64> for T {
 /// ability to extract UTF-8 strings from a [`Reader`].
 ///
 /// [`Reader`]: ../trait.Reader.html
-pub trait StringDataReader: Reader {
+pub trait StringDataReader<'a> {
+    fn read_string(&mut self, size: usize) -> Result<String>;
+}
+
+impl<'a> StringDataReader<'a> for dyn Reader<'a> {
     fn read_string(&mut self, size: usize) -> Result<String> {
         let mut tmp: Vec<u8> = vec![0; size];
         self.read_all(tmp.as_mut_slice())?;
@@ -182,8 +186,6 @@ pub trait StringDataReader: Reader {
     }
 }
 
-impl<T: Reader> StringDataReader for T {}
-
 /// The `DataReader` trait defines the combined ability
 /// to read signed and unsigned integer, floating point values.
 /// ILInt values and strings from a [`Reader`].
@@ -193,23 +195,24 @@ impl<T: Reader> StringDataReader for T {}
 /// qualified name such as ``DataReader::<u8>::read_int(r)``.
 ///
 /// [`Reader`]: ../trait.Reader.html
-pub trait DataReader:
-    IntDataReader<u8>
-    + IntDataReader<u16>
-    + IntDataReader<u32>
-    + IntDataReader<u64>
-    + IntDataReader<i8>
-    + IntDataReader<i16>
-    + IntDataReader<i32>
-    + IntDataReader<i64>
-    + FloatDataReader<f32>
-    + FloatDataReader<f64>
-    + ILIntDataReader
-    + StringDataReader
+pub trait DataReader<'a>:
+    Reader<'a>
+    + IntDataReader<'a, u8>
+    + IntDataReader<'a, u16>
+    + IntDataReader<'a, u32>
+    + IntDataReader<'a, u64>
+    + IntDataReader<'a, i8>
+    + IntDataReader<'a, i16>
+    + IntDataReader<'a, i32>
+    + IntDataReader<'a, i64>
+    + FloatDataReader<'a, f32>
+    + FloatDataReader<'a, f64>
+    + ILIntDataReader<'a>
+    + StringDataReader<'a>
 {
 }
 
-impl<T: Reader> DataReader for T {}
+impl<'a> DataReader<'a> for dyn Reader<'a> {}
 
 /// This macro defines the core implementation of
 /// IntDataWriter.write_int().
@@ -225,7 +228,7 @@ macro_rules! data_writer_write_be_bytes {
 /// are always encoded in big endian format.
 ///
 /// [`Writer`]: ../trait.Writer.html
-pub trait IntDataWriter<T>: Writer {
+pub trait IntDataWriter<'a, T> {
     /// Writes the value.
     ///
     /// Parameters:
@@ -235,54 +238,54 @@ pub trait IntDataWriter<T>: Writer {
     ///
     /// * `Ok(())`: On success.
     /// * `Err(ErrorKind)`: In case of error.
-    fn write_int(&mut self, v: T) -> Result<()>;
+    fn write_int(&self, v: T, writer: &mut dyn Writer) -> Result<()>;
 }
 
-impl<T: Writer> IntDataWriter<u8> for T {
-    fn write_int(&mut self, v: u8) -> Result<()> {
-        self.write(v)
+impl<'a> IntDataWriter<'a, u8> for () {
+    fn write_int(&self, v: u8, writer: &mut dyn Writer) -> Result<()> {
+        writer.write(v)
     }
 }
 
-impl<T: Writer> IntDataWriter<u16> for T {
-    fn write_int(&mut self, v: u16) -> Result<()> {
-        data_writer_write_be_bytes!(self, v)
+impl<'a> IntDataWriter<'a, u16> for () {
+    fn write_int(&self, v: u16, writer: &mut dyn Writer) -> Result<()> {
+        data_writer_write_be_bytes!(writer, v)
     }
 }
 
-impl<T: Writer> IntDataWriter<u32> for T {
-    fn write_int(&mut self, v: u32) -> Result<()> {
-        data_writer_write_be_bytes!(self, v)
+impl<'a> IntDataWriter<'a, u32> for () {
+    fn write_int(&self, v: u32, writer: &mut dyn Writer) -> Result<()> {
+        data_writer_write_be_bytes!(writer, v)
     }
 }
 
-impl<T: Writer> IntDataWriter<u64> for T {
-    fn write_int(&mut self, v: u64) -> Result<()> {
-        data_writer_write_be_bytes!(self, v)
+impl<'a> IntDataWriter<'a, u64> for () {
+    fn write_int(&self, v: u64, writer: &mut dyn Writer) -> Result<()> {
+        data_writer_write_be_bytes!(writer, v)
     }
 }
 
-impl<T: Writer> IntDataWriter<i8> for T {
-    fn write_int(&mut self, v: i8) -> Result<()> {
-        self.write(v as u8)
+impl<'a> IntDataWriter<'a, i8> for () {
+    fn write_int(&self, v: i8, writer: &mut dyn Writer) -> Result<()> {
+        writer.write(v as u8)
     }
 }
 
-impl<T: Writer> IntDataWriter<i16> for T {
-    fn write_int(&mut self, v: i16) -> Result<()> {
-        data_writer_write_be_bytes!(self, v)
+impl<'a> IntDataWriter<'a, i16> for () {
+    fn write_int(&self, v: i16, writer: &mut dyn Writer) -> Result<()> {
+        data_writer_write_be_bytes!(writer, v)
     }
 }
 
-impl<T: Writer> IntDataWriter<i32> for T {
-    fn write_int(&mut self, v: i32) -> Result<()> {
-        data_writer_write_be_bytes!(self, v)
+impl<'a> IntDataWriter<'a, i32> for () {
+    fn write_int(&self, v: i32, writer: &mut dyn Writer) -> Result<()> {
+        data_writer_write_be_bytes!(writer, v)
     }
 }
 
-impl<T: Writer> IntDataWriter<i64> for T {
-    fn write_int(&mut self, v: i64) -> Result<()> {
-        data_writer_write_be_bytes!(self, v)
+impl<'a> IntDataWriter<'a, i64> for () {
+    fn write_int(&self, v: i64, writer: &mut dyn Writer) -> Result<()> {
+        data_writer_write_be_bytes!(writer, v)
     }
 }
 
@@ -291,7 +294,7 @@ impl<T: Writer> IntDataWriter<i64> for T {
 /// values to a [`Writer`].
 ///
 /// [`Writer`]: ../trait.Writer.html
-pub trait ILIntDataWriter: Writer {
+pub trait ILIntDataWriter {
     /// Writes the value.
     ///
     /// Parameters:
@@ -300,12 +303,12 @@ pub trait ILIntDataWriter: Writer {
     /// Returns:
     /// * `Ok(())`: On success.
     /// * `Err(ErrorKind)`: In case of error.
-    fn write_ilint(&mut self, v: u64) -> Result<()>;
+    fn write_ilint(&mut self, v: u64, writer: &mut dyn Writer) -> Result<()>;
 }
 
-impl<T: Writer> ILIntDataWriter for T {
-    fn write_ilint(&mut self, v: u64) -> Result<()> {
-        match encode(v, self) {
+impl ILIntDataWriter for () {
+    fn write_ilint(&mut self, v: u64, writer: &mut dyn Writer) -> Result<()> {
+        match encode(v, writer) {
             Ok(()) => Ok(()),
             Err(crate::ilint::ErrorKind::IOError(e)) => Err(e),
             _ => Err(ErrorKind::UnableToWriteData),
@@ -319,7 +322,7 @@ impl<T: Writer> ILIntDataWriter for T {
 /// are always encoded in big endian IEEE 754-2008.
 ///
 /// [`Writer`]: ../trait.Writer.html
-pub trait FloatDataWriter<T>: Writer {
+pub trait FloatDataWriter<'a, T> {
     /// Writes the value.
     ///
     /// Parameters:
@@ -331,13 +334,13 @@ pub trait FloatDataWriter<T>: Writer {
     fn write_float(&mut self, v: T) -> Result<()>;
 }
 
-impl<T: Writer> FloatDataWriter<f32> for T {
+impl<'a> FloatDataWriter<'a, f32> for dyn Writer {
     fn write_float(&mut self, v: f32) -> Result<()> {
         data_writer_write_be_bytes!(self, v)
     }
 }
 
-impl<T: Writer> FloatDataWriter<f64> for T {
+impl<'a> FloatDataWriter<'a, f64> for dyn Writer {
     fn write_float(&mut self, v: f64) -> Result<()> {
         data_writer_write_be_bytes!(self, v)
     }
@@ -347,7 +350,7 @@ impl<T: Writer> FloatDataWriter<f64> for T {
 /// ability to write UTF-8 strings to [`Writer`].
 ///
 /// [`Writer`]: ../trait.Writer.html
-pub trait StringDataWriter {
+pub trait StringDataWriter<'a> {
     /// Writes the value.
     ///
     /// Parameters:
@@ -359,31 +362,8 @@ pub trait StringDataWriter {
     fn write_string(&mut self, value: &str) -> Result<()>;
 }
 
-impl<T: Writer> StringDataWriter for T {
+impl<'a> StringDataWriter<'a> for dyn Writer {
     fn write_string(&mut self, value: &str) -> Result<()> {
         self.write_all(value.as_bytes())
     }
 }
-
-/// The `DataWriter` trait defines the combined ability
-/// to write signed and unsigned integer, floating point values.
-/// ILInt values and strings to a [`Writer`].
-///
-/// [`Writer`]: ../trait.Writer.html
-pub trait DataWriter:
-    IntDataWriter<u8>
-    + IntDataWriter<u16>
-    + IntDataWriter<u32>
-    + IntDataWriter<u64>
-    + IntDataWriter<i8>
-    + IntDataWriter<i16>
-    + IntDataWriter<i32>
-    + IntDataWriter<i64>
-    + FloatDataWriter<f32>
-    + FloatDataWriter<f64>
-    + ILIntDataWriter
-    + StringDataWriter
-{
-}
-
-impl<T: Writer> DataWriter for T {}

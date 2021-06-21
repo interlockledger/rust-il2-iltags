@@ -34,15 +34,16 @@ use crate::io::{ByteArrayReader, VecWriter};
 
 macro_rules! test_int_data_reader_t {
     ($type: ty, $sample : expr, $expected: expr) => {{
-        let mut r = ByteArrayReader::new($sample);
+        let mut reader = ByteArrayReader::new($sample);
+        let r: &mut dyn Reader = &mut reader;
 
         for exp_val in $expected {
-            match IntDataReader::<$type>::read_int(&mut r) {
+            match r.read_int() as Result<$type> {
                 Ok(v) => assert_eq!(v, *exp_val as $type),
                 _ => panic!(),
             }
         }
-        assert!(IntDataReader::<$type>::read_int(&mut r).is_err());
+        assert!(IntDataReader::<$type>::read_int(r).is_err());
     }};
 }
 
@@ -109,18 +110,12 @@ fn test_int_data_reader_i64() {
 }
 
 #[test]
-fn test_ilint_data_reader(){
+fn test_ilint_data_reader() {
     let sample: [u8; 46] = [
-        0xF7,
-        0xF8, 0x00,
-        0xF9, 0x01, 0x23,
-        0xFA, 0x01, 0x23, 0x45,
-        0xFB, 0x01, 0x23, 0x45, 0x67,
-        0xFC, 0x01, 0x23, 0x45, 0x67, 0x89,
-        0xFD, 0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 
-        0xFE, 0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD,
-        0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x07, 
-        0xFF
+        0xF7, 0xF8, 0x00, 0xF9, 0x01, 0x23, 0xFA, 0x01, 0x23, 0x45, 0xFB, 0x01, 0x23, 0x45, 0x67,
+        0xFC, 0x01, 0x23, 0x45, 0x67, 0x89, 0xFD, 0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xFE, 0x01,
+        0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x07,
+        0xFF,
     ];
     let expected: [u64; 9] = [
         0xF7,
@@ -131,45 +126,45 @@ fn test_ilint_data_reader(){
         0x0123456881,
         0x012345678AA3,
         0x123456789ACC5,
-        0xFFFFFFFFFFFFFFFF
+        0xFFFFFFFFFFFFFFFF,
     ];
 
-    let mut r = ByteArrayReader::new(&sample);
+    let mut reader = ByteArrayReader::new(&sample);
+    let r: &mut dyn Reader = &mut reader;
+
     for exp in expected.iter() {
-        match ILIntDataReader::read_ilint(&mut r) {
+        match r.read_ilint() {
             Ok(v) => assert_eq!(*exp, v),
-            _ => panic!()
+            _ => panic!(),
         };
     }
-    assert!(ILIntDataReader::read_ilint(&mut r).is_err());
+    assert!(r.read_ilint().is_err());
 }
 
 #[test]
 fn test_float_data_reader_f32() {
-    let sample: [u8; 5] = [
-        0x40, 0x49, 0x0f, 0xdb, 
-        0x01
-    ];
-    let mut r = ByteArrayReader::new(&sample);
-    match FloatDataReader::<f32>::read_float(&mut r) {
+    let sample: [u8; 5] = [0x40, 0x49, 0x0f, 0xdb, 0x01];
+    let mut reader = ByteArrayReader::new(&sample);
+    let r: &mut dyn Reader = &mut reader;
+
+    match FloatDataReader::<f32>::read_float(r) {
         Ok(v) => assert_eq!(3.14159274101257324, v),
-        _ => panic!()
+        _ => panic!(),
     };
-    assert!(FloatDataReader::<f32>::read_float(&mut r).is_err());
+    assert!(FloatDataReader::<f32>::read_float(r).is_err());
 }
 
 #[test]
 fn test_float_data_reader_f64() {
-    let sample: [u8; 9] = [
-        0x40, 0x09, 0x21, 0xfb, 0x54, 0x44, 0x2d, 0x18,
-        0x01
-    ];
-    let mut r = ByteArrayReader::new(&sample);
-    match FloatDataReader::<f64>::read_float(&mut r) {
+    let sample: [u8; 9] = [0x40, 0x09, 0x21, 0xfb, 0x54, 0x44, 0x2d, 0x18, 0x01];
+    let mut reader = ByteArrayReader::new(&sample);
+    let r: &mut dyn Reader = &mut reader;
+
+    match FloatDataReader::<f64>::read_float(r) {
         Ok(v) => assert_eq!(3.1415926535897932384626433, v),
-        _ => panic!()
+        _ => panic!(),
     };
-    assert!(FloatDataReader::<f64>::read_float(&mut r).is_err());
+    assert!(FloatDataReader::<f64>::read_float(r).is_err());
 }
 
 #[test]
@@ -178,22 +173,19 @@ fn test_string_data_reader() {
     // choosen because it contains Latin characters that
     // result in a multi-byte characters in UTF-8.
     let sample: [u8; 30] = [
-        0x4c, 0xc3, 0xa1, 0x67, 0x72, 0x69, 0x6d, 0x61,
-        0x73, 0x20, 0x6e, 0xc3, 0xa3, 0x6f, 0x20, 0x73,
-        0xc3, 0xa3, 0x6f, 0x20, 0x61, 0x72, 0x67, 0x75,
-        0x6d, 0x65, 0x6e, 0x74, 0x6f, 0x73
+        0x4c, 0xc3, 0xa1, 0x67, 0x72, 0x69, 0x6d, 0x61, 0x73, 0x20, 0x6e, 0xc3, 0xa3, 0x6f, 0x20,
+        0x73, 0xc3, 0xa3, 0x6f, 0x20, 0x61, 0x72, 0x67, 0x75, 0x6d, 0x65, 0x6e, 0x74, 0x6f, 0x73,
     ];
     let expected = "Lágrimas não são argumentos";
-    
-    let mut r = ByteArrayReader::new(&sample);
+    let mut reader = ByteArrayReader::new(&sample);
+    let r: &mut dyn Reader = &mut reader;
 
-
-    match StringDataReader::read_string(&mut r, 30) {
+    match StringDataReader::read_string(r, 30) {
         Ok(v) => assert_eq!(expected, v),
-        _ => panic!()
+        _ => panic!(),
     };
-    assert!(StringDataReader::read_string(&mut r, 0).is_ok());
-    assert!(StringDataReader::read_string(&mut r, 1).is_err());
+    assert!(StringDataReader::read_string(r, 0).is_ok());
+    assert!(StringDataReader::read_string(r, 1).is_err());
 }
 
 #[test]
@@ -202,84 +194,78 @@ fn test_data_reader() {
     // choosen because it contains Latin characters that
     // result in a multi-byte characters in UTF-8.
     let sample: [u8; 72] = [
-        0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 
-        0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 
-        0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 
-        0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f, 
-        0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 
-        0x28, 0x29,
-        0x4c, 0xc3, 0xa1, 0x67, 0x72, 0x69, 0x6d, 0x61,
-        0x73, 0x20, 0x6e, 0xc3, 0xa3, 0x6f, 0x20, 0x73,
-        0xc3, 0xa3, 0x6f, 0x20, 0x61, 0x72, 0x67, 0x75,
-        0x6d, 0x65, 0x6e, 0x74, 0x6f, 0x73
+        0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e,
+        0x0f, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d,
+        0x1e, 0x1f, 0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x29, 0x4c, 0xc3, 0xa1,
+        0x67, 0x72, 0x69, 0x6d, 0x61, 0x73, 0x20, 0x6e, 0xc3, 0xa3, 0x6f, 0x20, 0x73, 0xc3, 0xa3,
+        0x6f, 0x20, 0x61, 0x72, 0x67, 0x75, 0x6d, 0x65, 0x6e, 0x74, 0x6f, 0x73,
     ];
-
-    let mut r = ByteArrayReader::new(&sample);
-    let dr: &mut dyn DataReader = &mut r; 
+    let mut reader = ByteArrayReader::new(&sample);
+    let dr: &mut dyn Reader = &mut reader;
 
     match dr.read_int() as Result<u8> {
-        Ok(v) =>  assert_eq!(0x00,  v),
-        _ => panic!()
+        Ok(v) => assert_eq!(0x00, v),
+        _ => panic!(),
     }
     match dr.read_int() as Result<u16> {
-        Ok(v) =>  assert_eq!(0x0102,  v),
-        _ => panic!()
+        Ok(v) => assert_eq!(0x0102, v),
+        _ => panic!(),
     }
     match dr.read_int() as Result<u32> {
-        Ok(v) =>  assert_eq!(0x0304_0506,  v),
-        _ => panic!()
+        Ok(v) => assert_eq!(0x0304_0506, v),
+        _ => panic!(),
     }
     match dr.read_int() as Result<u64> {
-        Ok(v) =>  assert_eq!(0x0708_090A_0B0C_0D0E,  v),
-        _ => panic!()
+        Ok(v) => assert_eq!(0x0708_090A_0B0C_0D0E, v),
+        _ => panic!(),
     }
     match dr.read_int() as Result<i8> {
-        Ok(v) =>  assert_eq!(0x0f,  v),
-        _ => panic!()
+        Ok(v) => assert_eq!(0x0f, v),
+        _ => panic!(),
     }
     match dr.read_int() as Result<i16> {
-        Ok(v) =>  assert_eq!(0x1011,  v),
-        _ => panic!()
+        Ok(v) => assert_eq!(0x1011, v),
+        _ => panic!(),
     }
     match dr.read_int() as Result<i32> {
-        Ok(v) =>  assert_eq!(0x1213_1415,  v),
-        _ => panic!()
+        Ok(v) => assert_eq!(0x1213_1415, v),
+        _ => panic!(),
     }
     match dr.read_int() as Result<i64> {
-        Ok(v) =>  assert_eq!(0x1617_1819_1A1B_1C1D,  v),
-        _ => panic!()
+        Ok(v) => assert_eq!(0x1617_1819_1A1B_1C1D, v),
+        _ => panic!(),
     }
     match dr.read_float() as Result<f32> {
-        Ok(v) =>  assert_eq!(0.000000000000000000008424034,  v),
-        _ => panic!()
+        Ok(v) => assert_eq!(0.000000000000000000008424034, v),
+        _ => panic!(),
     }
     match dr.read_float() as Result<f64> {
         Ok(v) =>  assert_eq!(0.0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000030657805298494026,  v),
         _ => panic!()
     }
     match dr.read_string(30) {
-        Ok(v) =>  assert_eq!("Lágrimas não são argumentos", v),
-        _ => panic!()
+        Ok(v) => assert_eq!("Lágrimas não são argumentos", v),
+        _ => panic!(),
     }
     match dr.read_int() as Result<u8> {
-        Ok(_) =>  panic!(),
-        _ => ()
+        Ok(_) => panic!(),
+        _ => (),
     }
 }
 
 macro_rules! test_int_data_writer_t {
     ($type: ty, $sample : expr, $expected: expr) => {{
-        let mut bin = Vec::<u8>::new();
-        let mut w =  VecWriter::new(&mut bin);
+        let mut writer = VecWriter::new();
+        let w: &mut dyn Writer = &mut writer;
 
         for val in $sample {
-            match IntDataWriter::<$type>::write_int(&mut w, *val) {
+            match ().write_int(*val, w) {
                 Ok(_) => (),
                 _ => panic!(),
             }
         }
-        assert_eq!($expected.len(), bin.len());
-        assert_eq!($expected, bin.as_slice());
+        assert_eq!($expected.len(), writer.get_array().len());
+        assert_eq!($expected, writer.get_array().as_slice());
     }};
 }
 
@@ -328,94 +314,90 @@ fn test_int_data_writer_i32() {
 #[test]
 fn test_int_data_writer_u64() {
     let sample: [u64; 2] = [0x0123456789ABCDEF, 0x0123456789ABCDEF];
-    let exp: [u8; 16] = [0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF,
-                        0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF];
+    let exp: [u8; 16] = [
+        0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF, 0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD,
+        0xEF,
+    ];
     test_int_data_writer_t!(u64, &sample, &exp);
 }
 
 #[test]
 fn test_int_data_writer_i64() {
     let sample: [i64; 2] = [0x0123456789ABCDEF, -0x7EDCBA9876543211];
-    let exp: [u8; 16] = [0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF,
-                        0x81, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF];
+    let exp: [u8; 16] = [
+        0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF, 0x81, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD,
+        0xEF,
+    ];
     test_int_data_writer_t!(i64, &sample, &exp);
 }
 
 #[test]
 fn test_float_data_writer_f32() {
-    let mut bin = Vec::<u8>::new();
-    let mut w =  VecWriter::new(&mut bin);
-    let exp: [u8; 8] = 
-                    [0x40, 0x49, 0x0f, 0xdb,
-                    0x40, 0x49, 0x0f, 0xdb,];
+    let mut writer = VecWriter::new();
+    let w: &mut dyn Writer = &mut writer;
 
-    match FloatDataWriter::<f32>::write_float(&mut w, 3.14159274101257324 as f32) {
+    let exp: [u8; 8] = [0x40, 0x49, 0x0f, 0xdb, 0x40, 0x49, 0x0f, 0xdb];
+
+    match FloatDataWriter::<f32>::write_float(w, 3.14159274101257324 as f32) {
         Ok(_) => (),
-        Err(_) => panic!()
+        Err(_) => panic!(),
     }
-    match FloatDataWriter::<f32>::write_float(&mut w, 3.14159274101257324 as f32) {
+    match FloatDataWriter::<f32>::write_float(w, 3.14159274101257324 as f32) {
         Ok(_) => (),
-        Err(_) => panic!()
+        Err(_) => panic!(),
     }
-    assert_eq!(exp, bin.as_slice());
+    assert_eq!(exp, writer.get_array().as_slice());
 }
 
 #[test]
 fn test_float_data_writer_f64() {
-    let mut bin = Vec::<u8>::new();
-    let mut w =  VecWriter::new(&mut bin);
+    let mut writer = VecWriter::new();
+    let w: &mut dyn Writer = &mut writer;
     let exp: [u8; 16] = [
-        0x40, 0x09, 0x21, 0xfb, 0x54, 0x44, 0x2d, 0x18,
-        0x40, 0x09, 0x21, 0xfb, 0x54, 0x44, 0x2d, 0x18];
+        0x40, 0x09, 0x21, 0xfb, 0x54, 0x44, 0x2d, 0x18, 0x40, 0x09, 0x21, 0xfb, 0x54, 0x44, 0x2d,
+        0x18,
+    ];
 
-    match FloatDataWriter::<f64>::write_float(&mut w, 3.1415926535897932384626433 as f64) {
+    match FloatDataWriter::<f64>::write_float(w, 3.1415926535897932384626433 as f64) {
         Ok(_) => (),
-        Err(_) => panic!()
+        Err(_) => panic!(),
     }
-    match FloatDataWriter::<f64>::write_float(&mut w, 3.1415926535897932384626433 as f64) {
+    match FloatDataWriter::<f64>::write_float(w, 3.1415926535897932384626433 as f64) {
         Ok(_) => (),
-        Err(_) => panic!()
+        Err(_) => panic!(),
     }
-    assert_eq!(exp, bin.as_slice());
+    assert_eq!(exp, writer.get_array().as_slice());
 }
 
 #[test]
 fn test_string_data_writer_f64() {
-    let mut bin = Vec::<u8>::new();
-    let mut w =  VecWriter::new(&mut bin);
-    let exp: [u8; 60] = [
-        0x4c, 0xc3, 0xa1, 0x67, 0x72, 0x69, 0x6d, 0x61,
-        0x73, 0x20, 0x6e, 0xc3, 0xa3, 0x6f, 0x20, 0x73,
-        0xc3, 0xa3, 0x6f, 0x20, 0x61, 0x72, 0x67, 0x75,
-        0x6d, 0x65, 0x6e, 0x74, 0x6f, 0x73,
-        0x4c, 0xc3, 0xa1, 0x67, 0x72, 0x69, 0x6d, 0x61,
-        0x73, 0x20, 0x6e, 0xc3, 0xa3, 0x6f, 0x20, 0x73,
-        0xc3, 0xa3, 0x6f, 0x20, 0x61, 0x72, 0x67, 0x75,
-        0x6d, 0x65, 0x6e, 0x74, 0x6f, 0x73];
+    let mut writer = VecWriter::new();
+    let w: &mut dyn Writer = &mut writer;
 
-    match StringDataWriter::write_string(&mut w, "Lágrimas não são argumentos") {
+    let exp: [u8; 60] = [
+        0x4c, 0xc3, 0xa1, 0x67, 0x72, 0x69, 0x6d, 0x61, 0x73, 0x20, 0x6e, 0xc3, 0xa3, 0x6f, 0x20,
+        0x73, 0xc3, 0xa3, 0x6f, 0x20, 0x61, 0x72, 0x67, 0x75, 0x6d, 0x65, 0x6e, 0x74, 0x6f, 0x73,
+        0x4c, 0xc3, 0xa1, 0x67, 0x72, 0x69, 0x6d, 0x61, 0x73, 0x20, 0x6e, 0xc3, 0xa3, 0x6f, 0x20,
+        0x73, 0xc3, 0xa3, 0x6f, 0x20, 0x61, 0x72, 0x67, 0x75, 0x6d, 0x65, 0x6e, 0x74, 0x6f, 0x73,
+    ];
+
+    match StringDataWriter::write_string(w, "Lágrimas não são argumentos") {
         Ok(_) => (),
-        Err(_) => panic!()
+        Err(_) => panic!(),
     }
-    match StringDataWriter::write_string(&mut w, "Lágrimas não são argumentos") {
+    match StringDataWriter::write_string(w, "Lágrimas não são argumentos") {
         Ok(_) => (),
-        Err(_) => panic!()
+        Err(_) => panic!(),
     }
-    assert_eq!(exp, bin.as_slice());
+    assert_eq!(exp, writer.get_array().as_slice());
 }
 
 #[test]
-fn test_ilint_data_writer(){
+fn test_ilint_data_writer() {
     let expected: [u8; 45] = [
-        0xF7,
-        0xF8, 0x00,
-        0xF9, 0x01, 0x23,
-        0xFA, 0x01, 0x23, 0x45,
-        0xFB, 0x01, 0x23, 0x45, 0x67,
-        0xFC, 0x01, 0x23, 0x45, 0x67, 0x89,
-        0xFD, 0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 
-        0xFE, 0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD,
-        0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x07
+        0xF7, 0xF8, 0x00, 0xF9, 0x01, 0x23, 0xFA, 0x01, 0x23, 0x45, 0xFB, 0x01, 0x23, 0x45, 0x67,
+        0xFC, 0x01, 0x23, 0x45, 0x67, 0x89, 0xFD, 0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xFE, 0x01,
+        0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x07,
     ];
     let sample: [u64; 9] = [
         0xF7,
@@ -426,83 +408,78 @@ fn test_ilint_data_writer(){
         0x0123456881,
         0x012345678AA3,
         0x123456789ACC5,
-        0xFFFFFFFFFFFFFFFF
+        0xFFFFFFFFFFFFFFFF,
     ];
-
-    let mut bin = Vec::<u8>::new();
-    let mut w =  VecWriter::new(&mut bin);
+    let mut writer = VecWriter::new();
+    let w: &mut dyn Writer = &mut writer;
 
     for exp in sample.iter() {
-        match ILIntDataWriter::write_ilint(&mut w, *exp) {
+        match ().write_ilint(*exp, w) {
             Ok(_) => (),
-            _ => panic!()
+            _ => panic!(),
         };
     }
-    assert_eq!(expected, bin.as_slice())
+    assert_eq!(expected, writer.get_array().as_slice())
 }
 
 #[test]
 fn test_data_writer() {
-    let mut bin = Vec::<u8>::new();
-    let mut w =  VecWriter::new(&mut bin);
     let exp: [u8; 72] = [
-        0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
-        0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10, 
-        0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 
-        0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1e, 0x1f,
-        0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 
-        0x28, 0x29,
-        0x4c, 0xc3, 0xa1, 0x67, 0x72, 0x69, 0x6d, 0x61,
-        0x73, 0x20, 0x6e, 0xc3, 0xa3, 0x6f, 0x20, 0x73,
-        0xc3, 0xa3, 0x6f, 0x20, 0x61, 0x72, 0x67, 0x75,
-        0x6d, 0x65, 0x6e, 0x74, 0x6f, 0x73];
+        0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
+        0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e,
+        0x1e, 0x1f, 0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x29, 0x4c, 0xc3, 0xa1,
+        0x67, 0x72, 0x69, 0x6d, 0x61, 0x73, 0x20, 0x6e, 0xc3, 0xa3, 0x6f, 0x20, 0x73, 0xc3, 0xa3,
+        0x6f, 0x20, 0x61, 0x72, 0x67, 0x75, 0x6d, 0x65, 0x6e, 0x74, 0x6f, 0x73,
+    ];
+    let mut writer = VecWriter::new();
 
-    let dw : &mut dyn DataWriter = &mut w;
+    //let dw: &mut dyn Writer = &mut writer;
 
-    match dw.write_int(0x01 as u8) {
+    match ().write_int(0x01 as u8, &mut writer) {
+        Ok(_) => (),
+        Err(_) => panic!(),
+    }
+    match ().write_int(0x0203 as u16, &mut writer) {
+        Ok(_) => (),
+        Err(_) => panic!(),
+    }
+    match ().write_int(0x0405_0607 as u32, &mut writer) {
+        Ok(_) => (),
+        Err(_) => panic!(),
+    }
+    match ().write_int(0x0809_0A0B_0C0D_0E0F as u64, &mut writer) {
+        Ok(_) => (),
+        Err(_) => panic!(),
+    }
+    match ().write_int(0x10 as i8, &mut writer) {
+        Ok(_) => (),
+        Err(_) => panic!(),
+    }
+    match ().write_int(0x1112 as i16, &mut writer) {
+        Ok(_) => (),
+        Err(_) => panic!(),
+    }
+    match ().write_int(0x1314_1516 as i32, &mut writer) {
+        Ok(_) => (),
+        Err(_) => panic!(),
+    }
+    match ().write_int(0x1718_191A_1B1C_1D1E as i64, &mut writer) {
+        Ok(_) => (),
+        Err(_) => panic!(),
+    }
+    /*
+    match ().write_float(0.000000000000000000008424034 as f32) {
+        Ok(_) => (),
+        Err(_) => panic!(),
+    }
+    match ().write_float(0.0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000030657805298494026 as f64) {
         Ok(_) => (),
         Err(_) => panic!()
     }
-    match dw.write_int(0x0203 as u16) {
+    match ().write_string("Lágrimas não são argumentos") {
         Ok(_) => (),
-        Err(_) => panic!()
+        Err(_) => panic!(),
     }
-    match dw.write_int(0x0405_0607 as u32) {
-        Ok(_) => (),
-        Err(_) => panic!()
-    }
-    match dw.write_int(0x0809_0A0B_0C0D_0E0F as u64) {
-        Ok(_) => (),
-        Err(_) => panic!()
-    }
-    match dw.write_int(0x10 as i8) {
-        Ok(_) => (),
-        Err(_) => panic!()
-    }
-    match dw.write_int(0x1112 as i16) {
-        Ok(_) => (),
-        Err(_) => panic!()
-    }
-    match dw.write_int(0x1314_1516 as i32) {
-        Ok(_) => (),
-        Err(_) => panic!()
-    }
-    match dw.write_int(0x1718_191A_1B1C_1D1E as i64) {
-        Ok(_) => (),
-        Err(_) => panic!()
-    }
-    match dw.write_float(0.000000000000000000008424034 as f32) {
-        Ok(_) => (),
-        Err(_) => panic!()
-    }
-    match dw.write_float(0.0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000030657805298494026 as f64) {
-        Ok(_) => (),
-        Err(_) => panic!()
-    }
-    match dw.write_string("Lágrimas não são argumentos") {
-        Ok(_) => (),
-        Err(_) => panic!()
-    }
-
-    assert_eq!(exp, bin.as_slice());
+    */
+    assert_eq!(exp, writer.get_array().as_slice());
 }

@@ -50,7 +50,7 @@ impl DummyReader {
     }
 }
 
-impl Reader for DummyReader {
+impl<'a> Reader<'a> for DummyReader {
     fn read(&mut self) -> Result<u8> {
         if self.available > 0 {
             self.available -= 1;
@@ -60,6 +60,10 @@ impl Reader for DummyReader {
         } else {
             Err(ErrorKind::UnableToReadData)
         }
+    }
+
+    fn as_reader(&mut self) -> &mut dyn Reader<'a> {
+        self
     }
 }
 

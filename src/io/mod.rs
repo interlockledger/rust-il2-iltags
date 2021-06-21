@@ -63,7 +63,7 @@ pub type Result<T> = std::result::Result<T, ErrorKind>;
 /// all-or-nothing operations. No partial reads are allowed.
 ///
 /// Implementations of this trait are not required to be thread-safe.
-pub trait Reader {
+pub trait Reader<'a> {
     /// Reads a single byte from the source.
     ///
     /// Returns:
@@ -112,6 +112,8 @@ pub trait Reader {
         }
         Ok(())
     }
+
+    fn as_reader(&mut self) -> &mut dyn Reader<'a>;
 }
 
 /// The `Writer` trait allows the addition of bytes into the destination.
@@ -148,6 +150,8 @@ pub trait Writer {
         }
         Ok(())
     }
+
+    fn as_writer(&mut self) -> &mut dyn Writer;
 }
 
 /// The `LimitedReader` implements a [`Reader`] that wraps another
@@ -160,7 +164,7 @@ pub trait Writer {
 ///
 /// [`Reader`]: trait.Reader.html
 pub struct LimitedReader<'a> {
-    source: &'a mut dyn Reader,
+    source: &'a mut dyn Reader<'a>,
     available: usize,
 }
 
@@ -170,7 +174,7 @@ impl<'a> LimitedReader<'a> {
     /// Parameters:
     /// * `src`: A mutable reference to the source Reader.
     /// * `available`: Number of bytes available for reading.
-    pub fn new(src: &'a mut dyn Reader, available: usize) -> LimitedReader {
+    pub fn new(src: &'a mut dyn Reader<'a>, available: usize) -> LimitedReader {
         LimitedReader {
             source: src,
             available,
@@ -221,7 +225,7 @@ impl<'a> LimitedReader<'a> {
     }
 }
 
-impl<'a> Reader for LimitedReader<'a> {
+impl<'a> Reader<'a> for LimitedReader<'a> {
     fn read(&mut self) -> Result<u8> {
         self.can_read(1)?;
         let ret = self.source.read();
@@ -238,6 +242,10 @@ impl<'a> Reader for LimitedReader<'a> {
             self.available -= buff.len();
         }
         ret
+    }
+
+    fn as_reader(&mut self) -> &mut dyn Reader<'a> {
+        self
     }
 }
 
@@ -259,7 +267,7 @@ impl<'a, T: std::io::Read> ReadReader<'a, T> {
     }
 }
 
-impl<'a, T: std::io::Read> Reader for ReadReader<'a, T> {
+impl<'a, T: std::io::Read> Reader<'a> for ReadReader<'a, T> {
     fn read(&mut self) -> Result<u8> {
         let mut buff: [u8; 1] = [0; 1];
         match self.source.read_exact(&mut buff) {
@@ -273,6 +281,10 @@ impl<'a, T: std::io::Read> Reader for ReadReader<'a, T> {
             Ok(()) => Ok(()),
             Err(e) => Err(ErrorKind::IOError(e)),
         }
+    }
+
+    fn as_reader(&mut self) -> &mut dyn Reader<'a> {
+        self
     }
 }
 
@@ -310,5 +322,9 @@ impl<'a> Writer for WriteWriter<'a> {
             Ok(_) => Err(ErrorKind::UnableToWriteData),
             Err(e) => Err(ErrorKind::IOError(e)),
         }
+    }
+
+    fn as_writer(&mut self) -> &mut dyn Writer {
+        self
     }
 }

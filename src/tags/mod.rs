@@ -35,7 +35,8 @@ pub mod std;
 mod tests;
 
 use crate::ilint::encoded_size;
-use crate::io::data::{DataReader, DataWriter};
+use crate::io::data::*;
+use crate::io::{Reader, Writer};
 use ::std::any::Any;
 use ::std::collections::HashMap;
 
@@ -85,6 +86,11 @@ pub fn is_reserved_tag(id: u64) -> bool {
     id <= RESERVED_ID_MAX
 }
 
+//=============================================================================
+// ILTag
+//-----------------------------------------------------------------------------
+
+/// This trait must be implemented by all ILTags on this library.
 pub trait ILTag: Any {
     /// Returns the ID of the tag.
     fn id(&self) -> u64;
@@ -100,13 +106,13 @@ pub trait ILTag: Any {
     }
 
     /// Retuns the size of the serialized value in bytes.
-    fn value_size(&self) -> usize;
+    fn value_size(&self) -> u64;
 
     /// Returns the total size of the tag in bytes.
-    fn size(&self) -> usize {
-        let mut size: usize = encoded_size(self.id());
+    fn size(&self) -> u64 {
+        let mut size: u64 = encoded_size(self.id()) as u64;
         if !self.is_implicity() {
-            size += encoded_size(self.value_size() as u64);
+            size += encoded_size(self.value_size()) as u64;
         }
         size + self.value_size()
     }
@@ -122,7 +128,7 @@ pub trait ILTag: Any {
     /// * `Ok()`: On success.
     /// * `Err(())`: If the buffer is too small to hold the encoded value.
     ///
-    fn serialize_value(&self, writer: &mut dyn DataWriter) -> Result<()>;
+    fn serialize_value(&self, writer: &mut dyn Writer) -> Result<()>;
 
     /// Serializes this tag.
     ///
@@ -135,13 +141,13 @@ pub trait ILTag: Any {
     /// * `Ok()`: On success.
     /// * `Err(())`: If the buffer is too small to hold the encoded value.
     ///
-    fn serialize(&self, writer: &mut dyn DataWriter) -> Result<()> {
-        match writer.write_ilint(self.id()) {
+    fn serialize(&self, writer: &mut dyn Writer) -> Result<()> {
+        match ().write_ilint(self.id(), writer) {
             Ok(()) => (),
             Err(e) => return Err(ErrorKind::IOError(e)),
         }
         if !self.is_implicity() {
-            match writer.write_ilint(self.value_size() as u64) {
+            match ().write_ilint(self.value_size() as u64, writer) {
                 Ok(()) => (),
                 Err(e) => return Err(ErrorKind::IOError(e)),
             }
@@ -199,6 +205,10 @@ pub fn tag_downcast_mut<T: ILTag + Any>(tag: &mut dyn ILTag) -> Option<&mut T> {
     tag.as_mut_any().downcast_mut::<T>()
 }
 
+//=============================================================================
+// ILTagCreator
+//-----------------------------------------------------------------------------
+
 /// This trait must be implemented by all tag creators.
 pub trait ILTagCreator {
     /// Creates a new boxed instance of the the class.
@@ -211,6 +221,10 @@ pub trait ILTagCreator {
     /// * `Box<dyn ILTag>`: The new empty boxed tag.
     fn create_empty_tag(&self, tag_id: u64) -> Box<dyn ILTag>;
 }
+
+//=============================================================================
+// ILCreatorEngine
+//-----------------------------------------------------------------------------
 
 /// This struct implements an engine that maps the ILTagCreators
 /// to the associated tag ID.
@@ -263,7 +277,7 @@ impl ILTagCreatorEngine {
             Some(c) => Some(c.create_empty_tag(tag_id)),
             None => {
                 if self.strict {
-                    Some(Box::new(RawTag::new(tag_id)))
+                    Some(Box::new(ILRawTag::new(tag_id)))
                 } else {
                     None
                 }
@@ -272,6 +286,9 @@ impl ILTagCreatorEngine {
     }
 }
 
+//=============================================================================
+// ILTagFactory
+//-----------------------------------------------------------------------------
 /// This trait must be implemented by all tag factories.
 pub trait ILTagFactory {
     fn as_ref(&self) -> &dyn ILTagFactory;
@@ -281,14 +298,17 @@ pub trait ILTagFactory {
     fn deserialize(&self, reader: &mut dyn DataReader) -> Result<Box<dyn ILTag>>;
 }
 
+//=============================================================================
+// ILRawTag
+//-----------------------------------------------------------------------------
 /// This struct implements a raw tag. It can be used to store any non
 /// explicit tag.
-pub struct RawTag {
+pub struct ILRawTag {
     id: u64,
     payload: Vec<u8>,
 }
 
-impl RawTag {
+impl ILRawTag {
     /// Creates a new instance of this struct.
     ///
     /// Arguments:
@@ -296,9 +316,9 @@ impl RawTag {
     ///
     /// Returns:
     /// * The new instance of RawTag.
-    pub fn new(id: u64) -> RawTag {
+    pub fn new(id: u64) -> ILRawTag {
         assert!(!is_implicit_tag(id));
-        RawTag {
+        ILRawTag {
             id,
             payload: Vec::new(),
         }
@@ -312,11 +332,11 @@ impl RawTag {
     ///
     /// Returns:
     /// * The new instance of RawTag.
-    pub fn with_value(id: u64, value: &[u8]) -> RawTag {
+    pub fn with_value(id: u64, value: &[u8]) -> ILRawTag {
         assert!(!is_implicit_tag(id));
         let mut v: Vec<u8> = Vec::with_capacity(value.len());
         v.extend_from_slice(value);
-        RawTag { id, payload: v }
+        ILRawTag { id, payload: v }
     }
 
     /// Returns an immutable reference to the payload.
@@ -330,15 +350,15 @@ impl RawTag {
     }
 }
 
-impl ILTag for RawTag {
+impl ILTag for ILRawTag {
     fn id(&self) -> u64 {
         self.id
     }
-    fn value_size(&self) -> usize {
-        self.payload.len()
+    fn value_size(&self) -> u64 {
+        self.payload.len() as u64
     }
 
-    fn serialize_value(&self, writer: &mut dyn DataWriter) -> Result<()> {
+    fn serialize_value(&self, writer: &mut dyn Writer) -> Result<()> {
         match writer.write_all(self.payload.as_slice()) {
             Ok(()) => Ok(()),
             Err(e) => Err(ErrorKind::IOError(e)),
@@ -366,3 +386,61 @@ impl ILTag for RawTag {
         self
     }
 }
+
+//=============================================================================
+// ILIntegerTag
+//-----------------------------------------------------------------------------
+pub struct ILIntegerTag<T: Sized + Default + 'static> {
+    id: u64,
+    value: T,
+}
+/*
+
+
+impl<T: Sized + Default + 'static> ILIntegerTag<T> {
+    pub fn new(id: u64) -> ILIntegerTag<T> {
+        ILIntegerTag {
+            id: id,
+            value: T::default(),
+        }
+    }
+
+    pub fn get_value(&self) -> T {
+        self.value
+    }
+
+    pub fn set_value(&mut self, value: T) {
+        self.value = value
+    }
+}
+
+impl<T: Sized + Default + 'static> ILTag for ILIntegerTag<T> {
+    fn id(&self) -> u64 {
+        self.id
+    }
+
+    fn value_size(&self) -> u64 {
+        std::mem::size_of::<T>() as u64
+    }
+
+    fn serialize_value(&self, writer: &mut dyn DataWriter) -> Result<()> {
+        match writer.write_int(self.value) {}
+    }
+
+    fn deserialize_value(
+        &mut self,
+        factory: &dyn ILTagFactory,
+        value_size: usize,
+        reader: &mut dyn DataReader,
+    ) -> Result<()> {
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn as_mut_any(&mut self) -> &mut dyn Any {
+        self
+    }
+}
+*/

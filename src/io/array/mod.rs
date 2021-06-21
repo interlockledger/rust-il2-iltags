@@ -77,7 +77,7 @@ impl<'a> ByteArrayReader<'a> {
     }
 }
 
-impl<'a> Reader for ByteArrayReader<'a> {
+impl<'a> Reader<'a> for ByteArrayReader<'a> {
     fn read(&mut self) -> Result<u8> {
         if self.offset < self.array.len() {
             let r = self.array[self.offset];
@@ -96,6 +96,9 @@ impl<'a> Reader for ByteArrayReader<'a> {
         } else {
             Err(ErrorKind::UnableToReadData)
         }
+    }
+    fn as_reader(&mut self) -> &mut dyn Reader<'a> {
+        self
     }
 }
 
@@ -158,6 +161,10 @@ impl<'a> Writer for ByteArrayWriter<'a> {
             Err(ErrorKind::UnableToWriteData)
         }
     }
+
+    fn as_writer(&mut self) -> &mut dyn Writer {
+        self
+    }
 }
 
 /// `VecWriter` implements a [`Writer`] that
@@ -165,15 +172,15 @@ impl<'a> Writer for ByteArrayWriter<'a> {
 /// dynamically as needed.
 ///
 /// [`Writer`]: ../trait.Writer.html
-pub struct VecWriter<'a> {
-    vector: &'a mut Vec<u8>,
+pub struct VecWriter {
+    vector: Vec<u8>,
     offset: usize,
 }
 
-impl<'a> VecWriter<'a> {
-    pub fn new(vec: &mut Vec<u8>) -> VecWriter {
+impl<'a> VecWriter {
+    pub fn new() -> VecWriter {
         VecWriter {
-            vector: vec,
+            vector: Vec::new(),
             offset: 0,
         }
     }
@@ -191,11 +198,11 @@ impl<'a> VecWriter<'a> {
     }
 
     pub fn get_array(&mut self) -> &mut Vec<u8> {
-        self.vector
+        &mut self.vector
     }
 }
 
-impl<'a> Writer for VecWriter<'a> {
+impl Writer for VecWriter {
     fn write(&mut self, value: u8) -> Result<()> {
         if self.offset == self.vector.len() {
             self.vector.push(value);
@@ -215,5 +222,8 @@ impl<'a> Writer for VecWriter<'a> {
         self.vector[self.offset..new_offset].copy_from_slice(buff);
         self.offset = new_offset;
         Ok(())
+    }
+    fn as_writer(&mut self) -> &mut dyn Writer {
+        self
     }
 }
