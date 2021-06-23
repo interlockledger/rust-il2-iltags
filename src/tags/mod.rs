@@ -142,12 +142,12 @@ pub trait ILTag: Any {
     /// * `Err(())`: If the buffer is too small to hold the encoded value.
     ///
     fn serialize(&self, writer: &mut dyn Writer) -> Result<()> {
-        match ().write_ilint(self.id(), writer) {
+        match write_ilint(self.id(), writer) {
             Ok(()) => (),
             Err(e) => return Err(ErrorKind::IOError(e)),
         }
         if !self.is_implicity() {
-            match ().write_ilint(self.value_size() as u64, writer) {
+            match write_ilint(self.value_size() as u64, writer) {
                 Ok(()) => (),
                 Err(e) => return Err(ErrorKind::IOError(e)),
             }
@@ -171,7 +171,7 @@ pub trait ILTag: Any {
         &mut self,
         factory: &dyn ILTagFactory,
         value_size: usize,
-        reader: &mut dyn DataReader,
+        reader: &mut dyn Reader,
     ) -> Result<()>;
 
     /// Returns a reference as Any.
@@ -295,7 +295,7 @@ pub trait ILTagFactory {
 
     fn create_tag(&self, tag_id: u64) -> Option<Box<dyn ILTag>>;
 
-    fn deserialize(&self, reader: &mut dyn DataReader) -> Result<Box<dyn ILTag>>;
+    fn deserialize(&self, reader: &mut dyn Reader) -> Result<Box<dyn ILTag>>;
 }
 
 //=============================================================================
@@ -369,7 +369,7 @@ impl ILTag for ILRawTag {
         &mut self,
         _factory: &dyn ILTagFactory,
         value_size: usize,
-        reader: &mut dyn DataReader,
+        reader: &mut dyn Reader,
     ) -> Result<()> {
         self.payload.resize(value_size, 0);
         match reader.read_all(self.payload.as_mut_slice()) {

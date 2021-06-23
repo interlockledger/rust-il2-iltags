@@ -30,7 +30,6 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 use super::*;
-use crate::io::data::*;
 use crate::io::Writer;
 
 #[test]
@@ -102,7 +101,7 @@ impl ILTag for DummyTag {
         &mut self,
         _factory: &dyn ILTagFactory,
         value_size: usize,
-        reader: &mut dyn DataReader,
+        reader: &mut dyn Reader,
     ) -> Result<()> {
         if value_size != 4 {
             Err(ErrorKind::CorruptedData)

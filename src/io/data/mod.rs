@@ -31,339 +31,346 @@
  */
 //! This module implements extension traits for Reader and Writer that
 //! allows the manipulation of basic data types.
-//#[cfg(test)]
-//mod tests;
+#[cfg(test)]
+mod tests;
 
 use super::{ErrorKind, Reader, Result, Writer};
 use crate::ilint::{decode, encode};
 
-/// The trait `IntDataReader` defines the
-/// ability to extract signed and unsigned integer
-/// values from a [`Reader`]. Those values
-/// are always encoded in big endian format.
+/// Extracts an `u8` from the specified `Reader`.
 ///
-/// [`Reader`]: ../trait.Reader.html
-pub trait IntDataReader<'a, T> {
-    /// Reads an integer of type `T` from the Reader
-    ///
-    /// Returns:
-    /// * `Ok(T)`: The value read.
-    /// * `Err(ErrorKind)`: In case of error.
-    fn read_int(&mut self) -> Result<T>;
-}
-
-/// This macro contains the base implementation of
-/// `IntDataReader.read_int()`.
-macro_rules! data_reader_read_be_bytes {
-    ($self: ident, $type: ident) => {{
-        let mut tmp: [u8; std::mem::size_of::<$type>()] = [0; std::mem::size_of::<$type>()];
-        $self.read_all(&mut tmp)?;
-        Ok($type::from_be_bytes(tmp))
-    }};
-}
-
-impl<'a> IntDataReader<'a, u8> for dyn Reader<'a> {
-    fn read_int(&mut self) -> Result<u8> {
-        self.read()
-    }
-}
-
-impl<'a> IntDataReader<'a, u16> for dyn Reader<'a> {
-    fn read_int(&mut self) -> Result<u16> {
-        data_reader_read_be_bytes!(self, u16)
-    }
-}
-
-impl<'a> IntDataReader<'a, u32> for dyn Reader<'a> {
-    fn read_int(&mut self) -> Result<u32> {
-        data_reader_read_be_bytes!(self, u32)
-    }
-}
-
-impl<'a> IntDataReader<'a, u64> for dyn Reader<'a> {
-    fn read_int(&mut self) -> Result<u64> {
-        data_reader_read_be_bytes!(self, u64)
-    }
-}
-
-impl<'a> IntDataReader<'a, i8> for dyn Reader<'a> {
-    fn read_int(&mut self) -> Result<i8> {
-        match self.read() {
-            Ok(v) => Ok(v as i8),
-            Err(e) => Err(e),
-        }
-    }
-}
-
-impl<'a> IntDataReader<'a, i16> for dyn Reader<'a> {
-    fn read_int(&mut self) -> Result<i16> {
-        data_reader_read_be_bytes!(self, i16)
-    }
-}
-
-impl<'a> IntDataReader<'a, i32> for dyn Reader<'a> {
-    fn read_int(&mut self) -> Result<i32> {
-        data_reader_read_be_bytes!(self, i32)
-    }
-}
-
-impl<'a> IntDataReader<'a, i64> for dyn Reader<'a> {
-    fn read_int(&mut self) -> Result<i64> {
-        data_reader_read_be_bytes!(self, i64)
-    }
-}
-
-/// The trait `ILIntDataReader` defines the
-/// ability to extract an **ILInt** encoded value
-/// from a [`Reader`].
+/// Arguments:
+/// - `reader`: The reader;
 ///
-/// [`Reader`]: ../trait.Reader.html
-pub trait ILIntDataReader<'a> {
-    /// Reads an **ILInt** value.
-    ///
-    /// Returns:
-    /// * `Ok(T)`: The value read. It is always a **u64**.
-    /// * `Err(ErrorKind)`: In case of error.    
-    fn read_ilint(&mut self) -> Result<u64>;
+/// Returns:
+/// - Ok(v): The value read;
+/// - Err(_): If the value could not be extracted;
+pub fn read_u8(reader: &mut dyn Reader) -> Result<u8> {
+    reader.read()
 }
 
-impl<'a> ILIntDataReader<'a> for dyn Reader<'a> {
-    fn read_ilint(&mut self) -> Result<u64> {
-        match decode(self) {
-            Ok(value) => Ok(value),
-            Err(crate::ilint::ErrorKind::IOError(e)) => Err(e),
-            _ => Err(ErrorKind::CorruptedData),
-        }
-    }
-}
-
-/// The trait `FloatDataReader` defines the
-/// ability to extract 32 and 64 bit floating
-/// point values from a [`Reader`]. Those values
-/// are always encoded in big endian IEEE 754-2008.
+/// Extracts an `i8` from the specified `Reader`.
 ///
-/// [`Reader`]: ../trait.Reader.html
-pub trait FloatDataReader<'a, T> {
-    /// Reads an float value.
-    ///
-    /// Returns:
-    ///
-    /// * `Ok(T)`: The value read.
-    /// * `Err(ErrorKind)`: In case of error.    
-    fn read_float(&mut self) -> Result<T>;
-}
-
-impl<'a> FloatDataReader<'a, f32> for dyn Reader<'a> {
-    fn read_float(&mut self) -> Result<f32> {
-        let tmp: u32 = self.read_int()?;
-        Ok(f32::from_bits(tmp))
-    }
-}
-
-impl<'a> FloatDataReader<'a, f64> for dyn Reader<'a> {
-    fn read_float(&mut self) -> Result<f64> {
-        let tmp: u64 = self.read_int()?;
-        Ok(f64::from_bits(tmp))
-    }
-}
-
-/// The trait `StringDataReader` defines the
-/// ability to extract UTF-8 strings from a [`Reader`].
+/// Arguments:
+/// - `reader`: The reader;
 ///
-/// [`Reader`]: ../trait.Reader.html
-pub trait StringDataReader<'a> {
-    fn read_string(&mut self, size: usize) -> Result<String>;
-}
-
-impl<'a> StringDataReader<'a> for dyn Reader<'a> {
-    fn read_string(&mut self, size: usize) -> Result<String> {
-        let mut tmp: Vec<u8> = vec![0; size];
-        self.read_all(tmp.as_mut_slice())?;
-        match String::from_utf8(tmp) {
-            Ok(s) => Ok(s),
-            _ => Err(ErrorKind::CorruptedData),
-        }
+/// Returns:
+/// - Ok(v): The value read;
+/// - Err(_): If the value could not be extracted;
+pub fn read_i8(reader: &mut dyn Reader) -> Result<i8> {
+    match reader.read() {
+        Ok(v) => Ok(v as i8),
+        Err(e) => Err(e),
     }
 }
 
-/// The `DataReader` trait defines the combined ability
-/// to read signed and unsigned integer, floating point values.
-/// ILInt values and strings from a [`Reader`].
+/// Extracts an `u16` from the specified `Reader`.
 ///
-/// Since this trait requires the implementation of the same trait
-/// for multiple types, each variant can be invoked by its full
-/// qualified name such as ``DataReader::<u8>::read_int(r)``.
+/// Arguments:
+/// - `reader`: The reader;
 ///
-/// [`Reader`]: ../trait.Reader.html
-pub trait DataReader<'a>:
-    Reader<'a>
-    + IntDataReader<'a, u8>
-    + IntDataReader<'a, u16>
-    + IntDataReader<'a, u32>
-    + IntDataReader<'a, u64>
-    + IntDataReader<'a, i8>
-    + IntDataReader<'a, i16>
-    + IntDataReader<'a, i32>
-    + IntDataReader<'a, i64>
-    + FloatDataReader<'a, f32>
-    + FloatDataReader<'a, f64>
-    + ILIntDataReader<'a>
-    + StringDataReader<'a>
-{
+/// Returns:
+/// - Ok(v): The value read;
+/// - Err(_): If the value could not be extracted;
+
+pub fn read_u16(reader: &mut dyn Reader) -> Result<u16> {
+    let mut tmp: [u8; 2] = [0; 2];
+    reader.read_all(&mut tmp)?;
+    Ok(u16::from_be_bytes(tmp))
 }
 
-impl<'a> DataReader<'a> for dyn Reader<'a> {}
-
-/// This macro defines the core implementation of
-/// IntDataWriter.write_int().
-macro_rules! data_writer_write_be_bytes {
-    ($self: ident, $value: expr) => {
-        $self.write_all(&$value.to_be_bytes())
-    };
-}
-
-/// The trait `IntDataWriter` defines the
-/// ability to write signed and unsigned integer
-/// values to a [`Writer`]. Those values
-/// are always encoded in big endian format.
+/// Extracts an `i16` from the specified `Reader`.
 ///
-/// [`Writer`]: ../trait.Writer.html
-pub trait IntDataWriter<'a, T> {
-    /// Writes the value.
-    ///
-    /// Parameters:
-    /// * `v`: The value to write.
-    ///
-    /// Returns:
-    ///
-    /// * `Ok(())`: On success.
-    /// * `Err(ErrorKind)`: In case of error.
-    fn write_int(&self, v: T, writer: &mut dyn Writer) -> Result<()>;
-}
-
-impl<'a> IntDataWriter<'a, u8> for () {
-    fn write_int(&self, v: u8, writer: &mut dyn Writer) -> Result<()> {
-        writer.write(v)
-    }
-}
-
-impl<'a> IntDataWriter<'a, u16> for () {
-    fn write_int(&self, v: u16, writer: &mut dyn Writer) -> Result<()> {
-        data_writer_write_be_bytes!(writer, v)
-    }
-}
-
-impl<'a> IntDataWriter<'a, u32> for () {
-    fn write_int(&self, v: u32, writer: &mut dyn Writer) -> Result<()> {
-        data_writer_write_be_bytes!(writer, v)
-    }
-}
-
-impl<'a> IntDataWriter<'a, u64> for () {
-    fn write_int(&self, v: u64, writer: &mut dyn Writer) -> Result<()> {
-        data_writer_write_be_bytes!(writer, v)
-    }
-}
-
-impl<'a> IntDataWriter<'a, i8> for () {
-    fn write_int(&self, v: i8, writer: &mut dyn Writer) -> Result<()> {
-        writer.write(v as u8)
-    }
-}
-
-impl<'a> IntDataWriter<'a, i16> for () {
-    fn write_int(&self, v: i16, writer: &mut dyn Writer) -> Result<()> {
-        data_writer_write_be_bytes!(writer, v)
-    }
-}
-
-impl<'a> IntDataWriter<'a, i32> for () {
-    fn write_int(&self, v: i32, writer: &mut dyn Writer) -> Result<()> {
-        data_writer_write_be_bytes!(writer, v)
-    }
-}
-
-impl<'a> IntDataWriter<'a, i64> for () {
-    fn write_int(&self, v: i64, writer: &mut dyn Writer) -> Result<()> {
-        data_writer_write_be_bytes!(writer, v)
-    }
-}
-
-/// The trait `ILIntDataWriter` defines the
-/// ability to write ILInt encoded
-/// values to a [`Writer`].
+/// Arguments:
+/// - `reader`: The reader;
 ///
-/// [`Writer`]: ../trait.Writer.html
-pub trait ILIntDataWriter {
-    /// Writes the value.
-    ///
-    /// Parameters:
-    /// * `v`: The value to write.
-    ///
-    /// Returns:
-    /// * `Ok(())`: On success.
-    /// * `Err(ErrorKind)`: In case of error.
-    fn write_ilint(&mut self, v: u64, writer: &mut dyn Writer) -> Result<()>;
+/// Returns:
+/// - Ok(v): The value read;
+/// - Err(_): If the value could not be extracted;
+pub fn read_i16(reader: &mut dyn Reader) -> Result<i16> {
+    let mut tmp: [u8; 2] = [0; 2];
+    reader.read_all(&mut tmp)?;
+    Ok(i16::from_be_bytes(tmp))
 }
 
-impl ILIntDataWriter for () {
-    fn write_ilint(&mut self, v: u64, writer: &mut dyn Writer) -> Result<()> {
-        match encode(v, writer) {
-            Ok(()) => Ok(()),
-            Err(crate::ilint::ErrorKind::IOError(e)) => Err(e),
-            _ => Err(ErrorKind::UnableToWriteData),
-        }
-    }
-}
-
-/// The trait `FloatDataWrite` defines the
-/// ability to write 32 and 64 bit floating
-/// point values to [`Writer`]. Those values
-/// are always encoded in big endian IEEE 754-2008.
+/// Extracts an `u32` from the specified `Reader`.
 ///
-/// [`Writer`]: ../trait.Writer.html
-pub trait FloatDataWriter<'a, T> {
-    /// Writes the value.
-    ///
-    /// Parameters:
-    /// * `v`: The value to write.
-    ///
-    /// Returns:
-    /// * `Ok(())`: On success.
-    /// * `Err(ErrorKind)`: In case of error.
-    fn write_float(&mut self, v: T) -> Result<()>;
-}
-
-impl<'a> FloatDataWriter<'a, f32> for dyn Writer {
-    fn write_float(&mut self, v: f32) -> Result<()> {
-        data_writer_write_be_bytes!(self, v)
-    }
-}
-
-impl<'a> FloatDataWriter<'a, f64> for dyn Writer {
-    fn write_float(&mut self, v: f64) -> Result<()> {
-        data_writer_write_be_bytes!(self, v)
-    }
-}
-
-/// The trait `StringDataWriter` defines the
-/// ability to write UTF-8 strings to [`Writer`].
+/// Arguments:
+/// - `reader`: The reader;
 ///
-/// [`Writer`]: ../trait.Writer.html
-pub trait StringDataWriter<'a> {
-    /// Writes the value.
-    ///
-    /// Parameters:
-    /// * `v`: The value to write.
-    ///
-    /// Returns:
-    /// * `Ok(())`: On success.
-    /// * `Err(ErrorKind)`: In case of error.
-    fn write_string(&mut self, value: &str) -> Result<()>;
+/// Returns:
+/// - Ok(v): The value read;
+/// - Err(_): If the value could not be extracted;
+pub fn read_u32(reader: &mut dyn Reader) -> Result<u32> {
+    let mut tmp: [u8; 4] = [0; 4];
+    reader.read_all(&mut tmp)?;
+    Ok(u32::from_be_bytes(tmp))
 }
 
-impl<'a> StringDataWriter<'a> for dyn Writer {
-    fn write_string(&mut self, value: &str) -> Result<()> {
-        self.write_all(value.as_bytes())
+/// Extracts an `i32` from the specified `Reader`.
+///
+/// Arguments:
+/// - `reader`: The reader;
+///
+/// Returns:
+/// - Ok(v): The value read;
+/// - Err(_): If the value could not be extracted;
+pub fn read_i32(reader: &mut dyn Reader) -> Result<i32> {
+    let mut tmp: [u8; 4] = [0; 4];
+    reader.read_all(&mut tmp)?;
+    Ok(i32::from_be_bytes(tmp))
+}
+
+/// Extracts an `u64` from the specified `Reader`.
+///
+/// Arguments:
+/// - `reader`: The reader;
+///
+/// Returns:
+/// - Ok(v): The value read;
+/// - Err(_): If the value could not be extracted;
+pub fn read_u64(reader: &mut dyn Reader) -> Result<u64> {
+    let mut tmp: [u8; 8] = [0; 8];
+    reader.read_all(&mut tmp)?;
+    Ok(u64::from_be_bytes(tmp))
+}
+
+/// Extracts an `i64` from the specified `Reader`.
+///
+/// Arguments:
+/// - `reader`: The reader;
+///
+/// Returns:
+/// - Ok(v): The value read;
+/// - Err(_): If the value could not be extracted;
+pub fn read_i64(reader: &mut dyn Reader) -> Result<i64> {
+    let mut tmp: [u8; 8] = [0; 8];
+    reader.read_all(&mut tmp)?;
+    Ok(i64::from_be_bytes(tmp))
+}
+
+/// Extracts an ILInt value from the specified `Reader`.
+///
+/// Arguments:
+/// - `reader`: The reader;
+///
+/// Returns:
+/// - Ok(v): The value read;
+/// - Err(_): If the value could not be extracted;
+pub fn read_ilint(reader: &mut dyn Reader) -> Result<u64> {
+    match decode(reader) {
+        Ok(value) => Ok(value),
+        Err(crate::ilint::ErrorKind::IOError(e)) => Err(e),
+        _ => Err(ErrorKind::CorruptedData),
     }
+}
+
+/// Extracts an `f32` from the specified `Reader`. It is
+/// always expected to be encoded as a `binary32`
+/// from *IEEE 754-2008*.
+///
+/// Arguments:
+/// - `reader`: The reader;
+///
+/// Returns:
+/// - Ok(v): The value read;
+/// - Err(_): If the value could not be extracted;
+pub fn read_f32(reader: &mut dyn Reader) -> Result<f32> {
+    let tmp: u32 = read_u32(reader)?;
+    Ok(f32::from_bits(tmp))
+}
+
+/// Extracts an `f64` from the specified `Reader`. It is
+/// always expected to be encoded as a `binary64`
+/// from *IEEE 754-2008*.
+///
+/// Arguments:
+/// - `reader`: The reader;
+///
+/// Returns:
+/// - Ok(v): The value read;
+/// - Err(_): If the value could not be extracted;
+pub fn read_f64(reader: &mut dyn Reader) -> Result<f64> {
+    let tmp: u64 = read_u64(reader)?;
+    Ok(f64::from_bits(tmp))
+}
+
+/// Extracts an UTF-8 string from the specified `Reader`.
+///
+/// Arguments:
+/// - `reader`: The reader;
+/// - `size`: The size in bytes;
+///
+/// Returns:
+/// - Ok(v): The value read;
+/// - Err(_): If the value could not be extracted;
+pub fn read_string(reader: &mut dyn Reader, size: usize) -> Result<String> {
+    let mut tmp: Vec<u8> = vec![0; size];
+    reader.read_all(tmp.as_mut_slice())?;
+    match String::from_utf8(tmp) {
+        Ok(s) => Ok(s),
+        _ => Err(ErrorKind::CorruptedData),
+    }
+}
+
+/// Writes an `u8` value to the specified `Writer`.
+///
+/// Arguments:
+/// - `v`: The value;
+/// - `writer`: The reader;
+///
+/// Returns:
+/// - Ok(()): For success;
+/// - Err(_): For failure;
+pub fn write_u8(v: u8, writer: &mut dyn Writer) -> Result<()> {
+    writer.write(v)
+}
+
+/// Writes an `i8` value to the specified `Writer`.
+///
+/// Arguments:
+/// - `v`: The value;
+/// - `writer`: The reader;
+///
+/// Returns:
+/// - Ok(()): For success;
+/// - Err(_): For failure;
+pub fn write_i8(v: i8, writer: &mut dyn Writer) -> Result<()> {
+    writer.write(v as u8)
+}
+
+/// Writes an `u16` value to the specified `Writer`.
+///
+/// Arguments:
+/// - `v`: The value;
+/// - `writer`: The reader;
+///
+/// Returns:
+/// - Ok(()): For success;
+/// - Err(_): For failure;
+pub fn write_u16(v: u16, writer: &mut dyn Writer) -> Result<()> {
+    writer.write_all(&v.to_be_bytes())
+}
+
+/// Writes an `i16` value to the specified `Writer`.
+///
+/// Arguments:
+/// - `v`: The value;
+/// - `writer`: The reader;
+///
+/// Returns:
+/// - Ok(()): For success;
+/// - Err(_): For failure;
+pub fn write_i16(v: i16, writer: &mut dyn Writer) -> Result<()> {
+    writer.write_all(&v.to_be_bytes())
+}
+
+/// Writes an `u32` value to the specified `Writer`.
+///
+/// Arguments:
+/// - `v`: The value;
+/// - `writer`: The reader;
+///
+/// Returns:
+/// - Ok(()): For success;
+/// - Err(_): For failure;
+pub fn write_u32(v: u32, writer: &mut dyn Writer) -> Result<()> {
+    writer.write_all(&v.to_be_bytes())
+}
+
+/// Writes an `i32` value to the specified `Writer`.
+///
+/// Arguments:
+/// - `v`: The value;
+/// - `writer`: The reader;
+///
+/// Returns:
+/// - Ok(()): For success;
+/// - Err(_): For failure;
+pub fn write_i32(v: i32, writer: &mut dyn Writer) -> Result<()> {
+    writer.write_all(&v.to_be_bytes())
+}
+
+/// Writes an `u64` value to the specified `Writer`.
+///
+/// Arguments:
+/// - `v`: The value;
+/// - `writer`: The reader;
+///
+/// Returns:
+/// - Ok(()): For success;
+/// - Err(_): For failure;
+pub fn write_u64(v: u64, writer: &mut dyn Writer) -> Result<()> {
+    writer.write_all(&v.to_be_bytes())
+}
+
+/// Writes an `i64` value to the specified `Writer`.
+///
+/// Arguments:
+/// - `v`: The value;
+/// - `writer`: The reader;
+///
+/// Returns:
+/// - Ok(()): For success;
+/// - Err(_): For failure;
+pub fn write_i64(v: i64, writer: &mut dyn Writer) -> Result<()> {
+    writer.write_all(&v.to_be_bytes())
+}
+
+/// Writes an ILInt value to the specified `Writer`.
+///
+/// Arguments:
+/// - `v`: The value;
+/// - `writer`: The reader;
+///
+/// Returns:
+/// - Ok(()): For success;
+/// - Err(_): For failure;
+pub fn write_ilint(v: u64, writer: &mut dyn Writer) -> Result<()> {
+    match encode(v, writer) {
+        Ok(()) => Ok(()),
+        Err(crate::ilint::ErrorKind::IOError(e)) => Err(e),
+        _ => Err(ErrorKind::UnableToWriteData),
+    }
+}
+
+/// Writes an `f32` value to the specified `Writer`. It is
+/// always encoded as a `binary32` from *IEEE 754-2008*.
+///
+/// Arguments:
+/// - `v`: The value;
+/// - `writer`: The reader;
+///
+/// Returns:
+/// - Ok(()): For success;
+/// - Err(_): For failure;
+pub fn write_f32(v: f32, writer: &mut dyn Writer) -> Result<()> {
+    writer.write_all(&v.to_be_bytes())
+}
+
+/// Writes an `f64` value to the specified `Writer`. It is
+/// always encoded as a `binary64` from *IEEE 754-2008*.
+///
+/// Arguments:
+/// - `v`: The value;
+/// - `writer`: The reader;
+///
+/// Returns:
+/// - Ok(()): For success;
+/// - Err(_): For failure;
+pub fn write_f64(v: f64, writer: &mut dyn Writer) -> Result<()> {
+    writer.write_all(&v.to_be_bytes())
+}
+
+/// Writes an UTF-8 string to the specified `Writer`.
+///
+/// Arguments:
+/// - `v`: The value;
+/// - `writer`: The reader;
+///
+/// Returns:
+/// - Ok(()): For success;
+/// - Err(_): For failure;
+pub fn write_string(v: &str, writer: &mut dyn Writer) -> Result<()> {
+    writer.write_all(&v.as_bytes())
 }
