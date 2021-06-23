@@ -32,6 +32,9 @@
 use super::*;
 use crate::io::test_utils::fill_sample;
 
+//=============================================================================
+// ByteArrayReader
+//-----------------------------------------------------------------------------
 //Tests for ByteArrayReader
 #[test]
 fn test_bytearrayreader_new() {
@@ -39,11 +42,11 @@ fn test_bytearrayreader_new() {
     fill_sample(&mut src);
     let mut ba = ByteArrayReader::new(&src);
     assert_eq!(ba.get_offset(), 0);
-    assert_eq!(ba.get_array(), src);
+    assert_eq!(ba.as_slice(), src);
 
     ba = ByteArrayReader::new(&src[0..1]);
     assert_eq!(ba.get_offset(), 0);
-    assert_eq!(ba.get_array(), &src[0..1]);
+    assert_eq!(ba.as_slice(), &src[0..1]);
 }
 
 #[test]
@@ -51,18 +54,24 @@ fn test_bytearrayreader_get_set_offset() {
     let mut src = [0u8; 8];
     fill_sample(&mut src);
     let mut ba = ByteArrayReader::new(&src);
-    for i in 0..src.len() {
+    for i in 0..src.len() + 1 {
         ba.set_offset(i);
         assert_eq!(ba.get_offset(), i);
     }
+
+    ba.set_offset(ba.as_slice().len() + 1);
+    assert_eq!(ba.get_offset(), ba.as_slice().len());
+
+    ba.set_offset(usize::MAX);
+    assert_eq!(ba.get_offset(), ba.as_slice().len());
 }
 
 #[test]
-fn test_bytearrayreader_get_array() {
+fn test_bytearrayreader_as_slice() {
     let mut src = [0u8; 8];
     fill_sample(&mut src);
     let ba = ByteArrayReader::new(&src);
-    assert_eq!(*ba.get_array(), src);
+    assert_eq!(ba.as_slice(), &src);
 }
 
 #[test]
@@ -75,6 +84,20 @@ fn test_bytearrayreader_available() {
         assert!(ba.read().is_ok());
         assert_eq!(ba.available(), src.len() - i - 1);
     }
+}
+
+#[test]
+fn test_bytearrayreader_can_read() {
+    let src = [0u8; 8];
+    let ba = ByteArrayReader::new(&src);
+
+    for size in 0..src.len() + 1 {
+        assert!(ba.can_read(size).is_ok());
+    }
+    match ba.can_read(src.len() + 2) {
+        Err(ErrorKind::UnableToReadData) => (),
+        _ => panic!(),
+    };
 }
 
 #[test]
@@ -112,67 +135,281 @@ fn test_bytearrayreader_reader_readall() {
     }
 }
 
-//Tests for ByteArrayWriter
 #[test]
-fn test_bytearraywriter_new() {
-    let mut src1: [u8; 8] = [0; 8];
-    let mut src2 = src1;
-    let mut ba1 = ByteArrayWriter::new(&mut src1);
-    assert_eq!(ba1.get_offset(), 0);
-    assert_eq!(ba1.get_array(), &mut src2);
+fn test_bytearrayreader_skip() {
+    let mut src: [u8; 20] = [0; 20];
+    fill_sample(&mut src);
 
-    let mut src3: [u8; 8] = [0; 8];
-    for i in 0..src3.len() {
-        src3[i] = i as u8;
+    let mut ba = ByteArrayReader::new(&src);
+    let mut offs: usize = 0;
+    for size in 0..6 {
+        assert!(ba.skip(size).is_ok());
+        offs += size;
+        assert_eq!(ba.get_offset(), offs);
+        assert_eq!(ba.available(), 20 - offs);
     }
-    let mut src4 = src3;
-    let mut ba2 = ByteArrayWriter::new(&mut src3[0..1]);
-    assert_eq!(ba2.get_offset(), 0);
-    assert_eq!(ba2.get_array(), &mut src4[0..1]);
+    match ba.skip(6) {
+        Err(ErrorKind::UnableToReadData) => (),
+        _ => panic!(),
+    }
+    match ba.skip(5) {
+        Ok(()) => (),
+        _ => panic!(),
+    }
+    assert_eq!(ba.get_offset(), 20);
+    match ba.skip(0) {
+        Ok(()) => (),
+        _ => panic!(),
+    }
+    match ba.skip(1) {
+        Err(ErrorKind::UnableToReadData) => (),
+        _ => panic!(),
+    }
 }
 
 #[test]
-fn test_bytearraywriter_get_set_offset() {
-    let mut src = [0u8; 8];
-    let src2 = src;
+fn test_bytearrayreader_as_reader() {
+    let src: [u8; 20] = [0; 20];
+    let mut ba = ByteArrayReader::new(&src);
+
+    let m = ba.as_reader();
+    assert!(m.skip(1).is_ok());
+    assert_eq!(ba.get_offset(), 1);
+}
+
+//=============================================================================
+// VecReader
+//-----------------------------------------------------------------------------
+#[test]
+fn test_vecreader_new() {
+    let mut src: [u8; 20] = [0; 20];
     fill_sample(&mut src);
 
-    let mut ba = ByteArrayWriter::new(&mut src);
+    let r = VecReader::new(&src);
+    assert_eq!(r.as_slice(), &src);
+    assert_eq!(r.get_offset(), 0);
+}
 
-    for i in 0..src2.len() {
+#[test]
+fn test_vecreader_get_set_offset() {
+    let mut src: [u8; 20] = [0; 20];
+    fill_sample(&mut src);
+
+    let mut ba = VecReader::new(&src);
+
+    for i in 0..src.len() + 1 {
         ba.set_offset(i);
         assert_eq!(ba.get_offset(), i);
     }
+
+    ba.set_offset(ba.as_slice().len() + 1);
+    assert_eq!(ba.get_offset(), ba.as_slice().len());
+
+    ba.set_offset(usize::MAX);
+    assert_eq!(ba.get_offset(), ba.as_slice().len());
 }
 
 #[test]
-fn test_bytearraywriter_writer_write() {
+fn test_vecreader_available() {
     let mut src = [0u8; 8];
-    let mut baw = ByteArrayWriter::new(&mut src);
+    fill_sample(&mut src);
+    let mut ba = VecReader::new(&src);
 
-    let mut src2 = [0u8; 8];
-    fill_sample(&mut src2);
+    for i in 0..src.len() {
+        assert_eq!(ba.available(), src.len() - i);
+        assert!(ba.read().is_ok());
+        assert_eq!(ba.available(), src.len() - i - 1);
+    }
+}
 
-    for i in 0..src2.len() {
-        match baw.write(src2[i]) {
-            Ok(_0) => assert_eq!(src2[i], baw.array[i]),
+#[test]
+fn test_vecreader_can_read() {
+    let src = [0u8; 8];
+    let ba = VecReader::new(&src);
+
+    for size in 0..src.len() + 1 {
+        assert!(ba.can_read(size).is_ok());
+    }
+    match ba.can_read(src.len() + 2) {
+        Err(ErrorKind::UnableToReadData) => (),
+        _ => panic!(),
+    };
+}
+
+#[test]
+fn test_vecreader_get_vec() {
+    let mut src = [0u8; 8];
+    fill_sample(&mut src);
+    let ba = VecReader::new(&src);
+
+    assert_eq!(ba.get_vec().as_slice(), &src);
+}
+
+#[test]
+fn test_vecreader_reader_read() {
+    let mut src = [0u8; 8];
+    fill_sample(&mut src);
+    let mut ba = VecReader::new(&src);
+    for i in 0..src.len() {
+        match ba.read() {
+            Ok(v) => assert_eq!(v, src[i]),
             _ => panic!("Unexpected read error!"),
         }
     }
+    assert!(ba.read().is_err());
 }
 
 #[test]
-fn test_bytearraywriter_writer_writeall() {
-    let mut src = [0u8; 8];
-    let mut baw = ByteArrayWriter::new(&mut src);
+fn test_vecreader_reader_readall() {
+    let mut src: [u8; 20] = [0; 20];
+    fill_sample(&mut src);
 
-    let mut src2 = [0u8; 8];
-    fill_sample(&mut src2);
-
-    match baw.write_all(&mut src2) {
-        Ok(_0) => assert_eq!(src2, baw.get_array()),
-        _ => panic!("Unexpected read_all error!"),
+    let mut ba = VecReader::new(&src);
+    let mut offs: usize = 0;
+    let mut buff: [u8; 6] = [0; 6];
+    for l in 0..7 {
+        let count = if l <= ba.available() {
+            l
+        } else {
+            ba.available()
+        };
+        let slice = &mut buff[0..count];
+        assert!(ba.read_all(slice).is_ok());
+        assert_eq!(&src[offs..(offs + count)], slice);
+        offs += count;
     }
+}
+
+#[test]
+fn test_vecreader_skip() {
+    let mut src: [u8; 20] = [0; 20];
+    fill_sample(&mut src);
+
+    let mut ba = VecReader::new(&src);
+    let mut offs: usize = 0;
+    for size in 0..6 {
+        assert!(ba.skip(size).is_ok());
+        offs += size;
+        assert_eq!(ba.get_offset(), offs);
+        assert_eq!(ba.available(), 20 - offs);
+    }
+    match ba.skip(6) {
+        Err(ErrorKind::UnableToReadData) => (),
+        _ => panic!(),
+    }
+    match ba.skip(5) {
+        Ok(()) => (),
+        _ => panic!(),
+    }
+    assert_eq!(ba.get_offset(), 20);
+    match ba.skip(0) {
+        Ok(()) => (),
+        _ => panic!(),
+    }
+    match ba.skip(1) {
+        Err(ErrorKind::UnableToReadData) => (),
+        _ => panic!(),
+    }
+}
+
+#[test]
+fn test_vecreader_as_reader() {
+    let src: [u8; 20] = [0; 20];
+    let mut ba = VecReader::new(&src);
+
+    let m = ba.as_reader();
+    assert!(m.skip(1).is_ok());
+    assert_eq!(ba.get_offset(), 1);
+}
+
+//=============================================================================
+// VecWriter
+//-----------------------------------------------------------------------------
+#[test]
+fn test_vecwriter_new() {
+    let w = VecWriter::new();
+
+    assert!(!w.is_read_only());
+    assert_eq!(w.get_offset(), 0);
+    assert_eq!(w.get_vec().len(), 0);
+}
+
+#[test]
+fn test_vecwriter_with_capacity() {
+    let w = VecWriter::with_capacity(123);
+
+    assert!(!w.is_read_only());
+    assert_eq!(w.get_offset(), 0);
+    assert_eq!(w.get_vec().len(), 0);
+    assert_eq!(w.get_vec().capacity(), 123);
+}
+
+#[test]
+fn test_vecwriter_get_set_read_only() {
+    let mut w = VecWriter::new();
+
+    assert!(!w.is_read_only());
+    w.set_read_only(true);
+    assert!(w.is_read_only());
+    w.set_read_only(false);
+    assert!(!w.is_read_only());
+}
+
+#[test]
+fn test_vecwriter_can_write() {
+    let mut w = VecWriter::new();
+
+    match w.can_write() {
+        Ok(()) => (),
+        _ => panic!(),
+    }
+    w.set_read_only(true);
+    match w.can_write() {
+        Err(ErrorKind::UnableToWriteData) => (),
+        _ => panic!(),
+    }
+    w.set_read_only(false);
+    match w.can_write() {
+        Ok(()) => (),
+        _ => panic!(),
+    }
+}
+
+#[test]
+fn test_vecwriter_as_slice() {
+    let mut src: [u8; 10] = [0; 10];
+    fill_sample(&mut src);
+
+    let mut w = VecWriter::new();
+
+    assert_eq!(w.as_slice().len(), 0);
+    for s in &src {
+        match w.write(*s) {
+            Ok(()) => (),
+            _ => panic!(),
+        }
+    }
+
+    assert_eq!(w.as_slice().len(), src.len());
+    assert_eq!(w.as_slice(), &src);
+}
+
+#[test]
+fn test_vecwriter_get_vec() {
+    let mut src: [u8; 10] = [0; 10];
+    fill_sample(&mut src);
+
+    let mut w = VecWriter::new();
+
+    assert_eq!(w.get_vec().len(), 0);
+    for s in &src {
+        match w.write(*s) {
+            Ok(()) => (),
+            _ => panic!(),
+        }
+    }
+    assert_eq!(w.get_vec().len(), src.len());
+    assert_eq!(w.get_vec().as_slice(), &src);
 }
 
 #[test]
@@ -188,7 +425,7 @@ fn test_vecwriter_writer_write() {
             _ => panic!("Unexpected read_all error!"),
         }
     }
-    assert_eq!(src2, baw.get_array().as_slice());
+    assert_eq!(&src2, baw.as_slice());
 }
 
 #[test]
@@ -210,5 +447,5 @@ fn test_vecwriter_writer_write_all() {
     let mut exp = [0u8; 16];
     exp[0..8].copy_from_slice(&src2);
     exp[8..16].copy_from_slice(&src2);
-    assert_eq!(exp, baw.get_array().as_slice());
+    assert_eq!(exp, baw.as_slice());
 }

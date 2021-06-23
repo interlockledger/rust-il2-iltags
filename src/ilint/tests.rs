@@ -30,7 +30,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 use super::*;
-use crate::io::{ByteArrayReader, ByteArrayWriter};
+use crate::io::{ByteArrayReader, VecWriter};
 
 pub struct SampleILInt {
     pub value: u64,
@@ -139,35 +139,32 @@ fn test_encoded_size() {
 #[test]
 fn test_encode() {
     for i in 0..0xF8 {
-        let mut buff: [u8; 1] = [0];
-
-        let mut writer = ByteArrayWriter::new(&mut buff);
+        let mut writer = VecWriter::new();
         match encode(i as u64, &mut writer) {
             Ok(()) => (),
             Err(_) => panic!("Success expected!"),
         }
-        assert_eq!(buff[0], i as u8);
+        assert_eq!(writer.as_slice()[0], i as u8);
 
-        let mut writer = ByteArrayWriter::new(&mut buff[0..0]);
+        let mut writer = VecWriter::new();
+        writer.set_read_only(true);
         assert!(encode(i as u64, &mut writer).is_err());
     }
 
     for sample in &SAMPLE_VALUES {
-        let mut buff: [u8; 10] = [FILLER; 10];
         let enc_size = sample.encoded_size;
 
-        let mut writer = ByteArrayWriter::new(&mut buff);
+        let mut writer = VecWriter::new();
         match encode(sample.value, &mut writer) {
             Ok(()) => (),
             Err(_) => panic!("Success expected!"),
         }
         assert_eq!(enc_size, writer.get_offset());
-        assert_eq!(buff, sample.encoded);
+        assert_eq!(writer.as_slice()[0..enc_size], sample.encoded[0..enc_size]);
 
-        for size in 0..enc_size {
-            let mut writer = ByteArrayWriter::new(&mut buff[0..size]);
-            assert!(encode(sample.value as u64, &mut writer).is_err());
-        }
+        let mut writer = VecWriter::new();
+        writer.set_read_only(true);
+        assert!(encode(sample.value as u64, &mut writer).is_err());
     }
 }
 

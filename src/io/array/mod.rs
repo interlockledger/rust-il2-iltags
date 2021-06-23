@@ -39,8 +39,11 @@ use super::{ErrorKind, Reader, Result, Writer};
 #[cfg(test)]
 mod tests;
 
+//=============================================================================
+// ByteArrayReader
+//-----------------------------------------------------------------------------
 /// `ByteArrayReader` implements a [`Reader`] that
-/// can extract bytes from a slice of bytes.
+/// can extract bytes from a borrowed slice of bytes.
 ///
 /// [`Reader`]: ../trait.Reader.html
 pub struct ByteArrayReader<'a> {
@@ -56,154 +59,281 @@ impl<'a> ByteArrayReader<'a> {
         }
     }
 
+    /// Returns the current reading position.
+    ///
+    /// Returns:
+    /// - The current offset. It is guaranteed to be at most
+    /// the total size of the data.
+
     pub fn get_offset(&self) -> usize {
         self.offset
     }
 
+    /// Sets the current reading position.
+    ///
+    /// Arguments:
+    /// - `offset`: The new position. It if is larger
+    ///   than the total length, it will assume the
+    ///   total length;
     pub fn set_offset(&mut self, offset: usize) {
-        if offset < self.array.len() {
-            self.offset = offset
-        } else {
-            self.offset = self.array.len()
-        }
+        self.offset = std::cmp::min(offset, self.array.len());
     }
 
-    pub fn get_array(&self) -> &[u8] {
+    /// Returns a reference to the inner data as a
+    /// slice.
+    pub fn as_slice(&self) -> &[u8] {
         self.array
     }
 
+    /// Returns the remanining number of bytes.
     pub fn available(&self) -> usize {
         self.array.len() - self.offset
+    }
+
+    /// Verifies if the specified number of bytes can be
+    /// read from this struct.
+    ///
+    /// Returns:
+    /// - `Result(())`: If it is possible to read the specified
+    ///   number of bytes;
+    /// - `Result(ErrorKind::UnableToReadData)`: If it is not
+    ///   possible to read the specified number of bytes;
+    pub fn can_read(&self, count: usize) -> Result<()> {
+        if self.available() < count {
+            Err(ErrorKind::UnableToReadData)
+        } else {
+            Ok(())
+        }
     }
 }
 
 impl<'a> Reader<'a> for ByteArrayReader<'a> {
     fn read(&mut self) -> Result<u8> {
-        if self.offset < self.array.len() {
-            let r = self.array[self.offset];
-            self.offset += 1;
-            Ok(r)
-        } else {
-            Err(ErrorKind::UnableToReadData)
-        }
+        self.can_read(1)?;
+        let r = self.array[self.offset];
+        self.offset += 1;
+        Ok(r)
     }
 
     fn read_all(&mut self, buff: &mut [u8]) -> Result<()> {
-        if self.available() >= buff.len() {
-            buff.copy_from_slice(&self.array[self.offset..(self.offset + buff.len())]);
-            self.offset += buff.len();
-            Ok(())
-        } else {
-            Err(ErrorKind::UnableToReadData)
-        }
+        self.can_read(buff.len())?;
+        buff.copy_from_slice(&self.array[self.offset..(self.offset + buff.len())]);
+        self.offset += buff.len();
+        Ok(())
     }
+
+    fn skip(&mut self, count: usize) -> Result<()> {
+        self.can_read(count)?;
+        self.offset += count;
+        Ok(())
+    }
+
     fn as_reader(&mut self) -> &mut dyn Reader<'a> {
         self
     }
 }
 
-/// `ByteArrayWriter` implements a [`Writer`] that
-/// can add bytes into a slice of bytes.
+//=============================================================================
+// VecReader
+//-----------------------------------------------------------------------------
+/// `VecReader` implements a [`Writer`] that uses a Vec<u8> a
+/// its backend.
 ///
-/// [`Writer`]: ../trait.Writer.html
-pub struct ByteArrayWriter<'a> {
-    array: &'a mut [u8],
+/// [`Reader`]: ../trait.Reader.html
+pub struct VecReader {
+    vector: Vec<u8>,
     offset: usize,
 }
 
-impl<'a> ByteArrayWriter<'a> {
-    pub fn new(buff: &'a mut [u8]) -> ByteArrayWriter {
-        ByteArrayWriter {
-            array: buff,
+impl VecReader {
+    /// Creates a new `VecReader` with the data copied
+    /// from the specified slice.
+    pub fn new(value: &[u8]) -> VecReader {
+        let mut v: Vec<u8> = Vec::with_capacity(value.len());
+        v.extend_from_slice(value);
+        VecReader {
+            vector: v,
             offset: 0,
         }
     }
 
+    /// Returns the current reading position.
+    ///
+    /// Returns:
+    /// - The current offset. It is guaranteed to be at most
+    /// the total size of the data.
     pub fn get_offset(&self) -> usize {
         self.offset
     }
 
+    /// Sets the current reading position.
+    ///
+    /// Arguments:
+    /// - `offset`: The new position. It if is larger
+    ///   than the total length, it will assume the
+    ///   total length;
     pub fn set_offset(&mut self, offset: usize) {
-        if offset < self.array.len() {
-            self.offset = offset
+        self.offset = std::cmp::min(offset, self.vector.len());
+    }
+
+    /// Returns the remanining number of bytes.    
+    pub fn available(&self) -> usize {
+        self.vector.len() - self.offset
+    }
+
+    /// Verifies if the specified number of bytes can be
+    /// read from this struct.
+    ///
+    /// Returns:
+    /// - `Result(())`: If it is possible to read the specified
+    ///   number of bytes;
+    /// - `Result(ErrorKind::UnableToReadData)`: If it is not
+    ///   possible to read the specified number of bytes;
+    pub fn can_read(&self, count: usize) -> Result<()> {
+        if self.available() < count {
+            Err(ErrorKind::UnableToReadData)
         } else {
-            self.offset = self.array.len()
+            Ok(())
         }
     }
 
-    pub fn get_array(&mut self) -> &mut [u8] {
-        self.array
+    /// Returns a reference to the inner data as a
+    /// slice.
+    pub fn as_slice(&self) -> &[u8] {
+        &self.vector
     }
 
-    pub fn available(&self) -> usize {
-        self.array.len() - self.offset
+    /// Returns aread-only reference to the inner vector.
+    pub fn get_vec(&self) -> &Vec<u8> {
+        &self.vector
     }
 }
 
-impl<'a> Writer for ByteArrayWriter<'a> {
-    fn write(&mut self, value: u8) -> Result<()> {
-        if self.available() > 0 {
-            self.array[self.offset] = value;
-            self.offset += 1;
-            Ok(())
-        } else {
-            Err(ErrorKind::UnableToWriteData)
-        }
+impl<'a> Reader<'a> for VecReader {
+    fn read(&mut self) -> Result<u8> {
+        self.can_read(1)?;
+        let r = self.vector[self.offset];
+        self.offset += 1;
+        Ok(r)
     }
 
-    fn write_all(&mut self, buff: &[u8]) -> Result<()> {
-        if self.available() >= buff.len() {
-            let target = &mut self.array[self.offset..(self.offset + buff.len())];
-            target.copy_from_slice(buff);
-            self.offset += buff.len();
-            Ok(())
-        } else {
-            Err(ErrorKind::UnableToWriteData)
-        }
+    fn read_all(&mut self, buff: &mut [u8]) -> Result<()> {
+        self.can_read(buff.len())?;
+        let new_offs = self.offset + buff.len();
+        buff.copy_from_slice(&self.vector[self.offset..new_offs]);
+        self.offset = new_offs;
+        Ok(())
     }
 
-    fn as_writer(&mut self) -> &mut dyn Writer {
+    fn skip(&mut self, count: usize) -> Result<()> {
+        self.can_read(count)?;
+        self.offset += count;
+        Ok(())
+    }
+
+    fn as_reader(&mut self) -> &mut dyn Reader<'a> {
         self
     }
 }
 
-/// `VecWriter` implements a [`Writer`] that
-/// can add bytes to a vector that can grow
-/// dynamically as needed.
+//=============================================================================
+// VecWriter
+//-----------------------------------------------------------------------------
+/// `VecWriter` implements a [`Writer`] that uses a Vec<u8> a
+/// its backend.
 ///
 /// [`Writer`]: ../trait.Writer.html
 pub struct VecWriter {
     vector: Vec<u8>,
     offset: usize,
+    read_only: bool,
 }
 
-impl<'a> VecWriter {
+impl VecWriter {
+    /// Creates a new empty instance of this struct. The new struct
+    /// is set as writeable by default.
     pub fn new() -> VecWriter {
         VecWriter {
             vector: Vec::new(),
             offset: 0,
+            read_only: false,
         }
     }
 
+    /// Creates a new empty instance of this struct with an
+    /// initial capacity set.
+    ///
+    /// Arguments:
+    /// - `capacity`: The reserved capacity;
+    pub fn with_capacity(capacity: usize) -> VecWriter {
+        VecWriter {
+            vector: Vec::with_capacity(capacity),
+            offset: 0,
+            read_only: false,
+        }
+    }
+
+    /// Returns the current writing position.
+    ///
+    /// Returns:
+    /// - The current offset. It is guaranteed to be at most
+    /// the total size of the data.
     pub fn get_offset(&self) -> usize {
         self.offset
     }
 
+    /// Sets the current writing position.
+    ///
+    /// Arguments:
+    /// - `offset`: The new position. It if is larger
+    ///   than the total length, it will assume the
+    ///   total length;
     pub fn set_offset(&mut self, offset: usize) {
-        if offset < self.vector.len() {
-            self.offset = offset
+        self.offset = std::cmp::min(offset, self.vector.len());
+    }
+
+    /// Returns true if this instance is locked for writing.
+    pub fn is_read_only(&self) -> bool {
+        self.read_only
+    }
+
+    /// Sets the read-only flag.
+    ///
+    /// Arguments:
+    /// - `read_only`: The new value;
+    pub fn set_read_only(&mut self, read_only: bool) {
+        self.read_only = read_only;
+    }
+
+    /// Verifies if the it is possible to write into this
+    /// `VecWriter`.
+    ///
+    /// Returns:
+    /// - `Ok(())`: If it is possible to write;
+    /// - `Err(ErrorKind::UnableToWriteData)`: If it is not possible
+    /// to write;
+    pub fn can_write(&self) -> Result<()> {
+        if self.read_only {
+            Err(ErrorKind::UnableToWriteData)
         } else {
-            self.offset = self.vector.len()
+            Ok(())
         }
     }
 
-    pub fn get_array(&mut self) -> &mut Vec<u8> {
-        &mut self.vector
+    /// Returns the current data as a slice.
+    pub fn as_slice(&self) -> &[u8] {
+        &self.vector.as_slice()
+    }
+
+    /// Returns aread-only reference to the inner vector.
+    pub fn get_vec(&self) -> &Vec<u8> {
+        &self.vector
     }
 }
 
 impl Writer for VecWriter {
     fn write(&mut self, value: u8) -> Result<()> {
+        self.can_write()?;
         if self.offset == self.vector.len() {
             self.vector.push(value);
             self.offset += 1;
@@ -215,6 +345,7 @@ impl Writer for VecWriter {
     }
 
     fn write_all(&mut self, buff: &[u8]) -> Result<()> {
+        self.can_write()?;
         let new_offset = self.offset + buff.len();
         if new_offset > self.vector.len() {
             self.vector.resize(new_offset, 0);
@@ -223,6 +354,7 @@ impl Writer for VecWriter {
         self.offset = new_offset;
         Ok(())
     }
+
     fn as_writer(&mut self) -> &mut dyn Writer {
         self
     }
