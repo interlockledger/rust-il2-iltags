@@ -242,7 +242,7 @@ impl ILTagCreatorEngine {
     pub fn new(strict: bool) -> ILTagCreatorEngine {
         ILTagCreatorEngine {
             creators: HashMap::new(),
-            strict: strict,
+            strict,
         }
     }
 
@@ -340,12 +340,12 @@ impl ILRawTag {
     }
 
     /// Returns an immutable reference to the payload.
-    pub fn get_payload(&self) -> &Vec<u8> {
+    pub fn get_value(&self) -> &Vec<u8> {
         &self.payload
     }
 
     /// Returns a mutable reference to the payload.
-    pub fn get_mut_payload(&mut self) -> &mut Vec<u8> {
+    pub fn get_mut_value(&mut self) -> &mut Vec<u8> {
         &mut self.payload
     }
 }
@@ -354,6 +354,7 @@ impl ILTag for ILRawTag {
     fn id(&self) -> u64 {
         self.id
     }
+
     fn value_size(&self) -> u64 {
         self.payload.len() as u64
     }
@@ -386,61 +387,3 @@ impl ILTag for ILRawTag {
         self
     }
 }
-
-//=============================================================================
-// ILIntegerTag
-//-----------------------------------------------------------------------------
-pub struct ILIntegerTag<T: Sized + Default + 'static> {
-    id: u64,
-    value: T,
-}
-/*
-
-
-impl<T: Sized + Default + 'static> ILIntegerTag<T> {
-    pub fn new(id: u64) -> ILIntegerTag<T> {
-        ILIntegerTag {
-            id: id,
-            value: T::default(),
-        }
-    }
-
-    pub fn get_value(&self) -> T {
-        self.value
-    }
-
-    pub fn set_value(&mut self, value: T) {
-        self.value = value
-    }
-}
-
-impl<T: Sized + Default + 'static> ILTag for ILIntegerTag<T> {
-    fn id(&self) -> u64 {
-        self.id
-    }
-
-    fn value_size(&self) -> u64 {
-        std::mem::size_of::<T>() as u64
-    }
-
-    fn serialize_value(&self, writer: &mut dyn DataWriter) -> Result<()> {
-        match writer.write_int(self.value) {}
-    }
-
-    fn deserialize_value(
-        &mut self,
-        factory: &dyn ILTagFactory,
-        value_size: usize,
-        reader: &mut dyn DataReader,
-    ) -> Result<()> {
-    }
-
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
-    fn as_mut_any(&mut self) -> &mut dyn Any {
-        self
-    }
-}
-*/
