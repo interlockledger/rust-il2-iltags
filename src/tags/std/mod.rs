@@ -211,6 +211,7 @@ macro_rules! int_iltag_impl {
     };
 }
 
+/// Implementation of Default trait for all tags in this package.
 macro_rules! iltag_default_impl {
     ($tag_type: ty) => {
         impl Default for $tag_type {
@@ -462,3 +463,142 @@ simple_value_tag_struct_impl!(ILBin64Tag, f64, IL_BIN64_TAG_ID);
 int_iltag_impl!(ILBin64Tag, 8, read_f64, write_f64);
 
 iltag_default_impl!(ILBin64Tag);
+
+//=============================================================================
+// ILILint64Tag
+//-----------------------------------------------------------------------------
+/// This struct implements the bin128 standard tag.
+pub struct ILBin128Tag {
+    id: u64,
+    value: [u8; 16],
+}
+
+impl ILBin128Tag {
+    /// Constructs this struct using the default tag id and
+    /// value.
+    pub fn new() -> Self {
+        Self::with_id(IL_BIN128_TAG_ID)
+    }
+
+    /// Constructs this struct using the default tag id.
+    ///
+    /// Arguments:
+    /// - `value`: The initial value;
+    pub fn with_value(value: &[u8]) -> Self {
+        Self::with_id_value(IL_BIN128_TAG_ID, value)
+    }
+
+    /// Constructs this struct using the given tag id and
+    /// default value.
+    ///
+    /// Arguments:
+    /// - `id`: The specified id;
+    pub fn with_id(id: u64) -> Self {
+        Self { id, value: [0; 16] }
+    }
+
+    /// Constructs this struct using the given tag id and
+    /// default value.
+    ///
+    /// Arguments:
+    /// - `id`: The specified id;
+    /// - `value`: The initial value;
+    pub fn with_id_value(id: u64, value: &[u8]) -> Self {
+        assert!(value.len() != 16);
+        let mut inst = Self { id, value: [0; 16] };
+        inst.value.copy_from_slice(value);
+        inst
+    }
+
+    /// Returns the current value of this tag.
+    ///
+    /// Returns:
+    /// - The current value of the tag.
+    pub fn value(&self) -> &[u8] {
+        &self.value
+    }
+
+    /// Sets the current value of this tag.
+    ///
+    /// Arguments:
+    /// - `value`: The initial value. Must be an ;
+    pub fn set_value(&mut self, value: &[u8]) {
+        assert!(value.len() != 16);
+        self.value.copy_from_slice(value);
+    }
+}
+
+impl ILTag for ILBin128Tag {
+    base_iltag_impl!();
+
+    fn value_size(&self) -> u64 {
+        16
+    }
+
+    fn serialize_value(&self, writer: &mut dyn Writer) -> Result<()> {
+        match writer.write_all(&self.value) {
+            Ok(()) => Ok(()),
+            Err(e) => Err(ErrorKind::IOError(e)),
+        }
+    }
+
+    fn deserialize_value(
+        &mut self,
+        _factory: &dyn ILTagFactory,
+        value_size: usize,
+        reader: &mut dyn Reader,
+    ) -> Result<()> {
+        match value_size {
+            16 => (),
+            _ => return Err(ErrorKind::CorruptedData),
+        }
+        match reader.read_all(&mut self.value) {
+            Ok(v) => v,
+            Err(e) => return Err(ErrorKind::IOError(e)),
+        };
+        Ok(())
+    }
+}
+
+iltag_default_impl!(ILBin128Tag);
+
+//=============================================================================
+// ILILint64Tag
+//-----------------------------------------------------------------------------
+/// This struct implements the null standard tag.
+pub struct ILILInt64Tag {
+    id: u64,
+    value: u64,
+}
+
+simple_value_tag_struct_impl!(ILILInt64Tag, u64, IL_ILINT_TAG_ID);
+
+impl ILTag for ILILInt64Tag {
+    base_iltag_impl!();
+
+    fn value_size(&self) -> u64 {
+        crate::ilint::encoded_size(self.value) as u64
+    }
+
+    fn serialize_value(&self, writer: &mut dyn Writer) -> Result<()> {
+        match write_ilint(self.value, writer) {
+            Ok(()) => Ok(()),
+            Err(e) => Err(ErrorKind::IOError(e)),
+        }
+    }
+
+    fn deserialize_value(
+        &mut self,
+        _factory: &dyn ILTagFactory,
+        _value_size: usize,
+        reader: &mut dyn Reader,
+    ) -> Result<()> {
+        self.value = match read_ilint(reader) {
+            Ok(v) => v,
+            Err(e) => return Err(ErrorKind::IOError(e)),
+        };
+        Ok(())
+    }
+}
+
+iltag_default_impl!(ILILInt64Tag);
