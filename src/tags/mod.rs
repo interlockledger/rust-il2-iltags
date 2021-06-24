@@ -205,6 +205,27 @@ pub fn tag_downcast_mut<T: ILTag + Any>(tag: &mut dyn ILTag) -> Option<&mut T> {
     tag.as_mut_any().downcast_mut::<T>()
 }
 
+/// This macro implements the methods id(), as_any() and as_mut_any()
+/// from ILTag trait.
+///
+/// This macro requires that the `id` value be stored in the field `id`.
+#[macro_export]
+macro_rules! base_iltag_impl {
+    () => {
+        fn id(&self) -> u64 {
+            self.id
+        }
+
+        fn as_any(&self) -> &dyn Any {
+            self
+        }
+
+        fn as_mut_any(&mut self) -> &mut dyn Any {
+            self
+        }
+    };
+}
+
 //=============================================================================
 // ILTagCreator
 //-----------------------------------------------------------------------------
@@ -225,9 +246,9 @@ pub trait ILTagCreator {
 //=============================================================================
 // ILCreatorEngine
 //-----------------------------------------------------------------------------
-
 /// This struct implements an engine that maps the ILTagCreators
-/// to the associated tag ID.
+/// to the associated tag ID. It can be used as a component to implement
+/// ILTagFactory trait.
 pub struct ILTagCreatorEngine {
     creators: HashMap<u64, Box<dyn ILTagCreator>>,
     strict: bool,
@@ -244,6 +265,11 @@ impl ILTagCreatorEngine {
             creators: HashMap::new(),
             strict,
         }
+    }
+
+    /// Rreturns the current strict flag.
+    pub fn strict(&self) -> bool {
+        self.strict
     }
 
     /// Registers a new ILTagCreator.
@@ -276,7 +302,7 @@ impl ILTagCreatorEngine {
         match self.creators.get(&tag_id) {
             Some(c) => Some(c.create_empty_tag(tag_id)),
             None => {
-                if self.strict {
+                if !self.strict && !is_implicit_tag(tag_id) {
                     Some(Box::new(ILRawTag::new(tag_id)))
                 } else {
                     None
@@ -351,9 +377,7 @@ impl ILRawTag {
 }
 
 impl ILTag for ILRawTag {
-    fn id(&self) -> u64 {
-        self.id
-    }
+    base_iltag_impl!();
 
     fn value_size(&self) -> u64 {
         self.payload.len() as u64
@@ -377,13 +401,5 @@ impl ILTag for ILRawTag {
             Ok(()) => Ok(()),
             Err(x) => Err(ErrorKind::IOError(x)),
         }
-    }
-
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
-    fn as_mut_any(&mut self) -> &mut dyn Any {
-        self
     }
 }

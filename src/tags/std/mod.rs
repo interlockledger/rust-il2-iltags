@@ -30,9 +30,10 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 use super::{ErrorKind, ILTag, ILTagFactory, Result};
+use crate::base_iltag_impl;
 use crate::io::data::*;
 use crate::io::{Reader, Writer};
-use std::any::Any;
+use ::std::any::Any;
 
 // Implicit tags
 pub const IL_NULL_TAG_ID: u64 = 0;
@@ -144,26 +145,6 @@ macro_rules! simple_value_tag_struct_impl {
             pub fn set_value(&mut self, value: $value_type) {
                 self.value = value
             }
-        }
-    };
-}
-
-/// This macro implements the methods id(), as_any() and as_mut_any()
-/// from ILTag trait.
-///
-/// This macro requires that the `id` value be stored in the field `id`.
-macro_rules! base_iltag_impl {
-    () => {
-        fn id(&self) -> u64 {
-            self.id
-        }
-
-        fn as_any(&self) -> &dyn Any {
-            self
-        }
-
-        fn as_mut_any(&mut self) -> &mut dyn Any {
-            self
         }
     };
 }

@@ -30,6 +30,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 use super::*;
+use crate::io::array::VecWriter;
 use crate::io::Writer;
 
 #[test]
@@ -157,42 +158,34 @@ fn test_iltag_size() {
     assert_eq!(tag.size(), 2 + 2 + 255);
 }
 
-/*
 #[test]
 fn test_iltag_serialize() {
-    // Implicity tag
-    let mut actual: Vec<u8> = Vec::new();
-    {
-        let mut writer = VecWriter::new(&mut actual);
+    let mut writer = VecWriter::new();
 
-        let tag = DummyTag::new(15, 4);
-        assert!(tag.serialize(writer.as_writer()).is_ok());
-        assert_eq!(actual, [0x0F, 0x00, 0x01, 0x02, 0x03]);
+    let tag = DummyTag::new(15, 4);
+    assert!(tag.serialize(writer.as_writer()).is_ok());
+    assert_eq!(writer.as_slice(), &[0x0F, 0x00, 0x01, 0x02, 0x03]);
 
-        // Explicity tag
-        let mut actual: Vec<u8> = Vec::new();
-        let mut writer = VecWriter::new(&mut actual);
+    // Explicity tag
+    let mut writer = VecWriter::new();
 
-        let tag = DummyTag::new(16, 4);
-        assert!(tag.serialize(writer.as_writer()).is_ok());
-        assert_eq!(actual, [0x10, 0x04, 0x00, 0x01, 0x02, 0x03]);
+    let tag = DummyTag::new(16, 4);
+    assert!(tag.serialize(writer.as_writer()).is_ok());
+    assert_eq!(writer.as_slice(), &[0x10, 0x04, 0x00, 0x01, 0x02, 0x03]);
 
-        // Explicity tag - long
-        let mut actual: Vec<u8> = Vec::new();
-        let mut writer = VecWriter::new(&mut actual);
+    // Explicity tag - long
+    let mut writer = VecWriter::new();
 
-        let tag = DummyTag::new(255, 256);
-        assert!(tag.serialize(writer.as_writer()).is_ok());
+    let tag = DummyTag::new(255, 256);
+    assert!(tag.serialize(writer.as_writer()).is_ok());
 
-        let mut exp: Vec<u8> = Vec::new();
-        exp.extend_from_slice(&[248, 7, 248, 8]);
-        for i in 0..256 {
-            exp.push(i as u8);
-        }
-        assert_eq!(actual, exp);
+    let mut exp: Vec<u8> = Vec::new();
+    exp.extend_from_slice(&[248, 7, 248, 8]);
+    for i in 0..256 {
+        exp.push(i as u8);
     }
+    assert_eq!(writer.as_slice(), exp);
 }
-*/
 
 #[test]
 fn test_tag_downcast_ref() {
@@ -220,5 +213,120 @@ fn test_tag_downcast_mut() {
 }
 
 //=============================================================================
-// ILTag
+// ILDummyTagCreator
 //-----------------------------------------------------------------------------
+struct DummyTagCreator {
+    id: u64,
+}
+
+impl DummyTagCreator {
+    pub fn new(id: u64) -> Self {
+        Self { id }
+    }
+}
+
+impl ILTagCreator for DummyTagCreator {
+    fn create_empty_tag(&self, tag_id: u64) -> Box<dyn ILTag> {
+        assert!(tag_id == self.id);
+        Box::new(DummyTag::new(self.id, 1))
+    }
+}
+
+#[test]
+fn test_iltagcreator_for_dummytagcreator() {
+    let c: DummyTagCreator = DummyTagCreator::new(16);
+
+    let t = c.create_empty_tag(16);
+    assert_eq!(t.id(), 16);
+    assert_eq!(t.as_any().type_id(), ::std::any::TypeId::of::<DummyTag>());
+}
+
+#[test]
+#[should_panic]
+fn test_iltagcreator_for_dummytagcreator_error() {
+    let c: DummyTagCreator = DummyTagCreator::new(16);
+    c.create_empty_tag(17);
+}
+
+//=============================================================================
+// ILTagCreatorEngine
+//-----------------------------------------------------------------------------
+
+#[test]
+fn test_iltagcreatorengine_new() {
+    let e: ILTagCreatorEngine = ILTagCreatorEngine::new(false);
+    assert!(!e.strict());
+
+    let e: ILTagCreatorEngine = ILTagCreatorEngine::new(true);
+    assert!(e.strict());
+}
+
+#[test]
+fn test_iltagcreatorengine_normal() {
+    let mut e: ILTagCreatorEngine = ILTagCreatorEngine::new(false);
+
+    e.register(16, Box::new(DummyTagCreator::new(16)));
+    e.register(17, Box::new(DummyTagCreator::new(17)));
+
+    let t = match e.create_tag(16) {
+        Some(v) => v,
+        _ => panic!(),
+    };
+    assert_eq!(t.id(), 16);
+    assert_eq!(t.as_any().type_id(), ::std::any::TypeId::of::<DummyTag>());
+
+    let t = match e.create_tag(17) {
+        Some(v) => v,
+        _ => panic!(),
+    };
+    assert_eq!(t.id(), 17);
+    assert_eq!(t.as_any().type_id(), ::std::any::TypeId::of::<DummyTag>());
+
+    let t = match e.create_tag(18) {
+        Some(v) => v,
+        _ => panic!(),
+    };
+    assert_eq!(t.id(), 18);
+    assert_eq!(t.as_any().type_id(), ::std::any::TypeId::of::<ILRawTag>());
+
+    for id in 0..16 {
+        match e.create_tag(id as u64) {
+            None => (),
+            _ => panic!(),
+        };
+    }
+}
+
+#[test]
+fn test_iltagcreatorengine_strict() {
+    let mut e: ILTagCreatorEngine = ILTagCreatorEngine::new(true);
+
+    e.register(16, Box::new(DummyTagCreator::new(16)));
+    e.register(17, Box::new(DummyTagCreator::new(17)));
+
+    let t = match e.create_tag(16) {
+        Some(v) => v,
+        _ => panic!(),
+    };
+    assert_eq!(t.id(), 16);
+    assert_eq!(t.as_any().type_id(), ::std::any::TypeId::of::<DummyTag>());
+
+    let t = match e.create_tag(17) {
+        Some(v) => v,
+        _ => panic!(),
+    };
+    assert_eq!(t.id(), 17);
+    assert_eq!(t.as_any().type_id(), ::std::any::TypeId::of::<DummyTag>());
+
+    match e.create_tag(18) {
+        None => (),
+        _ => panic!(),
+    };
+
+    for id in 0..16 {
+        match e.create_tag(id as u64) {
+            None => (),
+            _ => panic!(),
+        };
+    }
+}
