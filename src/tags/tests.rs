@@ -218,11 +218,11 @@ fn test_tag_downcast_mut() {
 struct UntouchbleTagFactory {}
 
 impl ILTagFactory for UntouchbleTagFactory {
-    fn create_tag(&self, tag_id: u64) -> Option<Box<dyn ILTag>> {
+    fn create_tag(&self, _tag_id: u64) -> Option<Box<dyn ILTag>> {
         panic!();
     }
 
-    fn deserialize(&self, reader: &mut dyn Reader) -> Result<Box<dyn ILTag>> {
+    fn deserialize(&self, _reader: &mut dyn Reader) -> Result<Box<dyn ILTag>> {
         panic!();
     }
 }
