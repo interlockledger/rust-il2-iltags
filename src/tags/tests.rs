@@ -30,7 +30,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 use super::*;
-use crate::io::array::VecWriter;
+use crate::io::array::{ByteArrayReader, VecWriter};
 use crate::io::Writer;
 
 #[test]
@@ -213,6 +213,21 @@ fn test_tag_downcast_mut() {
 }
 
 //=============================================================================
+// UntouchbleTagFactory
+//-----------------------------------------------------------------------------
+struct UntouchbleTagFactory {}
+
+impl ILTagFactory for UntouchbleTagFactory {
+    fn create_tag(&self, tag_id: u64) -> Option<Box<dyn ILTag>> {
+        panic!();
+    }
+
+    fn deserialize(&self, reader: &mut dyn Reader) -> Result<Box<dyn ILTag>> {
+        panic!();
+    }
+}
+
+//=============================================================================
 // ILDummyTagCreator
 //-----------------------------------------------------------------------------
 struct DummyTagCreator {
@@ -328,5 +343,111 @@ fn test_iltagcreatorengine_strict() {
             None => (),
             _ => panic!(),
         };
+    }
+}
+
+//=============================================================================
+// ILRawTag
+//-----------------------------------------------------------------------------
+#[test]
+fn test_ilrawtag_new() {
+    let t = ILRawTag::new(16);
+    assert_eq!(t.id(), 16);
+    assert_eq!(t.value().len(), 0);
+}
+
+#[test]
+#[should_panic]
+fn test_ilrawtag_new_bad_id() {
+    ILRawTag::new(15);
+}
+
+#[test]
+fn test_ilrawtag_with_capacity() {
+    let t = ILRawTag::with_capacity(16, 17);
+    assert_eq!(t.id(), 16);
+    assert_eq!(t.value().len(), 0);
+    assert_eq!(t.value().capacity(), 17);
+}
+
+#[test]
+#[should_panic]
+fn test_ilrawtag_with_capacity_bad_id() {
+    ILRawTag::with_capacity(15, 16);
+}
+
+#[test]
+fn test_ilrawtag_with_value() {
+    const SAMPLE: [u8; 5] = [0, 1, 2, 3, 4];
+    let t = ILRawTag::with_value(16, &SAMPLE);
+    assert_eq!(t.id(), 16);
+    assert_eq!(t.value().len(), SAMPLE.len());
+    assert_eq!(t.value().as_slice(), &SAMPLE);
+}
+
+#[test]
+#[should_panic]
+fn test_ilrawtag_with_value_bad_id() {
+    const SAMPLE: [u8; 5] = [0, 1, 2, 3, 4];
+    ILRawTag::with_value(15, &SAMPLE);
+}
+
+#[test]
+fn test_ilrawtag_mut_value() {
+    const SAMPLE: [u8; 5] = [0, 1, 2, 3, 4];
+    let mut t = ILRawTag::new(16);
+    t.mut_value().extend_from_slice(&SAMPLE);
+    assert_eq!(t.value().as_slice(), &SAMPLE);
+}
+
+#[test]
+fn test_ilrawtag_iltag_base() {
+    let mut t = ILRawTag::new(16);
+
+    assert_eq!(16, t.id());
+    let _a: &dyn Any = t.as_any();
+    let _b: &mut dyn Any = t.as_mut_any();
+}
+
+#[test]
+fn test_ilrawtag_iltag_value_size() {
+    const SAMPLE: [u8; 5] = [0, 1, 2, 3, 4];
+    let mut t = ILRawTag::new(16);
+
+    assert_eq!(t.value_size(), 0);
+    t.mut_value().extend_from_slice(&SAMPLE);
+    assert_eq!(t.value_size(), SAMPLE.len() as u64);
+    assert_eq!(t.value().as_slice(), &SAMPLE);
+}
+
+#[test]
+fn test_ilrawtag_iltag_deserialize_value() {
+    const SAMPLE: [u8; 5] = [0, 1, 2, 3, 4];
+    let mut reader = ByteArrayReader::new(&SAMPLE);
+    let factory = UntouchbleTagFactory {};
+    let mut t = ILRawTag::new(16);
+
+    match t.deserialize_value(&factory, 0, &mut reader) {
+        Ok(()) => (),
+        _ => panic!(),
+    }
+    assert_eq!(t.value_size(), 0);
+
+    match t.deserialize_value(&factory, SAMPLE.len(), &mut reader) {
+        Ok(()) => (),
+        _ => panic!(),
+    }
+    assert_eq!(t.value_size(), SAMPLE.len() as u64);
+    assert_eq!(t.value().as_slice(), &SAMPLE);
+
+    match t.deserialize_value(&factory, 0, &mut reader) {
+        Ok(()) => (),
+        _ => panic!(),
+    }
+    assert_eq!(t.value_size(), 0);
+
+    match t.deserialize_value(&factory, 1, &mut reader) {
+        Err(ErrorKind::IOError(_)) => (),
+        _ => panic!(),
     }
 }

@@ -227,6 +227,16 @@ macro_rules! base_iltag_impl {
 }
 
 //=============================================================================
+// ILTagFactory
+//-----------------------------------------------------------------------------
+/// This trait must be implemented by all tag factories.
+pub trait ILTagFactory {
+    fn create_tag(&self, tag_id: u64) -> Option<Box<dyn ILTag>>;
+
+    fn deserialize(&self, reader: &mut dyn Reader) -> Result<Box<dyn ILTag>>;
+}
+
+//=============================================================================
 // ILTagCreator
 //-----------------------------------------------------------------------------
 
@@ -313,25 +323,13 @@ impl ILTagCreatorEngine {
 }
 
 //=============================================================================
-// ILTagFactory
-//-----------------------------------------------------------------------------
-/// This trait must be implemented by all tag factories.
-pub trait ILTagFactory {
-    fn as_ref(&self) -> &dyn ILTagFactory;
-
-    fn create_tag(&self, tag_id: u64) -> Option<Box<dyn ILTag>>;
-
-    fn deserialize(&self, reader: &mut dyn Reader) -> Result<Box<dyn ILTag>>;
-}
-
-//=============================================================================
 // ILRawTag
 //-----------------------------------------------------------------------------
 /// This struct implements a raw tag. It can be used to store any non
 /// explicit tag.
 pub struct ILRawTag {
     id: u64,
-    payload: Vec<u8>,
+    value: Vec<u8>,
 }
 
 impl ILRawTag {
@@ -346,7 +344,23 @@ impl ILRawTag {
         assert!(!is_implicit_tag(id));
         ILRawTag {
             id,
-            payload: Vec::new(),
+            value: Vec::new(),
+        }
+    }
+
+    /// Initializes a new RawTag with a given capacity.
+    ///
+    /// Arguments:
+    /// * `id`: The tag id;
+    /// * `capacity`: The expected initial capacity;
+    ///
+    /// Returns:
+    /// * The new instance of RawTag.
+    pub fn with_capacity(id: u64, capacity: usize) -> ILRawTag {
+        assert!(!is_implicit_tag(id));
+        ILRawTag {
+            id,
+            value: Vec::with_capacity(capacity),
         }
     }
 
@@ -362,17 +376,17 @@ impl ILRawTag {
         assert!(!is_implicit_tag(id));
         let mut v: Vec<u8> = Vec::with_capacity(value.len());
         v.extend_from_slice(value);
-        ILRawTag { id, payload: v }
+        ILRawTag { id, value: v }
     }
 
     /// Returns an immutable reference to the payload.
-    pub fn get_value(&self) -> &Vec<u8> {
-        &self.payload
+    pub fn value(&self) -> &Vec<u8> {
+        &self.value
     }
 
     /// Returns a mutable reference to the payload.
-    pub fn get_mut_value(&mut self) -> &mut Vec<u8> {
-        &mut self.payload
+    pub fn mut_value(&mut self) -> &mut Vec<u8> {
+        &mut self.value
     }
 }
 
@@ -380,11 +394,11 @@ impl ILTag for ILRawTag {
     base_iltag_impl!();
 
     fn value_size(&self) -> u64 {
-        self.payload.len() as u64
+        self.value.len() as u64
     }
 
     fn serialize_value(&self, writer: &mut dyn Writer) -> Result<()> {
-        match writer.write_all(self.payload.as_slice()) {
+        match writer.write_all(self.value.as_slice()) {
             Ok(()) => Ok(()),
             Err(e) => Err(ErrorKind::IOError(e)),
         }
@@ -396,10 +410,10 @@ impl ILTag for ILRawTag {
         value_size: usize,
         reader: &mut dyn Reader,
     ) -> Result<()> {
-        self.payload.resize(value_size, 0);
-        match reader.read_all(self.payload.as_mut_slice()) {
+        self.value.resize(value_size, 0);
+        match reader.read_all(self.value.as_mut_slice()) {
             Ok(()) => Ok(()),
-            Err(x) => Err(ErrorKind::IOError(x)),
+            Err(e) => Err(ErrorKind::IOError(e)),
         }
     }
 }
