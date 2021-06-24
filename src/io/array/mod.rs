@@ -335,11 +335,10 @@ impl Writer for VecWriter {
         self.can_write()?;
         if self.offset == self.vector.len() {
             self.vector.push(value);
-            self.offset += 1;
         } else {
             self.vector[self.offset] = value;
-            self.offset += 1;
         }
+        self.offset += 1;
         Ok(())
     }
 
