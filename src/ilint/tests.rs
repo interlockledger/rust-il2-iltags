@@ -251,7 +251,7 @@ fn test_decode() {
         match decode(&mut reader) {
             Ok(v) => {
                 assert_eq!(v, i as u64);
-                assert_eq!(reader.get_offset(), 1);
+                assert_eq!(reader.offset(), 1);
             }
             _ => panic!(),
         }
@@ -264,7 +264,7 @@ fn test_decode() {
         match decode(&mut reader) {
             Ok(v) => {
                 assert_eq!(v, sample.value);
-                assert_eq!(reader.get_offset(), enc_size);
+                assert_eq!(reader.offset(), enc_size);
             }
             _ => panic!(),
         }

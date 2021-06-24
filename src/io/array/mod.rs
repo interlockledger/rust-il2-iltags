@@ -64,8 +64,7 @@ impl<'a> ByteArrayReader<'a> {
     /// Returns:
     /// - The current offset. It is guaranteed to be at most
     /// the total size of the data.
-
-    pub fn get_offset(&self) -> usize {
+    pub fn offset(&self) -> usize {
         self.offset
     }
 
@@ -162,7 +161,7 @@ impl VecReader {
     /// Returns:
     /// - The current offset. It is guaranteed to be at most
     /// the total size of the data.
-    pub fn get_offset(&self) -> usize {
+    pub fn offset(&self) -> usize {
         self.offset
     }
 
@@ -204,7 +203,7 @@ impl VecReader {
     }
 
     /// Returns aread-only reference to the inner vector.
-    pub fn get_vec(&self) -> &Vec<u8> {
+    pub fn vec(&self) -> &Vec<u8> {
         &self.vector
     }
 }
@@ -326,7 +325,7 @@ impl VecWriter {
     }
 
     /// Returns aread-only reference to the inner vector.
-    pub fn get_vec(&self) -> &Vec<u8> {
+    pub fn vec(&self) -> &Vec<u8> {
         &self.vector
     }
 }
@@ -357,5 +356,11 @@ impl Writer for VecWriter {
 
     fn as_writer(&mut self) -> &mut dyn Writer {
         self
+    }
+}
+
+impl Default for VecWriter {
+    fn default() -> Self {
+        Self::new()
     }
 }

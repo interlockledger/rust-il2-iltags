@@ -41,11 +41,11 @@ fn test_bytearrayreader_new() {
     let mut src = [0u8; 8];
     fill_sample(&mut src);
     let mut ba = ByteArrayReader::new(&src);
-    assert_eq!(ba.get_offset(), 0);
+    assert_eq!(ba.offset(), 0);
     assert_eq!(ba.as_slice(), src);
 
     ba = ByteArrayReader::new(&src[0..1]);
-    assert_eq!(ba.get_offset(), 0);
+    assert_eq!(ba.offset(), 0);
     assert_eq!(ba.as_slice(), &src[0..1]);
 }
 
@@ -56,14 +56,14 @@ fn test_bytearrayreader_get_set_offset() {
     let mut ba = ByteArrayReader::new(&src);
     for i in 0..src.len() + 1 {
         ba.set_offset(i);
-        assert_eq!(ba.get_offset(), i);
+        assert_eq!(ba.offset(), i);
     }
 
     ba.set_offset(ba.as_slice().len() + 1);
-    assert_eq!(ba.get_offset(), ba.as_slice().len());
+    assert_eq!(ba.offset(), ba.as_slice().len());
 
     ba.set_offset(usize::MAX);
-    assert_eq!(ba.get_offset(), ba.as_slice().len());
+    assert_eq!(ba.offset(), ba.as_slice().len());
 }
 
 #[test]
@@ -145,7 +145,7 @@ fn test_bytearrayreader_skip() {
     for size in 0..6 {
         assert!(ba.skip(size).is_ok());
         offs += size;
-        assert_eq!(ba.get_offset(), offs);
+        assert_eq!(ba.offset(), offs);
         assert_eq!(ba.available(), 20 - offs);
     }
     match ba.skip(6) {
@@ -156,7 +156,7 @@ fn test_bytearrayreader_skip() {
         Ok(()) => (),
         _ => panic!(),
     }
-    assert_eq!(ba.get_offset(), 20);
+    assert_eq!(ba.offset(), 20);
     match ba.skip(0) {
         Ok(()) => (),
         _ => panic!(),
@@ -174,7 +174,7 @@ fn test_bytearrayreader_as_reader() {
 
     let m = ba.as_reader();
     assert!(m.skip(1).is_ok());
-    assert_eq!(ba.get_offset(), 1);
+    assert_eq!(ba.offset(), 1);
 }
 
 //=============================================================================
@@ -187,7 +187,7 @@ fn test_vecreader_new() {
 
     let r = VecReader::new(&src);
     assert_eq!(r.as_slice(), &src);
-    assert_eq!(r.get_offset(), 0);
+    assert_eq!(r.offset(), 0);
 }
 
 #[test]
@@ -199,14 +199,14 @@ fn test_vecreader_get_set_offset() {
 
     for i in 0..src.len() + 1 {
         ba.set_offset(i);
-        assert_eq!(ba.get_offset(), i);
+        assert_eq!(ba.offset(), i);
     }
 
     ba.set_offset(ba.as_slice().len() + 1);
-    assert_eq!(ba.get_offset(), ba.as_slice().len());
+    assert_eq!(ba.offset(), ba.as_slice().len());
 
     ba.set_offset(usize::MAX);
-    assert_eq!(ba.get_offset(), ba.as_slice().len());
+    assert_eq!(ba.offset(), ba.as_slice().len());
 }
 
 #[test]
@@ -242,7 +242,7 @@ fn test_vecreader_get_vec() {
     fill_sample(&mut src);
     let ba = VecReader::new(&src);
 
-    assert_eq!(ba.get_vec().as_slice(), &src);
+    assert_eq!(ba.as_slice(), &src);
 }
 
 #[test]
@@ -290,7 +290,7 @@ fn test_vecreader_skip() {
     for size in 0..6 {
         assert!(ba.skip(size).is_ok());
         offs += size;
-        assert_eq!(ba.get_offset(), offs);
+        assert_eq!(ba.offset(), offs);
         assert_eq!(ba.available(), 20 - offs);
     }
     match ba.skip(6) {
@@ -301,7 +301,7 @@ fn test_vecreader_skip() {
         Ok(()) => (),
         _ => panic!(),
     }
-    assert_eq!(ba.get_offset(), 20);
+    assert_eq!(ba.offset(), 20);
     match ba.skip(0) {
         Ok(()) => (),
         _ => panic!(),
@@ -319,7 +319,7 @@ fn test_vecreader_as_reader() {
 
     let m = ba.as_reader();
     assert!(m.skip(1).is_ok());
-    assert_eq!(ba.get_offset(), 1);
+    assert_eq!(ba.offset(), 1);
 }
 
 //=============================================================================
@@ -331,7 +331,7 @@ fn test_vecwriter_new() {
 
     assert!(!w.is_read_only());
     assert_eq!(w.get_offset(), 0);
-    assert_eq!(w.get_vec().len(), 0);
+    assert_eq!(w.vec().len(), 0);
 }
 
 #[test]
@@ -340,8 +340,8 @@ fn test_vecwriter_with_capacity() {
 
     assert!(!w.is_read_only());
     assert_eq!(w.get_offset(), 0);
-    assert_eq!(w.get_vec().len(), 0);
-    assert_eq!(w.get_vec().capacity(), 123);
+    assert_eq!(w.vec().len(), 0);
+    assert_eq!(w.vec().capacity(), 123);
 }
 
 #[test]
@@ -401,15 +401,15 @@ fn test_vecwriter_get_vec() {
 
     let mut w = VecWriter::new();
 
-    assert_eq!(w.get_vec().len(), 0);
+    assert_eq!(w.vec().len(), 0);
     for s in &src {
         match w.write(*s) {
             Ok(()) => (),
             _ => panic!(),
         }
     }
-    assert_eq!(w.get_vec().len(), src.len());
-    assert_eq!(w.get_vec().as_slice(), &src);
+    assert_eq!(w.vec().len(), src.len());
+    assert_eq!(w.vec().as_slice(), &src);
 }
 
 #[test]
