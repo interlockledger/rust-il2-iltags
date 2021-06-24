@@ -34,6 +34,8 @@ use crate::base_iltag_impl;
 use crate::io::data::*;
 use crate::io::{Reader, Writer};
 use ::std::any::Any;
+#[cfg(test)]
+mod tests;
 
 // Implicit tags
 pub const IL_NULL_TAG_ID: u64 = 0;
