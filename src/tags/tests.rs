@@ -58,6 +58,9 @@ fn test_is_reserved_tag() {
 //=============================================================================
 // DummyTag
 //-----------------------------------------------------------------------------
+
+const DEFAULT_DUMMY_TAG_ID: u64 = 0xFACADA;
+
 struct DummyTag {
     id: u64,
     size: u64,
@@ -120,6 +123,18 @@ impl ILTag for DummyTag {
 
     fn as_mut_any(&mut self) -> &mut dyn Any {
         self
+    }
+}
+
+impl Default for DummyTag {
+    fn default() -> Self {
+        Self::new(DEFAULT_DUMMY_TAG_ID, 0)
+    }
+}
+
+impl DefaultWithId for DummyTag {
+    fn default_with_id(id: u64) -> Self {
+        Self::new(id, 0)
     }
 }
 
@@ -261,6 +276,42 @@ fn test_iltagcreator_for_dummytagcreator() {
 fn test_iltagcreator_for_dummytagcreator_error() {
     let c: DummyTagCreator = DummyTagCreator::new(16);
     c.create_empty_tag(17);
+}
+
+//=============================================================================
+// ILDefaultTagCreator
+//-----------------------------------------------------------------------------
+
+#[test]
+fn test_ildefaulttagcreator() {
+    let creator = ILDefaultTagCreator::<DummyTag>::new();
+
+    let t = creator.create_empty_tag(DEFAULT_DUMMY_TAG_ID);
+    assert_eq!(t.id(), DEFAULT_DUMMY_TAG_ID);
+}
+
+#[test]
+#[should_panic]
+fn test_ildefaulttagcreator_bad_id() {
+    let creator = ILDefaultTagCreator::<DummyTag>::new();
+
+    let t = creator.create_empty_tag(0);
+    assert_eq!(t.id(), DEFAULT_DUMMY_TAG_ID);
+}
+
+//=============================================================================
+// ILDefaultWithIdTagCreator
+//-----------------------------------------------------------------------------
+
+#[test]
+fn test_ildefaultwithidtagcreator() {
+    let creator = ILDefaultWithIdTagCreator::<DummyTag>::new();
+
+    let t = creator.create_empty_tag(0);
+    assert_eq!(t.id(), 0);
+
+    let t = creator.create_empty_tag(DEFAULT_DUMMY_TAG_ID);
+    assert_eq!(t.id(), DEFAULT_DUMMY_TAG_ID);
 }
 
 //=============================================================================

@@ -290,9 +290,20 @@ pub struct ILDefaultTagCreator<T: ILTag + Default> {
     phantom: ::std::marker::PhantomData<T>,
 }
 
+impl<T: ILTag + Default> ILDefaultTagCreator<T> {
+    /// Creates a new instance of this struct.
+    pub fn new() -> Self {
+        Self {
+            phantom: ::std::marker::PhantomData,
+        }
+    }
+}
+
 impl<T: ILTag + Default> ILTagCreator for ILDefaultTagCreator<T> {
-    fn create_empty_tag(&self, _tag_id: u64) -> Box<dyn ILTag> {
-        Box::new(T::default())
+    fn create_empty_tag(&self, tag_id: u64) -> Box<dyn ILTag> {
+        let ret = Box::new(T::default());
+        assert!(ret.id() == tag_id); // Just to detect potential errors
+        ret
     }
 }
 
@@ -303,6 +314,15 @@ impl<T: ILTag + Default> ILTagCreator for ILDefaultTagCreator<T> {
 /// `ILTags` that also implement `DefaultWithId`.
 pub struct ILDefaultWithIdTagCreator<T: ILTag + DefaultWithId> {
     phantom: ::std::marker::PhantomData<T>,
+}
+
+impl<T: ILTag + DefaultWithId> ILDefaultWithIdTagCreator<T> {
+    /// Creates a new instance of this struct.
+    pub fn new() -> Self {
+        Self {
+            phantom: ::std::marker::PhantomData,
+        }
+    }
 }
 
 impl<T: ILTag + DefaultWithId> ILTagCreator for ILDefaultWithIdTagCreator<T> {
