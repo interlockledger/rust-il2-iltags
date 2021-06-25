@@ -205,10 +205,25 @@ pub fn tag_downcast_mut<T: ILTag + Any>(tag: &mut dyn ILTag) -> Option<&mut T> {
     tag.as_mut_any().downcast_mut::<T>()
 }
 
-/// This macro implements the methods id(), as_any() and as_mut_any()
-/// from ILTag trait.
+/// This macro implements the methods `ILTag::id()`, `ILTag::as_any()` and
+/// `ILTag::as_mut_any()` from `ILTag` trait.
 ///
-/// This macro requires that the `id` value be stored in the field `id`.
+/// This macro requires the presence of a field `id` (u64) that will hold the id of the
+/// tag.
+///
+/// Example:
+/// ```
+/// pub struct SampleTag {
+///     id: u64,
+///     ...
+/// }
+///
+/// impl SampleTag{
+///     base_iltag_impl!();
+///     ...
+/// }
+///
+/// ```
 #[macro_export]
 macro_rules! base_iltag_impl {
     () => {
@@ -227,6 +242,20 @@ macro_rules! base_iltag_impl {
 }
 
 //=============================================================================
+// DefaultWithId
+//-----------------------------------------------------------------------------
+/// This trait defines a variant of the Default trait that takes an id as a
+/// parameter.
+pub trait DefaultWithId {
+    /// Creates a default tag with.
+    ///
+    /// Arguments:
+    ///
+    /// * `id`: The id.
+    fn default_with_id(id: u64) -> Self;
+}
+
+//=============================================================================
 // ILTagFactory
 //-----------------------------------------------------------------------------
 /// This trait must be implemented by all tag factories.
@@ -239,7 +268,6 @@ pub trait ILTagFactory {
 //=============================================================================
 // ILTagCreator
 //-----------------------------------------------------------------------------
-
 /// This trait must be implemented by all tag creators.
 pub trait ILTagCreator {
     /// Creates a new boxed instance of the the class.
@@ -251,6 +279,36 @@ pub trait ILTagCreator {
     /// Returns:
     /// * `Box<dyn ILTag>`: The new empty boxed tag.
     fn create_empty_tag(&self, tag_id: u64) -> Box<dyn ILTag>;
+}
+
+//=============================================================================
+// ILDefaultTagCreator
+//-----------------------------------------------------------------------------
+/// This template struct is used to implement the `ILTagCreator` trait for all
+/// `ILTags` that also implement `Default`.
+pub struct ILDefaultTagCreator<T: ILTag + Default> {
+    phantom: ::std::marker::PhantomData<T>,
+}
+
+impl<T: ILTag + Default> ILTagCreator for ILDefaultTagCreator<T> {
+    fn create_empty_tag(&self, _tag_id: u64) -> Box<dyn ILTag> {
+        Box::new(T::default())
+    }
+}
+
+//=============================================================================
+// ILDefaultWithIdTagCreator
+//-----------------------------------------------------------------------------
+/// This template struct is used to implement the `ILTagCreator` trait for all
+/// `ILTags` that also implement `DefaultWithId`.
+pub struct ILDefaultWithIdTagCreator<T: ILTag + DefaultWithId> {
+    phantom: ::std::marker::PhantomData<T>,
+}
+
+impl<T: ILTag + DefaultWithId> ILTagCreator for ILDefaultWithIdTagCreator<T> {
+    fn create_empty_tag(&self, tag_id: u64) -> Box<dyn ILTag> {
+        Box::new(T::default_with_id(tag_id))
+    }
 }
 
 //=============================================================================
@@ -415,5 +473,11 @@ impl ILTag for ILRawTag {
             Ok(()) => Ok(()),
             Err(e) => Err(ErrorKind::IOError(e)),
         }
+    }
+}
+
+impl DefaultWithId for ILRawTag {
+    fn default_with_id(id: u64) -> Self {
+        Self::new(id)
     }
 }

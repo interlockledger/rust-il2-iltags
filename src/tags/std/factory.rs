@@ -29,55 +29,11 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-//! This is the base module for all standard tags and tag factories.
-use super::{DefaultWithId, ErrorKind, ILTag, ILTagFactory, Result};
-
-pub mod constants;
-pub mod explicit;
-pub mod implicit;
-
-#[cfg(test)]
-mod constants_tests;
-#[cfg(test)]
-mod implicit_tests;
-#[cfg(test)]
-mod tests;
-
-pub use constants::*;
-pub use explicit::*;
-pub use implicit::*;
-
-/// Implementation of `Default` and `DefaultWithId` traits for all
-/// standard tags.
-///
-/// This macro requires that the struct implementation has a
-/// constructor called `new()` that takes no arguments.
-///
-/// Example:
-/// ```
-/// pub struct SampleTag{...}
-///
-/// impl SampleTag {
-///     pub fn new() -> Self {...}
-///
-///     pub fn with_id(id:u64) -> Self {...}
-/// }
-///
-/// iltag_default_impl!(SampleTag);
-/// ```
-#[macro_export]
-macro_rules! iltag_default_impl {
-    ($tag_type: ty) => {
-        impl Default for $tag_type {
-            fn default() -> Self {
-                Self::new()
-            }
-        }
-
-        impl DefaultWithId for $tag_type {
-            fn default_with_id(id: u64) -> Self {
-                Self::with_id(id)
-            }
-        }
-    };
-}
+//! This module implements all standard explicit tags defined by
+//! [ILTags Specification](https://github.com/interlockledger/specification/tree/master/ILTags).
+use super::constants::*;
+use super::{ErrorKind, ILTag, ILTagCreator, ILTagCreatorEngine, ILTagFactory, Result};
+use crate::base_iltag_impl;
+use crate::io::data::*;
+use crate::io::{Reader, Writer};
+use ::std::any::Any;

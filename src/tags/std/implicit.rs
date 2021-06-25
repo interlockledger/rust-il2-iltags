@@ -32,8 +32,9 @@
 //! This module implements all standard implicit tags defined by
 //! [ILTags Specification](https://github.com/interlockledger/specification/tree/master/ILTags).
 use super::constants::*;
-use super::{ErrorKind, ILTag, ILTagFactory, Result};
+use super::{DefaultWithId, ErrorKind, ILTag, ILTagFactory, Result};
 use crate::base_iltag_impl;
+use crate::iltag_default_impl;
 use crate::io::data::*;
 use crate::io::{Reader, Writer};
 use ::std::any::Any;
@@ -160,17 +161,6 @@ macro_rules! int_iltag_impl {
                     Err(e) => return Err(ErrorKind::IOError(e)),
                 };
                 Ok(())
-            }
-        }
-    };
-}
-
-/// Implementation of Default trait for all tags in this package.
-macro_rules! iltag_default_impl {
-    ($tag_type: ty) => {
-        impl Default for $tag_type {
-            fn default() -> Self {
-                Self::new()
             }
         }
     };
