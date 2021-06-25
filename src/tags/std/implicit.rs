@@ -29,7 +29,7 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-//! This module implements all standard implicity tags as defined by
+//! This module implements all standard implicit tags defined by
 //! [ILTags Specification](https://github.com/interlockledger/specification/tree/master/ILTags).
 use super::constants::*;
 use super::{ErrorKind, ILTag, ILTagFactory, Result};

@@ -29,7 +29,7 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-use super::implicity::*;
+use super::implicit::*;
 use super::*;
 use crate::io::{ByteArrayReader, VecReader, VecWriter};
 use crate::tags::tests::UntouchbleTagFactory;

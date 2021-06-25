@@ -29,18 +29,11 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-//! This is the base module for all standard tags and tag factories.
+//! This module implements all standard explicit tags defined by
+//! [ILTags Specification](https://github.com/interlockledger/specification/tree/master/ILTags).
+use super::constants::*;
 use super::{ErrorKind, ILTag, ILTagFactory, Result};
-
-pub mod constants;
-pub mod implicit;
-
-#[cfg(test)]
-mod constants_tests;
-#[cfg(test)]
-mod implicit_tests;
-#[cfg(test)]
-mod tests;
-
-pub use constants::*;
-pub use implicit::*;
+use crate::base_iltag_impl;
+use crate::io::data::*;
+use crate::io::{Reader, Writer};
+use ::std::any::Any;
