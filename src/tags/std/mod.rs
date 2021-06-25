@@ -420,7 +420,7 @@ iltag_default_impl!(ILUInt64Tag);
 //=============================================================================
 // ILBin32Tag
 //-----------------------------------------------------------------------------
-/// This struct implements the f32 standard tag.
+/// This struct implements the bin32 (f32) standard tag.
 pub struct ILBin32Tag {
     id: u64,
     value: f32,
@@ -435,7 +435,7 @@ iltag_default_impl!(ILBin32Tag);
 //=============================================================================
 // ILBin64Tag
 //-----------------------------------------------------------------------------
-/// This struct implements the f64 standard tag.
+/// This struct implements the bin64 (f64) standard tag.
 pub struct ILBin64Tag {
     id: u64,
     value: f64,
@@ -547,7 +547,7 @@ iltag_default_impl!(ILBin128Tag);
 //=============================================================================
 // ILILint64Tag
 //-----------------------------------------------------------------------------
-/// This struct implements the null standard tag.
+/// This struct implements the ILInt standard tag.
 pub struct ILILInt64Tag {
     id: u64,
     value: u64,
