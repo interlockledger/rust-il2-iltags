@@ -467,7 +467,7 @@ impl ILBin128Tag {
     ///
     /// Arguments:
     /// - `value`: The initial value;
-    pub fn with_value(value: &[u8]) -> Self {
+    pub fn with_value(value: &[u8; 16]) -> Self {
         Self::with_id_value(IL_BIN128_TAG_ID, value)
     }
 
@@ -486,7 +486,7 @@ impl ILBin128Tag {
     /// Arguments:
     /// - `id`: The specified id;
     /// - `value`: The initial value;
-    pub fn with_id_value(id: u64, value: &[u8]) -> Self {
+    pub fn with_id_value(id: u64, value: &[u8; 16]) -> Self {
         assert!(value.len() != 16);
         let mut inst = Self { id, value: [0; 16] };
         inst.value.copy_from_slice(value);
@@ -497,7 +497,7 @@ impl ILBin128Tag {
     ///
     /// Returns:
     /// - The current value of the tag.
-    pub fn value(&self) -> &[u8] {
+    pub fn value(&self) -> &[u8; 16] {
         &self.value
     }
 
@@ -505,8 +505,7 @@ impl ILBin128Tag {
     ///
     /// Arguments:
     /// - `value`: The initial value. Must be an ;
-    pub fn set_value(&mut self, value: &[u8]) {
-        assert!(value.len() != 16);
+    pub fn set_value(&mut self, value: &[u8; 16]) {
         self.value.copy_from_slice(value);
     }
 }
