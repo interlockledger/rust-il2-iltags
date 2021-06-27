@@ -510,29 +510,6 @@ fn test_iulint64tag_iltag_deserialize() {
 }
 
 //=============================================================================
-// ILILInt64Tag
-//-----------------------------------------------------------------------------
-#[test]
-fn test_ililint64tag_new() {
-    test_simple_value_tag_struct_impl_func_impl!(ILILInt64Tag, IL_ILINT_TAG_ID, u64, 1234);
-}
-
-#[test]
-fn test_ililint64tag_iltag_size() {
-    // TODO
-}
-
-#[test]
-fn test_ililint64tag_iltag_serialize() {
-    // TODO
-}
-
-#[test]
-fn test_ililint64tag_iltag_deserialize() {
-    // TODO
-}
-
-//=============================================================================
 // ILBin32Tag
 //-----------------------------------------------------------------------------
 #[test]
@@ -628,6 +605,14 @@ fn test_ilbin128tag_iltag_serialize() {
         _ => panic!(""),
     }
     assert_eq!(writer.vec().as_slice(), &BIN128_SAMPLE);
+
+    let t = ILBin128Tag::with_value(&BIN128_SAMPLE);
+    let mut writer = VecWriter::new();
+    writer.set_read_only(true);
+    match t.serialize_value(&mut writer) {
+        Err(ErrorKind::IOError(_)) => (),
+        _ => panic!(""),
+    }
 }
 
 #[test]
@@ -669,5 +654,98 @@ fn test_ilbin128tag_iltag_deserialize() {
     match t.deserialize_value(&factory, 16, &mut reader) {
         Err(ErrorKind::IOError(_)) => (),
         _ => panic!(""),
+    }
+}
+
+//=============================================================================
+// ILILint64Tag
+//-----------------------------------------------------------------------------
+const ILINT_SAMPLE: [u64; 9] = [
+    0xF7,
+    0xF8,
+    0x0_2345,
+    0x01_2345,
+    0x0123_4567,
+    0x01_2345_6789,
+    0x0123_4567_89AB,
+    0x01_2345_6789_ABCD,
+    0x0123_4567_89AB_CDEF,
+];
+//=============================================================================
+// ILILInt64Tag
+//-----------------------------------------------------------------------------
+#[test]
+fn test_ililint64tag_new() {
+    test_simple_value_tag_struct_impl_func_impl!(ILILInt64Tag, IL_ILINT_TAG_ID, u64, 1234);
+}
+
+#[test]
+fn test_ililint64tag_iltag_size() {
+    for v in &ILINT_SAMPLE {
+        let t = ILILInt64Tag::with_value(*v);
+        print!("{:?}\n", crate::ilint::encoded_size(*v));
+        assert_eq!(
+            t.value_size(),
+            crate::ilint::encoded_size(*v) as u64,
+            "Failed for the value {:?}.",
+            *v
+        );
+    }
+}
+
+#[test]
+fn test_ililint64tag_iltag_serialize() {
+    for v in &ILINT_SAMPLE {
+        let mut exp_writer = VecWriter::new();
+        match crate::ilint::encode(*v, &mut exp_writer) {
+            Ok(()) => (),
+            _ => panic!(),
+        }
+
+        let t = ILILInt64Tag::with_value(*v);
+        let mut writer = VecWriter::new();
+        match t.serialize_value(&mut writer) {
+            Ok(()) => (),
+            _ => panic!(""),
+        }
+        assert_eq!(writer.vec().as_slice(), exp_writer.vec().as_slice());
+    }
+
+    let t = ILILInt64Tag::new();
+    let mut writer = VecWriter::new();
+    writer.set_read_only(true);
+    match t.serialize_value(&mut writer) {
+        Err(ErrorKind::IOError(_)) => (),
+        _ => panic!(""),
+    }
+}
+
+#[test]
+fn test_ililint64tag_iltag_deserialize() {
+    let factory = UntouchbleTagFactory {};
+    let mut test_size = 0 as usize;
+    for v in &ILINT_SAMPLE {
+        let mut exp_writer = VecWriter::new();
+        match crate::ilint::encode(*v, &mut exp_writer) {
+            Ok(()) => (),
+            _ => panic!(),
+        }
+        let exp_size = exp_writer.vec().as_slice().len();
+
+        let mut t = ILILInt64Tag::new();
+        let mut reader = ByteArrayReader::new(exp_writer.vec().as_slice());
+        match t.deserialize_value(&factory, test_size, &mut reader) {
+            Ok(()) => (),
+            _ => panic!(""),
+        }
+        assert_eq!(t.value(), *v);
+
+        let mut t = ILILInt64Tag::new();
+        let mut reader = ByteArrayReader::new(&exp_writer.vec()[0..exp_size - 1]);
+        match t.deserialize_value(&factory, test_size, &mut reader) {
+            Err(ErrorKind::IOError(_)) => (),
+            _ => panic!(""),
+        }
+        test_size += 123;
     }
 }

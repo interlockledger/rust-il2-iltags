@@ -166,7 +166,7 @@ pub trait ILTag: Any {
     /// Returns:
     ///
     /// * `Ok()`: On success.
-    /// * `Err(())`: If the buffer is too small to hold the encoded value.
+    /// * `Err(())`: In case of error.
     fn deserialize_value(
         &mut self,
         factory: &dyn ILTagFactory,

@@ -530,6 +530,9 @@ impl ILTag for ILILInt64Tag {
         }
     }
 
+    /// This implementation follows the specification of `ILTag::deserialize_value()`
+    /// except for the fact that it does not check the `value_size` as it may vary
+    /// from 1 to 9 bytes depending on the actual value stored.
     fn deserialize_value(
         &mut self,
         _factory: &dyn ILTagFactory,
