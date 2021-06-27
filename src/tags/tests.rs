@@ -502,3 +502,10 @@ fn test_ilrawtag_iltag_deserialize_value() {
         _ => panic!(),
     }
 }
+
+#[test]
+fn test_ilrawtag_default_with_id() {
+    let c = ILDefaultWithIdTagCreator::<ILRawTag>::new();
+    let t = c.create_empty_tag(16);
+    assert_eq!(t.id(), 16);
+}

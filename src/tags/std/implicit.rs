@@ -448,7 +448,7 @@ impl ILBin128Tag {
     /// - `id`: The specified id;
     /// - `value`: The initial value;
     pub fn with_id_value(id: u64, value: &[u8; 16]) -> Self {
-        assert!(value.len() != 16);
+        assert!(value.len() == 16);
         let mut inst = Self { id, value: [0; 16] };
         inst.value.copy_from_slice(value);
         inst

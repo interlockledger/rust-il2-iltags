@@ -162,6 +162,22 @@ macro_rules! test_simple_value_iltag_deserialize_impl {
             Err(ErrorKind::CorruptedData) => (),
             _ => panic!("deserialize_value() should fail because size tag_size is wrong."),
         }
+
+        let tmp: [u8; 16] = [0; 16];
+        let mut t = <$tag_type>::new();
+        let mut reader = ByteArrayReader::new(&tmp);
+        match t.deserialize_value(&factory, exp_size - 1, &mut reader) {
+            Err(ErrorKind::CorruptedData) => (),
+            _ => panic!("deserialize_value() should fail because size tag_size is wrong."),
+        }
+
+        let tmp: [u8; 16] = [0; 16];
+        let mut t = <$tag_type>::new();
+        let mut reader = ByteArrayReader::new(&tmp[0..exp_size - 1]);
+        match t.deserialize_value(&factory, exp_size, &mut reader) {
+            Err(ErrorKind::IOError(_)) => (),
+            _ => panic!("deserialize_value() should fail because it is not possible to read data."),
+        }
     };
 }
 
@@ -560,4 +576,98 @@ fn test_ilbin64tag_iltag_serialize() {
 #[test]
 fn test_ilbin64tag_iltag_deserialize() {
     test_simple_value_iltag_deserialize_impl!(ILBin64Tag, f64, 8, [-1.2345678, 9.87654]);
+}
+
+//=============================================================================
+// ILBin128Tag
+//-----------------------------------------------------------------------------
+const BIN128_DEFAULT: [u8; 16] = [0; 16];
+
+const BIN128_SAMPLE: [u8; 16] = [
+    0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F,
+];
+
+#[test]
+fn test_ilbin128tag_new() {
+    let t = ILBin128Tag::new();
+    assert_eq!(t.id(), IL_BIN128_TAG_ID);
+    assert_eq!(t.value(), &BIN128_DEFAULT);
+
+    let t = ILBin128Tag::with_id(123);
+    assert_eq!(t.id(), 123);
+    assert_eq!(t.value(), &BIN128_DEFAULT);
+
+    let t = ILBin128Tag::with_value(&BIN128_SAMPLE);
+    assert_eq!(t.id(), IL_BIN128_TAG_ID);
+    assert_eq!(t.value(), &BIN128_SAMPLE);
+
+    let t = ILBin128Tag::with_id_value(123, &BIN128_SAMPLE);
+    assert_eq!(t.id(), 123);
+    assert_eq!(t.value(), &BIN128_SAMPLE);
+}
+
+#[test]
+fn test_ilbin128tag_iltag_size() {
+    test_simple_value_iltag_value_size_impl!(ILBin128Tag, 16);
+}
+
+#[test]
+fn test_ilbin128tag_iltag_serialize() {
+    let t = ILBin128Tag::new();
+    let mut writer = VecWriter::new();
+    match t.serialize_value(&mut writer) {
+        Ok(()) => (),
+        _ => panic!(""),
+    }
+    assert_eq!(writer.vec().as_slice(), &BIN128_DEFAULT);
+
+    let t = ILBin128Tag::with_value(&BIN128_SAMPLE);
+    let mut writer = VecWriter::new();
+    match t.serialize_value(&mut writer) {
+        Ok(()) => (),
+        _ => panic!(""),
+    }
+    assert_eq!(writer.vec().as_slice(), &BIN128_SAMPLE);
+}
+
+#[test]
+fn test_ilbin128tag_iltag_deserialize() {
+    let factory = UntouchbleTagFactory {};
+
+    let mut t = ILBin128Tag::new();
+    let mut reader = ByteArrayReader::new(&BIN128_DEFAULT);
+    match t.deserialize_value(&factory, 16, &mut reader) {
+        Ok(()) => (),
+        _ => panic!(""),
+    }
+    assert_eq!(t.value(), &BIN128_DEFAULT);
+
+    let mut t = ILBin128Tag::new();
+    let mut reader = ByteArrayReader::new(&BIN128_SAMPLE);
+    match t.deserialize_value(&factory, 16, &mut reader) {
+        Ok(()) => (),
+        _ => panic!(""),
+    }
+    assert_eq!(t.value(), &BIN128_SAMPLE);
+
+    let mut t = ILBin128Tag::new();
+    let mut reader = ByteArrayReader::new(&BIN128_SAMPLE);
+    match t.deserialize_value(&factory, 15, &mut reader) {
+        Err(ErrorKind::CorruptedData) => (),
+        _ => panic!(""),
+    }
+
+    let mut t = ILBin128Tag::new();
+    let mut reader = ByteArrayReader::new(&BIN128_SAMPLE);
+    match t.deserialize_value(&factory, 17, &mut reader) {
+        Err(ErrorKind::CorruptedData) => (),
+        _ => panic!(""),
+    }
+
+    let mut t = ILBin128Tag::new();
+    let mut reader = ByteArrayReader::new(&BIN128_SAMPLE[1..]);
+    match t.deserialize_value(&factory, 16, &mut reader) {
+        Err(ErrorKind::IOError(_)) => (),
+        _ => panic!(""),
+    }
 }
