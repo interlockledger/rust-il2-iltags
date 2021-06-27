@@ -56,6 +56,9 @@ macro_rules! test_new_with_id_default_func_impl {
 
         let t = <$tag_type>::with_id(123);
         assert_eq!(t.id(), 123, "with_id() is not setting the custom ID correctly.");
+
+        let t = <$tag_type>::default_with_id(123);
+        assert_eq!(t.id(), 123, "with_id() is not setting the custom ID correctly.");
     };
 }
 
