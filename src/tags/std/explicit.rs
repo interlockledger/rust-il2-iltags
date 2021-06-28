@@ -39,7 +39,6 @@ use crate::tags::{
     deserialize_bytes, deserialize_bytes_into_vec, deserialize_ilint, serialize_bytes,
     serialize_ilint, tag_size_to_usize, ILRawTag,
 };
-use crate::{base_iltag_impl, iltag_default_impl};
 use ::std::any::Any;
 use ::std::collections::HashMap;
 
@@ -972,9 +971,8 @@ iltag_default_impl!(ILOIDTag);
 //=============================================================================
 // ILDictTag
 //-----------------------------------------------------------------------------
-/// This struct the standard OID tag. It is designed to store ITU Object
-/// identifier values as an array of u64 values. It uses the same encoding
-/// of `ILILIntArrayTag`.
+/// This struct implements the standard dictionary tag. It always maps string
+/// to tags.
 pub struct ILDictTag {
     id: u64,
     value: HashMap<String, Box<dyn ILTag>>,
@@ -983,7 +981,7 @@ pub struct ILDictTag {
 impl ILDictTag {
     /// Creates a new instance of this struct.
     pub fn new() -> Self {
-        Self::with_id(IL_OID_TAG_ID)
+        Self::with_id(IL_DICTIONARY_TAG_ID)
     }
 
     /// Creates a new instance of this struct with the
@@ -1046,3 +1044,80 @@ impl ILTag for ILDictTag {
 }
 
 iltag_default_impl!(ILDictTag);
+
+//=============================================================================
+// ILStrDictTag
+//-----------------------------------------------------------------------------
+/// This struct implements the standard string dictionary tag. It always maps
+/// strings to strings.
+pub struct ILStrDictTag {
+    id: u64,
+    value: HashMap<String, String>,
+}
+
+impl ILStrDictTag {
+    /// Creates a new instance of this struct.
+    pub fn new() -> Self {
+        Self::with_id(IL_STRING_DICTIONARY_TAG_ID)
+    }
+
+    /// Creates a new instance of this struct with the
+    /// specified initial value.
+    ///
+    /// Arguments:
+    /// * `value`: A byte slice with the initial value;
+    pub fn with_id(id: u64) -> Self {
+        Self {
+            id,
+            value: HashMap::default(),
+        }
+    }
+
+    pub fn value(&self) -> &HashMap<String, String> {
+        &self.value
+    }
+
+    pub fn mut_value(&mut self) -> &mut HashMap<String, String> {
+        &mut self.value
+    }
+}
+
+impl ILTag for ILStrDictTag {
+    base_iltag_impl!();
+
+    fn value_size(&self) -> u64 {
+        let mut size: u64 = 0;
+        for (key, value) in self.value.iter() {
+            size += string_tag_size_from_value(key);
+            size += string_tag_size_from_value(value);
+        }
+        size
+    }
+
+    fn serialize_value(&self, writer: &mut dyn Writer) -> Result<()> {
+        for (key, value) in self.value.iter() {
+            serialize_string_tag_from_value(key, writer)?;
+            serialize_string_tag_from_value(value, writer)?;
+        }
+        Ok(())
+    }
+
+    fn deserialize_value(
+        &mut self,
+        _factory: &dyn ILTagFactory,
+        value_size: usize,
+        reader: &mut dyn Reader,
+    ) -> Result<()> {
+        let mut lreader = LimitedReader::new(reader, value_size);
+        self.value.clear();
+        while lreader.available() > 0 {
+            self.value.insert(
+                deserialize_string_tag_from_value(&mut lreader)?,
+                deserialize_string_tag_from_value(&mut lreader)?,
+            );
+        }
+        Ok(())
+    }
+}
+
+iltag_default_impl!(ILStrDictTag);

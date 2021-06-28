@@ -32,8 +32,70 @@
 //! This module implements all standard explicit tags defined by
 //! [ILTags Specification](https://github.com/interlockledger/specification/tree/master/ILTags).
 use super::constants::*;
-use super::{ErrorKind, ILTag, ILTagCreator, ILTagCreatorEngine, ILTagFactory, Result};
-use crate::base_iltag_impl;
-use crate::io::data::*;
-use crate::io::{Reader, Writer};
+use crate::io::{LimitedReader, Reader};
+use crate::tags::{
+    deserialize_ilint, is_implicit_tag, tag_size_to_usize, ErrorKind, ILDefaultTagCreator, ILTag,
+    ILTagCreator, ILTagCreatorEngine, ILTagFactory, Result,
+};
 use ::std::any::Any;
+
+use super::explicit::*;
+use super::implicit::*;
+
+fn create_std_engine(strict: bool) -> ILTagCreatorEngine {
+    let mut engine = ILTagCreatorEngine::new(strict);
+
+    engine.register(
+        IL_NULL_TAG_ID,
+        Box::new(ILDefaultTagCreator::<ILNullTag>::default()),
+    );
+    engine.register(
+        IL_BOOL_TAG_ID,
+        Box::new(ILDefaultTagCreator::<ILBoolTag>::default()),
+    );
+
+    engine
+}
+
+pub struct ILStandardTagFactory {
+    engine: ILTagCreatorEngine,
+}
+
+impl ILStandardTagFactory {
+    pub fn new(strict: bool) -> Self {
+        Self {
+            engine: create_std_engine(strict),
+        }
+    }
+}
+
+impl ILTagFactory for ILStandardTagFactory {
+    fn create_tag(&self, tag_id: u64) -> Option<Box<dyn ILTag>> {
+        self.engine.create_tag(tag_id)
+    }
+
+    fn deserialize(&self, reader: &mut dyn Reader) -> Result<Box<dyn ILTag>> {
+        let tag_id = deserialize_ilint(reader)?;
+        let tag_size = if is_implicit_tag(tag_id) {
+            // TODO
+            1
+        } else {
+            deserialize_ilint(reader)?
+        };
+        let utag_size = tag_size_to_usize(tag_size)?;
+        let mut tag = match self.create_tag(tag_id) {
+            Some(t) => t,
+            None => return Err(ErrorKind::UnknownTag),
+        };
+        if tag_id == IL_ILINT_TAG_ID {
+            tag.deserialize_value(self, utag_size, reader)?;
+        } else {
+            let mut lreader = LimitedReader::new(reader, utag_size);
+            tag.deserialize_value(self, utag_size, &mut lreader)?;
+            if !lreader.empty() {
+                return Err(ErrorKind::CorruptedData);
+            }
+        }
+        Ok(tag)
+    }
+}

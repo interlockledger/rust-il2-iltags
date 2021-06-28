@@ -29,21 +29,72 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-//! This is the base module for all standard tags and tag factories.
-use super::{DefaultWithId, ErrorKind, ILTag, ILTagFactory, Result};
 
-pub mod constants;
-pub mod explicit;
-pub mod factory;
-pub mod implicit;
+/// This macro implements the methods `ILTag::id()`, `ILTag::as_any()` and
+/// `ILTag::as_mut_any()` from `ILTag` trait.
+///
+/// This macro requires the presence of a field `id` (u64) that will hold the id of the
+/// tag.
+///
+/// Example:
+/// ```
+/// pub struct SampleTag {
+///     id: u64,
+///     ...
+/// }
+///
+/// impl SampleTag{
+///     base_iltag_impl!();
+///     ...
+/// }
+///
+/// ```
+macro_rules! base_iltag_impl {
+    () => {
+        fn id(&self) -> u64 {
+            self.id
+        }
 
-#[cfg(test)]
-mod constants_tests;
-#[cfg(test)]
-mod implicit_tests;
-//#[cfg(test)]
-//mod tests;
+        fn as_any(&self) -> &dyn Any {
+            self
+        }
 
-pub use constants::*;
-pub use explicit::*;
-pub use implicit::*;
+        fn as_mut_any(&mut self) -> &mut dyn Any {
+            self
+        }
+    };
+}
+
+/// Implementation of `Default` and `DefaultWithId` traits for all
+/// standard tags.
+///
+/// This macro requires that the struct implementation has a
+/// constructor called `new()` that takes no arguments.
+///
+/// Example:
+/// ```
+/// pub struct SampleTag{...}
+///
+/// impl SampleTag {
+///     pub fn new() -> Self {...}
+///
+///     pub fn with_id(id:u64) -> Self {...}
+/// }
+///
+/// iltag_default_impl!(SampleTag);
+/// ```
+macro_rules! iltag_default_impl {
+    ($tag_type: ty) => {
+        impl Default for $tag_type {
+            fn default() -> Self {
+                Self::new()
+            }
+        }
+
+        impl DefaultWithId for $tag_type {
+            fn default_with_id(id: u64) -> Self {
+                Self::with_id(id)
+            }
+        }
+    };
+}

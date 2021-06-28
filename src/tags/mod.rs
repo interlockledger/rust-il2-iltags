@@ -30,7 +30,12 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 //! This module contains the implementation of the **IL2 ILTags** standard.
+
+#[macro_use]
+mod macros;
+
 pub mod std;
+
 #[cfg(test)]
 mod tests;
 
@@ -308,42 +313,6 @@ pub fn tag_downcast_ref<T: ILTag + Any>(tag: &dyn ILTag) -> Option<&T> {
 /// the conversion is not possible.
 pub fn tag_downcast_mut<T: ILTag + Any>(tag: &mut dyn ILTag) -> Option<&mut T> {
     tag.as_mut_any().downcast_mut::<T>()
-}
-
-/// This macro implements the methods `ILTag::id()`, `ILTag::as_any()` and
-/// `ILTag::as_mut_any()` from `ILTag` trait.
-///
-/// This macro requires the presence of a field `id` (u64) that will hold the id of the
-/// tag.
-///
-/// Example:
-/// ```
-/// pub struct SampleTag {
-///     id: u64,
-///     ...
-/// }
-///
-/// impl SampleTag{
-///     base_iltag_impl!();
-///     ...
-/// }
-///
-/// ```
-#[macro_export]
-macro_rules! base_iltag_impl {
-    () => {
-        fn id(&self) -> u64 {
-            self.id
-        }
-
-        fn as_any(&self) -> &dyn Any {
-            self
-        }
-
-        fn as_mut_any(&mut self) -> &mut dyn Any {
-            self
-        }
-    };
 }
 
 //=============================================================================

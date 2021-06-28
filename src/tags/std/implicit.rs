@@ -32,9 +32,8 @@
 //! This module implements all standard implicit tags defined by
 //! [ILTags Specification](https://github.com/interlockledger/specification/tree/master/ILTags).
 use super::constants::*;
+
 use super::{DefaultWithId, ErrorKind, ILTag, ILTagFactory, Result};
-use crate::base_iltag_impl;
-use crate::iltag_default_impl;
 use crate::io::data::*;
 use crate::io::{Reader, Writer};
 use ::std::any::Any;
@@ -164,6 +163,36 @@ macro_rules! int_iltag_impl {
             }
         }
     };
+}
+
+/// Returns the size of the implicit tag. With the
+/// exception of `ILILInt64Tag`, all implicity tags
+/// have fixed size
+///
+/// Arguments:
+/// - id: The tag id;
+///
+/// Returns:
+/// - The size of the tag in bytes or u64::MAX if the id is
+/// not a valid implicit tag.
+pub fn implicit_tag_size(id: u64) -> u64 {
+    match id {
+        IL_NULL_TAG_ID => 0,
+        IL_BOOL_TAG_ID => 1,
+        IL_INT8_TAG_ID => 1,
+        IL_UINT8_TAG_ID => 1,
+        IL_INT16_TAG_ID => 2,
+        IL_UINT16_TAG_ID => 2,
+        IL_INT32_TAG_ID => 4,
+        IL_UINT32_TAG_ID => 4,
+        IL_INT64_TAG_ID => 8,
+        IL_UINT64_TAG_ID => 8,
+        IL_ILINT_TAG_ID => 9,
+        IL_BIN32_TAG_ID => 4,
+        IL_BIN64_TAG_ID => 8,
+        IL_BIN128_TAG_ID => 16,
+        _ => u64::MAX,
+    }
 }
 
 //=============================================================================
