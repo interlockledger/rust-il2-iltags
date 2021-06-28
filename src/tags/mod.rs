@@ -142,6 +142,61 @@ pub fn deserialize_ilint(reader: &mut dyn Reader) -> Result<u64> {
     }
 }
 
+/// Serializes a byte array.
+///
+/// Arguments:
+/// - `bytes`: The bytes to be written;
+/// - `writer`: The writer;
+///
+/// Returns:
+/// - Ok(()): On success;
+/// - Err(e): In case of error;
+pub fn serialize_bytes(bytes: &[u8], writer: &mut dyn Writer) -> Result<()> {
+    match writer.write_all(bytes) {
+        Ok(()) => Ok(()),
+        Err(e) => Err(ErrorKind::IOError(e)),
+    }
+}
+
+/// Deserializes a byte array of a given size.
+///
+/// Arguments:
+/// - `reader`: The reader;
+/// - `size`: The number of bytes to read;
+///
+/// Returns:
+/// - Ok(v): A vector with the bytes read;
+/// - Err(e): In case of error;
+pub fn deserialize_bytes(size: usize, reader: &mut dyn Reader) -> Result<Vec<u8>> {
+    let mut ret: Vec<u8> = vec![0; size];
+    match reader.read_all(ret.as_mut_slice()) {
+        Ok(()) => Ok(ret),
+        Err(e) => Err(ErrorKind::IOError(e)),
+    }
+}
+
+/// Deserializes a byte array of a given size into a vector.
+///
+/// Arguments:
+/// - `reader`: The reader;
+/// - `size`: The number of bytes to read;
+/// - `vec`: The vector that will receive the data;
+///
+/// Returns:
+/// - Ok(v): A vector with the bytes read;
+/// - Err(e): In case of error;
+pub fn deserialize_bytes_into_vec(
+    size: usize,
+    reader: &mut dyn Reader,
+    vec: &mut Vec<u8>,
+) -> Result<()> {
+    vec.resize(size, 0);
+    match reader.read_all(vec.as_mut_slice()) {
+        Ok(()) => Ok(()),
+        Err(e) => Err(ErrorKind::IOError(e)),
+    }
+}
+
 //=============================================================================
 // ILTag
 //-----------------------------------------------------------------------------
@@ -538,10 +593,7 @@ impl ILTag for ILRawTag {
     }
 
     fn serialize_value(&self, writer: &mut dyn Writer) -> Result<()> {
-        match writer.write_all(self.value.as_slice()) {
-            Ok(()) => Ok(()),
-            Err(e) => Err(ErrorKind::IOError(e)),
-        }
+        serialize_bytes(self.value.as_slice(), writer)
     }
 
     fn deserialize_value(
@@ -550,11 +602,7 @@ impl ILTag for ILRawTag {
         value_size: usize,
         reader: &mut dyn Reader,
     ) -> Result<()> {
-        self.value.resize(value_size, 0);
-        match reader.read_all(self.value.as_mut_slice()) {
-            Ok(()) => Ok(()),
-            Err(e) => Err(ErrorKind::IOError(e)),
-        }
+        deserialize_bytes_into_vec(value_size, reader, &mut self.value)
     }
 }
 

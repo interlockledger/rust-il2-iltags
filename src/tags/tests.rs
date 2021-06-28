@@ -55,6 +55,119 @@ fn test_is_reserved_tag() {
     assert!(!is_reserved_tag(32))
 }
 
+#[test]
+fn test_tag_size_to_usize() {
+    assert_eq!(MAX_TAG_SIZE, 512 * 1024 * 1024);
+
+    let s = match tag_size_to_usize(0) {
+        Ok(v) => v,
+        _ => panic!(),
+    };
+    assert_eq!(s, 0);
+
+    let s = match tag_size_to_usize(MAX_TAG_SIZE) {
+        Ok(v) => v,
+        _ => panic!(),
+    };
+    assert_eq!(s as u64, MAX_TAG_SIZE);
+
+    match tag_size_to_usize(MAX_TAG_SIZE + 1) {
+        Err(ErrorKind::TagTooLarge) => (),
+        _ => panic!(),
+    };
+}
+
+const ILINT_SAMPLE: u64 = 0xcb3a_208d_5c13_69e4;
+const ILINT_SAMPLE_BIN: [u8; 9] = [0xFF, 0xCB, 0x3A, 0x20, 0x8D, 0x5C, 0x13, 0x68, 0xEC];
+
+#[test]
+fn test_serialize_ilint() {
+    let mut writer = VecWriter::new();
+
+    match serialize_ilint(ILINT_SAMPLE, &mut writer) {
+        Ok(()) => (),
+        _ => panic!(),
+    }
+    assert_eq!(writer.as_slice(), &ILINT_SAMPLE_BIN);
+
+    writer.set_read_only(true);
+    match serialize_ilint(ILINT_SAMPLE, &mut writer) {
+        Err(ErrorKind::IOError(_)) => (),
+        _ => panic!(),
+    }
+}
+
+#[test]
+fn test_deserialize_ilint() {
+    let mut reader = ByteArrayReader::new(&ILINT_SAMPLE_BIN);
+    let v = match deserialize_ilint(&mut reader) {
+        Ok(v) => v,
+        _ => panic!(),
+    };
+    assert_eq!(v, ILINT_SAMPLE);
+
+    let mut reader = ByteArrayReader::new(&ILINT_SAMPLE_BIN[..ILINT_SAMPLE_BIN.len() - 1]);
+    match deserialize_ilint(&mut reader) {
+        Err(ErrorKind::IOError(_)) => (),
+        _ => panic!(),
+    };
+}
+
+#[test]
+fn test_serialize_bytes() {
+    let mut writer = VecWriter::new();
+    match serialize_bytes(&ILINT_SAMPLE_BIN, &mut writer) {
+        Ok(v) => v,
+        _ => panic!(),
+    };
+    assert_eq!(writer.as_slice(), &ILINT_SAMPLE_BIN);
+
+    writer.set_read_only(true);
+    match serialize_bytes(&ILINT_SAMPLE_BIN, &mut writer) {
+        Err(ErrorKind::IOError(_)) => (),
+        _ => panic!(),
+    };
+}
+
+#[test]
+fn test_deserialize_bytes() {
+    for size in 0..ILINT_SAMPLE_BIN.len() {
+        let mut reader = ByteArrayReader::new(&ILINT_SAMPLE_BIN);
+        let ret = match deserialize_bytes(size, &mut reader) {
+            Ok(v) => v,
+            _ => panic!(),
+        };
+        assert_eq!(ret.as_slice(), &ILINT_SAMPLE_BIN[0..size]);
+    }
+
+    let mut reader = ByteArrayReader::new(&ILINT_SAMPLE_BIN);
+    match deserialize_bytes(ILINT_SAMPLE_BIN.len() + 1, &mut reader) {
+        Err(ErrorKind::IOError(_)) => (),
+        _ => panic!(),
+    };
+}
+
+#[test]
+fn test_deserialize_bytes_into_vec() {
+    for size in 0..ILINT_SAMPLE_BIN.len() {
+        let mut reader = ByteArrayReader::new(&ILINT_SAMPLE_BIN);
+        let mut vec: Vec<u8> = Vec::new();
+        vec.resize(1234, 1); //
+        match deserialize_bytes_into_vec(size, &mut reader, &mut vec) {
+            Ok(()) => (),
+            _ => panic!(),
+        };
+        assert_eq!(vec.as_slice(), &ILINT_SAMPLE_BIN[0..size]);
+    }
+
+    let mut reader = ByteArrayReader::new(&ILINT_SAMPLE_BIN);
+    let mut vec: Vec<u8> = Vec::new();
+    match deserialize_bytes_into_vec(ILINT_SAMPLE_BIN.len() + 1, &mut reader, &mut vec) {
+        Err(ErrorKind::IOError(_)) => (),
+        _ => panic!(),
+    };
+}
+
 //=============================================================================
 // DummyTag
 //-----------------------------------------------------------------------------
