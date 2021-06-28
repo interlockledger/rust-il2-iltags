@@ -36,12 +36,35 @@ use super::{DefaultWithId, ErrorKind, ILTag, ILTagFactory, Result};
 use crate::io::data::*;
 use crate::io::{LimitedReader, Reader, Writer};
 use crate::tags::{
-    deserialize_bytes, deserialize_bytes_into_vec, deserialize_ilint, serialize_bytes,
-    serialize_ilint, tag_size_to_usize, ILRawTag,
+    deserialize_bytes, deserialize_ilint, serialize_bytes, serialize_ilint, tag_size_to_usize,
+    ILRawTag,
 };
 use ::std::any::Any;
 use ::std::collections::HashMap;
 
+/// This macro defines the methods for tags that uses an ILRawTag as
+/// its inner implementation.
+///
+/// This struct must contain a single field called inner using the type
+/// ILRawTag. Example:
+///
+/// ```
+/// pub struct NewStruct {
+///     inner: ILRawTag,
+/// }
+///
+/// impl  NewStruct {
+///     std_byte_array_tag_func_impl!();
+///     ...
+/// }
+/// ```
+///
+/// It defines the following methods:
+/// - `pub fn new() -> Self`;
+/// - `pub fn with_value(value: &[u8]) -> Self`;
+/// - `pub fn value(&self) -> &Vec<u8>`;
+/// - `pub fn mut_value(&mut self) -> &mut Vec<u8>`;
+///
 macro_rules! std_byte_array_tag_func_impl {
     ($tag_id: expr) => {
         /// Creates a new instance of this struct.
@@ -74,47 +97,6 @@ macro_rules! std_byte_array_tag_func_impl {
     };
 }
 
-macro_rules! base_iltag_inner_impl {
-    () => {
-        fn id(&self) -> u64 {
-            self.inner.id()
-        }
-
-        fn as_any(&self) -> &dyn Any {
-            self
-        }
-
-        fn as_mut_any(&mut self) -> &mut dyn Any {
-            self
-        }
-    };
-}
-
-macro_rules! std_byte_array_tag_iltag_impl {
-    ($tag_type:ty) => {
-        impl ILTag for $tag_type {
-            base_iltag_inner_impl!();
-
-            fn value_size(&self) -> u64 {
-                self.inner.value_size()
-            }
-
-            fn serialize_value(&self, writer: &mut dyn Writer) -> Result<()> {
-                self.inner.serialize_value(writer)
-            }
-
-            fn deserialize_value(
-                &mut self,
-                factory: &dyn ILTagFactory,
-                value_size: usize,
-                reader: &mut dyn Reader,
-            ) -> Result<()> {
-                self.inner.deserialize_value(factory, value_size, reader)
-            }
-        }
-    };
-}
-
 //=============================================================================
 // ILByteArrayTag
 //-----------------------------------------------------------------------------
@@ -138,7 +120,7 @@ impl ILByteArrayTag {
     }
 }
 
-std_byte_array_tag_iltag_impl!(ILByteArrayTag);
+inner_iltag_default_impl!(ILByteArrayTag);
 
 impl Default for ILByteArrayTag {
     fn default() -> Self {
@@ -198,7 +180,7 @@ impl ILStringTag {
 }
 
 impl ILTag for ILStringTag {
-    base_iltag_impl!();
+    iltag_base_func_impl!();
 
     fn value_size(&self) -> u64 {
         self.value.len() as u64
@@ -297,7 +279,7 @@ impl ILBigIntTag {
     std_byte_array_tag_func_impl!(IL_BINT_TAG_ID);
 }
 
-std_byte_array_tag_iltag_impl!(ILBigIntTag);
+inner_iltag_default_impl!(ILBigIntTag);
 
 impl Default for ILBigIntTag {
     fn default() -> Self {
@@ -380,7 +362,7 @@ impl ILBigDecTag {
 }
 
 impl ILTag for ILBigDecTag {
-    base_iltag_inner_impl!();
+    inner_iltag_base_func_impl!();
 
     fn value_size(&self) -> u64 {
         4 + self.inner.value_size()
@@ -474,7 +456,7 @@ impl ILILIntArrayTag {
 }
 
 impl ILTag for ILILIntArrayTag {
-    base_iltag_impl!();
+    iltag_base_func_impl!();
 
     fn value_size(&self) -> u64 {
         let mut size: u64 = crate::ilint::encoded_size(self.value.len() as u64) as u64;
@@ -563,7 +545,7 @@ impl ILTagSeqTag {
 }
 
 impl ILTag for ILTagSeqTag {
-    base_iltag_impl!();
+    iltag_base_func_impl!();
 
     fn value_size(&self) -> u64 {
         let mut size: u64 = 0;
@@ -638,7 +620,7 @@ impl ILTagArrayTag {
 }
 
 impl ILTag for ILTagArrayTag {
-    base_iltag_inner_impl!();
+    inner_iltag_base_func_impl!();
 
     fn value_size(&self) -> u64 {
         let size: u64 = crate::ilint::encoded_size(self.inner.value.len() as u64) as u64;
@@ -738,7 +720,7 @@ impl ILRangeTag {
 }
 
 impl ILTag for ILRangeTag {
-    base_iltag_impl!();
+    iltag_base_func_impl!();
 
     fn value_size(&self) -> u64 {
         (crate::ilint::encoded_size(self.start) + 2) as u64
@@ -862,7 +844,7 @@ impl ILVersionTag {
 }
 
 impl ILTag for ILVersionTag {
-    base_iltag_impl!();
+    iltag_base_func_impl!();
 
     fn value_size(&self) -> u64 {
         16
@@ -945,26 +927,7 @@ impl ILOIDTag {
     }
 }
 
-impl ILTag for ILOIDTag {
-    base_iltag_inner_impl!();
-
-    fn value_size(&self) -> u64 {
-        self.inner.value_size()
-    }
-
-    fn serialize_value(&self, writer: &mut dyn Writer) -> Result<()> {
-        self.inner.serialize_value(writer)
-    }
-
-    fn deserialize_value(
-        &mut self,
-        factory: &dyn ILTagFactory,
-        value_size: usize,
-        reader: &mut dyn Reader,
-    ) -> Result<()> {
-        self.inner.deserialize_value(factory, value_size, reader)
-    }
-}
+inner_iltag_default_impl!(ILOIDTag);
 
 iltag_default_impl!(ILOIDTag);
 
@@ -1006,7 +969,7 @@ impl ILDictTag {
 }
 
 impl ILTag for ILDictTag {
-    base_iltag_impl!();
+    iltag_base_func_impl!();
 
     fn value_size(&self) -> u64 {
         let mut size: u64 = 0;
@@ -1083,7 +1046,7 @@ impl ILStrDictTag {
 }
 
 impl ILTag for ILStrDictTag {
-    base_iltag_impl!();
+    iltag_base_func_impl!();
 
     fn value_size(&self) -> u64 {
         let mut size: u64 = 0;

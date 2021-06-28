@@ -132,7 +132,7 @@ macro_rules! simple_value_tag_struct_impl {
 macro_rules! int_iltag_impl {
     ($tag_type: ty, $value_size: expr, $read_func: ident, $write_func: ident) => {
         impl ILTag for $tag_type {
-            base_iltag_impl!();
+            iltag_base_func_impl!();
 
             fn value_size(&self) -> u64 {
                 $value_size
@@ -214,7 +214,7 @@ impl ILNullTag {
 }
 
 impl ILTag for ILNullTag {
-    base_iltag_impl!();
+    iltag_base_func_impl!();
 
     fn value_size(&self) -> u64 {
         0
@@ -251,7 +251,7 @@ pub struct ILBoolTag {
 simple_value_tag_struct_impl!(ILBoolTag, bool, IL_BOOL_TAG_ID);
 
 impl ILTag for ILBoolTag {
-    base_iltag_impl!();
+    iltag_base_func_impl!();
 
     fn value_size(&self) -> u64 {
         1
@@ -501,7 +501,7 @@ impl ILBin128Tag {
 }
 
 impl ILTag for ILBin128Tag {
-    base_iltag_impl!();
+    iltag_base_func_impl!();
 
     fn value_size(&self) -> u64 {
         16
@@ -546,7 +546,7 @@ pub struct ILILInt64Tag {
 simple_value_tag_struct_impl!(ILILInt64Tag, u64, IL_ILINT_TAG_ID);
 
 impl ILTag for ILILInt64Tag {
-    base_iltag_impl!();
+    iltag_base_func_impl!();
 
     fn value_size(&self) -> u64 {
         crate::ilint::encoded_size(self.value) as u64

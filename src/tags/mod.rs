@@ -555,7 +555,7 @@ impl ILRawTag {
 }
 
 impl ILTag for ILRawTag {
-    base_iltag_impl!();
+    iltag_base_func_impl!();
 
     fn value_size(&self) -> u64 {
         self.value.len() as u64

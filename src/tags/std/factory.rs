@@ -32,15 +32,14 @@
 //! This module implements all standard explicit tags defined by
 //! [ILTags Specification](https://github.com/interlockledger/specification/tree/master/ILTags).
 use super::constants::*;
+use super::explicit::*;
+use super::implicit::*;
 use crate::io::{LimitedReader, Reader};
 use crate::tags::{
     deserialize_ilint, is_implicit_tag, tag_size_to_usize, ErrorKind, ILDefaultTagCreator, ILTag,
     ILTagCreator, ILTagCreatorEngine, ILTagFactory, Result,
 };
 use ::std::any::Any;
-
-use super::explicit::*;
-use super::implicit::*;
 
 fn create_std_engine(strict: bool) -> ILTagCreatorEngine {
     let mut engine = ILTagCreatorEngine::new(strict);
