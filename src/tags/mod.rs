@@ -40,11 +40,15 @@ use crate::io::{Reader, Writer};
 use ::std::any::Any;
 use ::std::collections::HashMap;
 
+/// Maximum tag size that can be handled by this library.
+pub const MAX_TAG_SIZE: u64 = 1024 * 1024 * 512;
+
 /// Definition of the errors from this package.
 pub enum ErrorKind {
     UnknownTag,
     UnsupportedTag,
     CorruptedData,
+    TagTooLarge,
     IOError(crate::io::ErrorKind),
     Boxed(Box<dyn ::std::error::Error>),
 }
@@ -84,6 +88,58 @@ pub fn is_implicit_tag(id: u64) -> bool {
 ///
 pub fn is_reserved_tag(id: u64) -> bool {
     id <= RESERVED_ID_MAX
+}
+
+/// This function converts the tag size as u64 into
+/// a usize value. It checks if the tag size falls within
+/// the maximum size of a tag that this library accepts.
+///
+/// It can be used to detect potential corruptions in the
+/// data stream.
+///
+/// Arguments:
+/// - `size`: The size read from the tag.
+///
+/// Returns:
+/// - Ok(size): The size as u64;
+/// - Err(ErrorKind::TagTooLarge): If the tag is too large;
+pub fn tag_size_to_usize(size: u64) -> Result<usize> {
+    if size > MAX_TAG_SIZE {
+        Err(ErrorKind::TagTooLarge)
+    } else {
+        Ok(size as usize)
+    }
+}
+
+/// Serializes an u64 as an ILInt value.
+///
+/// Arguments:
+/// - `value`: The value to write;
+/// - `writer`: The writer;
+///
+/// Returns:
+/// - Ok(v): The value read;
+/// - Err(x): In case of error;
+pub fn serialize_ilint(value: u64, writer: &mut dyn Writer) -> Result<()> {
+    match write_ilint(value, writer) {
+        Ok(()) => Ok(()),
+        Err(e) => Err(ErrorKind::IOError(e)),
+    }
+}
+
+/// Unserializes an u64 from a reader.
+///
+/// Arguments:
+/// - `reader`: The reader;
+///
+/// Returns:
+/// - Ok(v): The value read;
+/// - Err(x): In case of error;
+pub fn deserialize_ilint(reader: &mut dyn Reader) -> Result<u64> {
+    match read_ilint(reader) {
+        Ok(v) => Ok(v),
+        Err(e) => Err(ErrorKind::IOError(e)),
+    }
 }
 
 //=============================================================================
@@ -142,15 +198,9 @@ pub trait ILTag: Any {
     /// * `Err(())`: If the buffer is too small to hold the encoded value.
     ///
     fn serialize(&self, writer: &mut dyn Writer) -> Result<()> {
-        match write_ilint(self.id(), writer) {
-            Ok(()) => (),
-            Err(e) => return Err(ErrorKind::IOError(e)),
-        }
+        serialize_ilint(self.id(), writer)?;
         if !self.is_implicity() {
-            match write_ilint(self.value_size() as u64, writer) {
-                Ok(()) => (),
-                Err(e) => return Err(ErrorKind::IOError(e)),
-            }
+            serialize_ilint(self.value_size(), writer)?;
         }
         self.serialize_value(writer)
     }
@@ -299,6 +349,12 @@ impl<T: ILTag + Default> ILDefaultTagCreator<T> {
     }
 }
 
+impl<T: ILTag + Default> Default for ILDefaultTagCreator<T> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<T: ILTag + Default> ILTagCreator for ILDefaultTagCreator<T> {
     fn create_empty_tag(&self, tag_id: u64) -> Box<dyn ILTag> {
         let ret = Box::new(T::default());
@@ -322,6 +378,12 @@ impl<T: ILTag + DefaultWithId> ILDefaultWithIdTagCreator<T> {
         Self {
             phantom: ::std::marker::PhantomData,
         }
+    }
+}
+
+impl<T: ILTag + DefaultWithId> Default for ILDefaultWithIdTagCreator<T> {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -355,7 +417,7 @@ impl ILTagCreatorEngine {
         }
     }
 
-    /// Rreturns the current strict flag.
+    /// Returns the current strict flag.
     pub fn strict(&self) -> bool {
         self.strict
     }

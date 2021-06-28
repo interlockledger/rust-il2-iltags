@@ -33,91 +33,80 @@
 //! [ILTags Specification](https://github.com/interlockledger/specification/tree/master/ILTags).
 use super::constants::*;
 use super::{DefaultWithId, ErrorKind, ILTag, ILTagFactory, Result};
-use crate::base_iltag_impl;
-use crate::iltag_default_impl;
 use crate::io::data::*;
 use crate::io::{Reader, Writer};
+use crate::tags::{deserialize_ilint, serialize_ilint, tag_size_to_usize, ILRawTag};
+use crate::{base_iltag_impl, iltag_default_impl};
 use ::std::any::Any;
 
-macro_rules! std_byte_array_tag_impl {
-    ($tag_type:ty, $tag_id: expr) => {
-        impl $tag_type {
-            /// Creates a new instance of this struct.
-            pub fn new() -> Self {
-                Self { value: Vec::new() }
+macro_rules! std_byte_array_tag_func_impl {
+    ($tag_id: expr) => {
+        /// Creates a new instance of this struct.
+        pub fn new() -> Self {
+            Self {
+                inner: ILRawTag::new($tag_id),
             }
+        }
 
-            /// Creates a new instance of this struct with a given capacity.
-            ///
-            /// Arguments:
-            /// * `capacity`: The expected initial capacity;
-            pub fn with_capacity(capacity: usize) -> Self {
-                Self {
-                    value: Vec::with_capacity(capacity),
-                }
+        /// Creates a new instance of this struct with the
+        /// specified initial value.
+        ///
+        /// Arguments:
+        /// * `value`: A byte slice with the initial value;
+        pub fn with_value(value: &[u8]) -> Self {
+            Self {
+                inner: ILRawTag::with_value($tag_id, value),
             }
+        }
 
-            /// Creates a new instance of this struct with the
-            /// specified initial value.
-            ///
-            /// Arguments:
-            /// * `value`: A byte slice with the initial value;
-            pub fn with_value(value: &[u8]) -> Self {
-                let mut v: Vec<u8> = Vec::with_capacity(value.len());
-                v.extend_from_slice(value);
-                Self { value: v }
-            }
+        /// Returns an immutable reference to the value.
+        pub fn value(&self) -> &Vec<u8> {
+            self.inner.value()
+        }
 
-            /// Returns an immutable reference to the value.
-            pub fn value(&self) -> &Vec<u8> {
-                &self.value
-            }
+        /// Returns a mutable reference to the value.
+        pub fn mut_value(&mut self) -> &mut Vec<u8> {
+            self.inner.mut_value()
+        }
+    };
+}
 
-            /// Returns a mutable reference to the value.
-            pub fn mut_value(&mut self) -> &mut Vec<u8> {
-                &mut self.value
-            }
+macro_rules! base_iltag_inner_impl {
+    () => {
+        fn id(&self) -> u64 {
+            self.inner.id()
+        }
+
+        fn as_any(&self) -> &dyn Any {
+            self
+        }
+
+        fn as_mut_any(&mut self) -> &mut dyn Any {
+            self
         }
     };
 }
 
 macro_rules! std_byte_array_tag_iltag_impl {
-    ($tag_type:ty, $tag_id: expr) => {
+    ($tag_type:ty) => {
         impl ILTag for $tag_type {
-            fn id(&self) -> u64 {
-                $tag_id
-            }
-
-            fn as_any(&self) -> &dyn Any {
-                self
-            }
-
-            fn as_mut_any(&mut self) -> &mut dyn Any {
-                self
-            }
+            base_iltag_inner_impl!();
 
             fn value_size(&self) -> u64 {
-                self.value.len() as u64
+                self.inner.value_size()
             }
 
             fn serialize_value(&self, writer: &mut dyn Writer) -> Result<()> {
-                match writer.write_all(self.value.as_slice()) {
-                    Ok(()) => Ok(()),
-                    Err(e) => Err(ErrorKind::IOError(e)),
-                }
+                self.inner.serialize_value(writer)
             }
 
             fn deserialize_value(
                 &mut self,
-                _factory: &dyn ILTagFactory,
+                factory: &dyn ILTagFactory,
                 value_size: usize,
                 reader: &mut dyn Reader,
             ) -> Result<()> {
-                self.value.resize(value_size, 0);
-                match reader.read_all(self.value.as_mut_slice()) {
-                    Ok(()) => Ok(()),
-                    Err(e) => Err(ErrorKind::IOError(e)),
-                }
+                self.inner.deserialize_value(factory, value_size, reader)
             }
         }
     };
@@ -128,12 +117,24 @@ macro_rules! std_byte_array_tag_iltag_impl {
 //-----------------------------------------------------------------------------
 /// This struct the standard byte array tag.
 pub struct ILByteArrayTag {
-    value: Vec<u8>,
+    inner: ILRawTag,
 }
 
-std_byte_array_tag_impl!(ILByteArrayTag, IL_BYTES_TAG_ID);
+impl ILByteArrayTag {
+    std_byte_array_tag_func_impl!(IL_BYTES_TAG_ID);
 
-std_byte_array_tag_iltag_impl!(ILByteArrayTag, IL_BYTES_TAG_ID);
+    /// Creates a new instance of this struct with a given capacity.
+    ///
+    /// Arguments:
+    /// * `capacity`: The expected initial capacity;
+    pub fn with_capacity(capacity: usize) -> Self {
+        Self {
+            inner: ILRawTag::with_capacity(IL_BYTES_TAG_ID, capacity),
+        }
+    }
+}
+
+std_byte_array_tag_iltag_impl!(ILByteArrayTag);
 
 impl Default for ILByteArrayTag {
     fn default() -> Self {
@@ -142,19 +143,805 @@ impl Default for ILByteArrayTag {
 }
 
 //=============================================================================
+// ILStringTag
+//-----------------------------------------------------------------------------
+/// This struct the standard big integer tag.
+pub struct ILStringTag {
+    id: u64,
+    value: String,
+}
+
+impl ILStringTag {
+    /// Creates a new instance of this struct.
+    pub fn new() -> Self {
+        Self::with_id(IL_STRING_TAG_ID)
+    }
+
+    /// Creates a new instance of this struct with the
+    /// specified initial value.
+    ///
+    /// Arguments:
+    /// * `value`: A byte slice with the initial value;
+    pub fn with_id(id: u64) -> Self {
+        Self {
+            id,
+            value: String::default(),
+        }
+    }
+
+    pub fn with_value(value: &str) -> Self {
+        Self::with_id_value(IL_STRING_TAG_ID, value)
+    }
+
+    pub fn with_id_value(id: u64, value: &str) -> Self {
+        Self {
+            id,
+            value: String::from(value),
+        }
+    }
+
+    pub fn value(&self) -> &String {
+        &self.value
+    }
+
+    pub fn mut_value(&mut self) -> &mut String {
+        &mut self.value
+    }
+
+    pub fn set_value(&mut self, value: &str) {
+        self.value.clear();
+        self.value.push_str(value);
+    }
+}
+
+impl ILTag for ILStringTag {
+    base_iltag_impl!();
+
+    fn value_size(&self) -> u64 {
+        self.value.len() as u64
+    }
+
+    fn serialize_value(&self, writer: &mut dyn Writer) -> Result<()> {
+        match writer.write_all(self.value.as_bytes()) {
+            Ok(()) => (),
+            Err(e) => return Err(ErrorKind::IOError(e)),
+        };
+        Ok(())
+    }
+
+    fn deserialize_value(
+        &mut self,
+        _factory: &dyn ILTagFactory,
+        value_size: usize,
+        reader: &mut dyn Reader,
+    ) -> Result<()> {
+        let mut tmp: Vec<u8> = vec![0; value_size];
+
+        match reader.read_all(tmp.as_mut_slice()) {
+            Ok(()) => (),
+            Err(e) => return Err(ErrorKind::IOError(e)),
+        }
+        self.value.clear();
+        match ::std::str::from_utf8(tmp.as_slice()) {
+            Ok(v) => {
+                self.value.push_str(v);
+                Ok(())
+            }
+            Err(_) => Err(ErrorKind::CorruptedData),
+        }
+    }
+}
+
+iltag_default_impl!(ILStringTag);
+
+pub fn string_tag_size_from_value(s: &str) -> u64 {
+    let len = s.len() as u64;
+    1 + crate::ilint::encoded_size(len) as u64 + len
+}
+
+pub fn serialize_string_tag_from_value(s: &str, writer: &mut dyn Writer) -> Result<()> {
+    let len = s.len() as u64;
+
+    serialize_ilint(IL_STRING_TAG_ID, writer)?;
+    serialize_ilint(len, writer)?;
+    match writer.write_all(s.as_bytes()) {
+        Ok(()) => (),
+        Err(e) => return Err(ErrorKind::IOError(e)),
+    }
+    Ok(())
+}
+
+pub fn deserialize_string_tag_from_value(reader: &mut dyn Reader) -> Result<String> {
+    let id = deserialize_ilint(reader)?;
+    if id != IL_STRING_TAG_ID {
+        return Err(ErrorKind::CorruptedData);
+    }
+    let len = deserialize_ilint(reader)?;
+    let usize_len = tag_size_to_usize(len)?;
+
+    let mut tmp: Vec<u8> = Vec::with_capacity(len as usize);
+    tmp.resize(usize_len, 0);
+    match reader.read_all(tmp.as_mut_slice()) {
+        Ok(()) => (),
+        Err(e) => return Err(ErrorKind::IOError(e)),
+    }
+    let s = match ::std::str::from_utf8(tmp.as_slice()) {
+        Ok(v) => v,
+        Err(_) => return Err(ErrorKind::CorruptedData),
+    };
+    Ok(String::from(s))
+}
+
+//=============================================================================
 // ILBigIntTag
 //-----------------------------------------------------------------------------
 /// This struct the standard big integer tag.
 pub struct ILBigIntTag {
-    value: Vec<u8>,
+    inner: ILRawTag,
 }
 
-std_byte_array_tag_impl!(ILBigIntTag, IL_BINT_TAG_ID);
+impl ILBigIntTag {
+    std_byte_array_tag_func_impl!(IL_BINT_TAG_ID);
+}
 
-std_byte_array_tag_iltag_impl!(ILBigIntTag, IL_BINT_TAG_ID);
+std_byte_array_tag_iltag_impl!(ILBigIntTag);
 
 impl Default for ILBigIntTag {
     fn default() -> Self {
         Self::new()
     }
 }
+//=============================================================================
+// ILBigDecTag
+//-----------------------------------------------------------------------------
+/// This struct the standard big decimal tag.
+pub struct ILBigDecTag {
+    inner: ILRawTag,
+    scale: i32,
+}
+
+impl ILBigDecTag {
+    /// Creates a new instance of this struct.
+    pub fn new() -> Self {
+        Self {
+            scale: 0,
+            inner: ILRawTag::new(IL_BDEC_TAG_ID),
+        }
+    }
+
+    /// Creates a new instance of this struct with the
+    /// specified initial value.
+    ///
+    /// Arguments:
+    /// * `value`: A byte slice with the initial value;
+    pub fn with_id(id: u64) -> Self {
+        Self {
+            scale: 0,
+            inner: ILRawTag::new(id),
+        }
+    }
+
+    /// Creates a new instance of this struct with the
+    /// specified initial value.
+    ///
+    /// Arguments:
+    /// * `value`: A byte slice with the initial value;
+    pub fn with_value(scale: i32, value: &[u8]) -> Self {
+        Self::with_id_value(IL_BDEC_TAG_ID, scale, value)
+    }
+
+    /// Creates a new instance of this struct with the
+    /// specified initial value.
+    ///
+    /// Arguments:
+    /// * `value`: A byte slice with the initial value;
+    pub fn with_id_value(id: u64, scale: i32, value: &[u8]) -> Self {
+        Self {
+            scale,
+            inner: ILRawTag::with_value(id, value),
+        }
+    }
+
+    /// Returns an immutable reference to the value.
+    pub fn scale(&self) -> i32 {
+        self.scale
+    }
+
+    /// Returns a mutable reference to the value.
+    pub fn set_scale(&mut self, scale: i32) {
+        self.scale = scale
+    }
+
+    /// Returns an immutable reference to the value.
+    pub fn value(&self) -> &Vec<u8> {
+        self.inner.value()
+    }
+
+    /// Returns a mutable reference to the value.
+    pub fn mut_value(&mut self) -> &mut Vec<u8> {
+        self.inner.mut_value()
+    }
+}
+
+impl ILTag for ILBigDecTag {
+    base_iltag_inner_impl!();
+
+    fn value_size(&self) -> u64 {
+        4 + self.inner.value_size()
+    }
+
+    fn serialize_value(&self, writer: &mut dyn Writer) -> Result<()> {
+        match write_i32(self.scale(), writer) {
+            Ok(()) => (),
+            Err(e) => return Err(ErrorKind::IOError(e)),
+        }
+        self.inner.serialize_value(writer)
+    }
+
+    fn deserialize_value(
+        &mut self,
+        factory: &dyn ILTagFactory,
+        value_size: usize,
+        reader: &mut dyn Reader,
+    ) -> Result<()> {
+        if value_size < 4 {
+            return Err(ErrorKind::CorruptedData);
+        }
+        self.scale = match read_i32(reader) {
+            Ok(v) => v,
+            Err(e) => return Err(ErrorKind::IOError(e)),
+        };
+        self.inner.deserialize_value(factory, value_size, reader)
+    }
+}
+
+iltag_default_impl!(ILBigDecTag);
+
+//=============================================================================
+// ILILIntArrayTag
+//-----------------------------------------------------------------------------
+/// This struct the standard big integer tag.
+pub struct ILILIntArrayTag {
+    id: u64,
+    value: Vec<u64>,
+}
+
+impl ILILIntArrayTag {
+    /// Creates a new instance of this struct.
+    pub fn new() -> Self {
+        Self::with_id(IL_ILINTARRAY_TAG_ID)
+    }
+
+    /// Creates a new instance of this struct with the
+    /// specified initial value.
+    ///
+    /// Arguments:
+    /// * `value`: A byte slice with the initial value;
+    pub fn with_id(id: u64) -> Self {
+        Self {
+            id,
+            value: Vec::new(),
+        }
+    }
+
+    /// Creates a new instance of this struct with the
+    /// specified initial value.
+    ///
+    /// Arguments:
+    /// * `value`: A byte slice with the initial value;
+    pub fn with_value(value: &[u64]) -> Self {
+        Self::with_id_value(IL_BDEC_TAG_ID, value)
+    }
+
+    /// Creates a new instance of this struct with the
+    /// specified initial value.
+    ///
+    /// Arguments:
+    /// * `value`: A byte slice with the initial value;
+    pub fn with_id_value(id: u64, value: &[u64]) -> Self {
+        let mut v: Vec<u64> = Vec::with_capacity(value.len());
+        v.extend_from_slice(value);
+        Self { id, value: v }
+    }
+
+    /// Returns an immutable reference to the value.
+    pub fn value(&self) -> &Vec<u64> {
+        &self.value
+    }
+
+    /// Returns a mutable reference to the value.
+    pub fn mut_value(&mut self) -> &mut Vec<u64> {
+        &mut self.value
+    }
+}
+
+impl ILTag for ILILIntArrayTag {
+    base_iltag_impl!();
+
+    fn value_size(&self) -> u64 {
+        let mut size: u64 = crate::ilint::encoded_size(self.value.len() as u64) as u64;
+        for v in self.value.as_slice() {
+            size += crate::ilint::encoded_size(*v) as u64;
+        }
+        size
+    }
+
+    fn serialize_value(&self, writer: &mut dyn Writer) -> Result<()> {
+        match write_ilint(self.value.len() as u64, writer) {
+            Ok(()) => (),
+            Err(e) => return Err(ErrorKind::IOError(e)),
+        };
+        for v in self.value.as_slice() {
+            match write_ilint(*v as u64, writer) {
+                Ok(()) => (),
+                Err(e) => return Err(ErrorKind::IOError(e)),
+            };
+        }
+        Ok(())
+    }
+
+    fn deserialize_value(
+        &mut self,
+        _factory: &dyn ILTagFactory,
+        value_size: usize,
+        reader: &mut dyn Reader,
+    ) -> Result<()> {
+        let count = match read_ilint(reader) {
+            Ok(v) => v,
+            Err(e) => return Err(ErrorKind::IOError(e)),
+        };
+        self.value.clear();
+        self.value.reserve(count as usize);
+        for _i in 0..count {
+            self.value.push(match read_ilint(reader) {
+                Ok(v) => v,
+                Err(e) => return Err(ErrorKind::IOError(e)),
+            });
+        }
+        if self.value_size() == value_size as u64 {
+            Ok(())
+        } else {
+            Err(ErrorKind::CorruptedData)
+        }
+    }
+}
+
+iltag_default_impl!(ILILIntArrayTag);
+
+//=============================================================================
+// ILTagSeqTag
+//-----------------------------------------------------------------------------
+/// This struct the standard big integer tag.
+pub struct ILTagSeqTag {
+    id: u64,
+    value: Vec<Box<dyn ILTag>>,
+}
+
+impl ILTagSeqTag {
+    /// Creates a new instance of this struct.
+    pub fn new() -> Self {
+        Self::with_id(IL_ILTAGSEQ_TAG_ID)
+    }
+
+    /// Creates a new instance of this struct with the
+    /// specified initial value.
+    ///
+    /// Arguments:
+    /// * `value`: A byte slice with the initial value;
+    pub fn with_id(id: u64) -> Self {
+        Self {
+            id,
+            value: Vec::new(),
+        }
+    }
+
+    /// Returns an immutable reference to the value.
+    pub fn value(&self) -> &Vec<Box<dyn ILTag>> {
+        &self.value
+    }
+
+    /// Returns a mutable reference to the value.
+    pub fn mut_value(&mut self) -> &mut Vec<Box<dyn ILTag>> {
+        &mut self.value
+    }
+}
+
+impl ILTag for ILTagSeqTag {
+    base_iltag_impl!();
+
+    fn value_size(&self) -> u64 {
+        let mut size: u64 = 0;
+        for v in self.value.as_slice() {
+            size += v.size();
+        }
+        size
+    }
+
+    fn serialize_value(&self, writer: &mut dyn Writer) -> Result<()> {
+        for v in self.value.as_slice() {
+            v.serialize(writer)?;
+        }
+        Ok(())
+    }
+
+    fn deserialize_value(
+        &mut self,
+        factory: &dyn ILTagFactory,
+        value_size: usize,
+        reader: &mut dyn Reader,
+    ) -> Result<()> {
+        self.value.clear();
+        let mut read: u64 = value_size as u64;
+        while read > 0 {
+            let t = factory.deserialize(reader)?;
+            read -= t.size();
+            self.value.push(t);
+        }
+        Ok(())
+    }
+}
+
+iltag_default_impl!(ILTagSeqTag);
+
+//=============================================================================
+// ILTagArrayTag
+//-----------------------------------------------------------------------------
+/// This struct the standard big integer tag.
+pub struct ILTagArrayTag {
+    inner: ILTagSeqTag,
+}
+
+impl ILTagArrayTag {
+    /// Creates a new instance of this struct.
+    pub fn new() -> Self {
+        Self::with_id(IL_ILTAGARRAY_TAG_ID)
+    }
+
+    /// Creates a new instance of this struct with the
+    /// specified initial value.
+    ///
+    /// Arguments:
+    /// * `value`: A byte slice with the initial value;
+    pub fn with_id(id: u64) -> Self {
+        Self {
+            inner: ILTagSeqTag::with_id(id),
+        }
+    }
+
+    /// Returns an immutable reference to the value.
+    pub fn value(&self) -> &Vec<Box<dyn ILTag>> {
+        self.inner.value()
+    }
+
+    /// Returns a mutable reference to the value.
+    pub fn mut_value(&mut self) -> &mut Vec<Box<dyn ILTag>> {
+        self.inner.mut_value()
+    }
+}
+
+impl ILTag for ILTagArrayTag {
+    base_iltag_inner_impl!();
+
+    fn value_size(&self) -> u64 {
+        let size: u64 = crate::ilint::encoded_size(self.inner.value.len() as u64) as u64;
+        size + self.inner.value_size()
+    }
+
+    fn serialize_value(&self, writer: &mut dyn Writer) -> Result<()> {
+        match write_ilint(self.inner.value.len() as u64, writer) {
+            Ok(()) => (),
+            Err(e) => return Err(ErrorKind::IOError(e)),
+        };
+        self.inner.serialize_value(writer)
+    }
+
+    fn deserialize_value(
+        &mut self,
+        factory: &dyn ILTagFactory,
+        value_size: usize,
+        reader: &mut dyn Reader,
+    ) -> Result<()> {
+        let count = match read_ilint(reader) {
+            Ok(v) => v,
+            Err(e) => return Err(ErrorKind::IOError(e)),
+        };
+        self.inner.value.clear();
+        self.inner.value.reserve(count as usize);
+        for _i in 0..count {
+            self.inner.value.push(factory.deserialize(reader)?);
+        }
+        if self.value_size() == value_size as u64 {
+            Ok(())
+        } else {
+            Err(ErrorKind::CorruptedData)
+        }
+    }
+}
+
+iltag_default_impl!(ILTagArrayTag);
+
+//=============================================================================
+// ILRangeTag
+//-----------------------------------------------------------------------------
+/// This struct the standard big integer tag.
+pub struct ILRangeTag {
+    id: u64,
+    start: u64,
+    count: u16,
+}
+
+impl ILRangeTag {
+    /// Creates a new instance of this struct.
+    pub fn new() -> Self {
+        Self::with_id(IL_RANGE_TAG_ID)
+    }
+
+    /// Creates a new instance of this struct with the
+    /// specified initial value.
+    ///
+    /// Arguments:
+    /// * `value`: A byte slice with the initial value;
+    pub fn with_id(id: u64) -> Self {
+        Self {
+            id,
+            start: 0,
+            count: 0,
+        }
+    }
+
+    pub fn with_value(start: u64, count: u16) -> Self {
+        Self::with_id_value(IL_RANGE_TAG_ID, start, count)
+    }
+
+    pub fn with_id_value(id: u64, start: u64, count: u16) -> Self {
+        Self { id, start, count }
+    }
+
+    pub fn start(&self) -> u64 {
+        self.start
+    }
+
+    pub fn set_start(&mut self, start: u64) {
+        self.start = start;
+    }
+
+    pub fn count(&self) -> u16 {
+        self.count
+    }
+
+    pub fn set_count(&mut self, count: u16) {
+        self.count = count;
+    }
+
+    pub fn set_value(&mut self, start: u64, count: u16) {
+        self.start = start;
+        self.count = count;
+    }
+}
+
+impl ILTag for ILRangeTag {
+    base_iltag_impl!();
+
+    fn value_size(&self) -> u64 {
+        (crate::ilint::encoded_size(self.start) + 2) as u64
+    }
+
+    fn serialize_value(&self, writer: &mut dyn Writer) -> Result<()> {
+        match write_ilint(self.start, writer) {
+            Ok(()) => (),
+            Err(e) => return Err(ErrorKind::IOError(e)),
+        };
+        match write_u16(self.count, writer) {
+            Ok(()) => Ok(()),
+            Err(e) => Err(ErrorKind::IOError(e)),
+        }
+    }
+
+    fn deserialize_value(
+        &mut self,
+        _factory: &dyn ILTagFactory,
+        value_size: usize,
+        reader: &mut dyn Reader,
+    ) -> Result<()> {
+        self.start = match read_ilint(reader) {
+            Ok(v) => v,
+            Err(e) => return Err(ErrorKind::IOError(e)),
+        };
+        self.count = match read_u16(reader) {
+            Ok(v) => v,
+            Err(e) => return Err(ErrorKind::IOError(e)),
+        };
+        if self.value_size() == value_size as u64 {
+            Ok(())
+        } else {
+            Err(ErrorKind::CorruptedData)
+        }
+    }
+}
+
+iltag_default_impl!(ILRangeTag);
+
+//=============================================================================
+// ILVersionTag
+//-----------------------------------------------------------------------------
+/// This struct the standard big integer tag.
+pub struct ILVersionTag {
+    id: u64,
+    value: [i32; 4],
+}
+
+impl ILVersionTag {
+    /// Creates a new instance of this struct.
+    pub fn new() -> Self {
+        Self::with_id(IL_VERSION_TAG_ID)
+    }
+
+    /// Creates a new instance of this struct with the
+    /// specified initial value.
+    ///
+    /// Arguments:
+    /// * `value`: A byte slice with the initial value;
+    pub fn with_id(id: u64) -> Self {
+        Self { id, value: [0; 4] }
+    }
+
+    pub fn with_value(major: i32, minor: i32, release: i32, build: i32) -> Self {
+        Self::with_id_value(IL_VERSION_TAG_ID, major, minor, release, build)
+    }
+
+    pub fn with_id_value(id: u64, major: i32, minor: i32, release: i32, build: i32) -> Self {
+        Self {
+            id,
+            value: [major, minor, release, build],
+        }
+    }
+
+    pub fn major(&self) -> i32 {
+        self.value[0]
+    }
+
+    pub fn set_major(&mut self, major: i32) {
+        self.value[0] = major;
+    }
+
+    pub fn minor(&self) -> i32 {
+        self.value[1]
+    }
+
+    pub fn set_minor(&mut self, minor: i32) {
+        self.value[1] = minor;
+    }
+
+    pub fn release(&self) -> i32 {
+        self.value[2]
+    }
+
+    pub fn set_release(&mut self, release: i32) {
+        self.value[2] = release;
+    }
+
+    pub fn build(&self) -> i32 {
+        self.value[3]
+    }
+
+    pub fn set_build(&mut self, build: i32) {
+        self.value[3] = build;
+    }
+
+    pub fn value(&self) -> &[i32; 4] {
+        &self.value
+    }
+
+    pub fn set_value(&mut self, major: i32, minor: i32, release: i32, build: i32) {
+        self.set_value_from_slice(&[major, minor, release, build]);
+    }
+
+    pub fn set_value_from_slice(&mut self, value: &[i32; 4]) {
+        self.value.copy_from_slice(value);
+    }
+}
+
+impl ILTag for ILVersionTag {
+    base_iltag_impl!();
+
+    fn value_size(&self) -> u64 {
+        16
+    }
+
+    fn serialize_value(&self, writer: &mut dyn Writer) -> Result<()> {
+        for v in &self.value {
+            match write_i32(*v, writer) {
+                Ok(()) => (),
+                Err(e) => return Err(ErrorKind::IOError(e)),
+            };
+        }
+        Ok(())
+    }
+
+    fn deserialize_value(
+        &mut self,
+        _factory: &dyn ILTagFactory,
+        value_size: usize,
+        reader: &mut dyn Reader,
+    ) -> Result<()> {
+        if value_size != 16 {
+            return Err(ErrorKind::CorruptedData);
+        }
+        for i in 0..4 {
+            self.value[i] = match read_i32(reader) {
+                Ok(v) => v,
+                Err(e) => return Err(ErrorKind::IOError(e)),
+            };
+        }
+        Ok(())
+    }
+}
+
+iltag_default_impl!(ILVersionTag);
+
+//=============================================================================
+// ILOIDTag
+//-----------------------------------------------------------------------------
+/// This struct the standard big integer tag.
+pub struct ILOIDTag {
+    inner: ILILIntArrayTag,
+}
+
+impl ILOIDTag {
+    /// Creates a new instance of this struct.
+    pub fn new() -> Self {
+        Self::with_id(IL_OID_TAG_ID)
+    }
+
+    /// Creates a new instance of this struct with the
+    /// specified initial value.
+    ///
+    /// Arguments:
+    /// * `value`: A byte slice with the initial value;
+    pub fn with_id(id: u64) -> Self {
+        Self {
+            inner: ILILIntArrayTag::with_id(id),
+        }
+    }
+
+    pub fn with_value(value: &[u64]) -> Self {
+        Self::with_id_value(IL_OID_TAG_ID, value)
+    }
+
+    pub fn with_id_value(id: u64, value: &[u64]) -> Self {
+        Self {
+            inner: ILILIntArrayTag::with_id_value(id, value),
+        }
+    }
+
+    pub fn value(&self) -> &[u64] {
+        self.inner.value()
+    }
+
+    pub fn mut_value(&mut self) -> &mut [u64] {
+        self.inner.mut_value()
+    }
+}
+
+impl ILTag for ILOIDTag {
+    base_iltag_inner_impl!();
+
+    fn value_size(&self) -> u64 {
+        self.inner.value_size()
+    }
+
+    fn serialize_value(&self, writer: &mut dyn Writer) -> Result<()> {
+        self.inner.serialize_value(writer)
+    }
+
+    fn deserialize_value(
+        &mut self,
+        factory: &dyn ILTagFactory,
+        value_size: usize,
+        reader: &mut dyn Reader,
+    ) -> Result<()> {
+        self.inner.deserialize_value(factory, value_size, reader)
+    }
+}
+
+iltag_default_impl!(ILOIDTag);

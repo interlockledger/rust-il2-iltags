@@ -40,8 +40,8 @@ pub mod implicit;
 mod constants_tests;
 #[cfg(test)]
 mod implicit_tests;
-#[cfg(test)]
-mod tests;
+//#[cfg(test)]
+//mod tests;
 
 pub use constants::*;
 pub use explicit::*;
