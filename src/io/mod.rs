@@ -223,6 +223,15 @@ impl<'a> LimitedReader<'a> {
             Ok(())
         }
     }
+
+    /// Verifies if the this reader is empty.
+    ///
+    /// Returns:
+    /// - true: if it is empty;
+    /// - false: if it is not empty;
+    pub fn empty(&self) -> bool {
+        self.available == 0
+    }
 }
 
 impl<'a> Reader for LimitedReader<'a> {

@@ -98,8 +98,23 @@ fn test_limitedreader_available() {
 
     for i in 0..10 {
         let limited = LimitedReader::new(&mut reader, i);
-        assert_eq!(limited.available(), i)
+        assert_eq!(limited.available(), i);
     }
+}
+
+#[test]
+fn test_limitedreader_empty() {
+    let mut reader = DummyReader::new(10);
+
+    let mut limited = LimitedReader::new(&mut reader, 5);
+    for _i in 0..5 {
+        assert!(!limited.empty());
+        match limited.read() {
+            Ok(_) => (),
+            _ => panic!(),
+        }
+    }
+    assert!(limited.empty());
 }
 
 #[test]
