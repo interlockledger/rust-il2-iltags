@@ -106,7 +106,7 @@ impl<'a> ByteArrayReader<'a> {
     }
 }
 
-impl<'a> Reader<'a> for ByteArrayReader<'a> {
+impl<'a> Reader for ByteArrayReader<'a> {
     fn read(&mut self) -> Result<u8> {
         self.can_read(1)?;
         let r = self.array[self.offset];
@@ -127,7 +127,7 @@ impl<'a> Reader<'a> for ByteArrayReader<'a> {
         Ok(())
     }
 
-    fn as_reader(&mut self) -> &mut dyn Reader<'a> {
+    fn as_reader(&mut self) -> &mut dyn Reader {
         self
     }
 }
@@ -208,7 +208,7 @@ impl VecReader {
     }
 }
 
-impl<'a> Reader<'a> for VecReader {
+impl<'a> Reader for VecReader {
     fn read(&mut self) -> Result<u8> {
         self.can_read(1)?;
         let r = self.vector[self.offset];
@@ -230,7 +230,7 @@ impl<'a> Reader<'a> for VecReader {
         Ok(())
     }
 
-    fn as_reader(&mut self) -> &mut dyn Reader<'a> {
+    fn as_reader(&mut self) -> &mut dyn Reader {
         self
     }
 }
