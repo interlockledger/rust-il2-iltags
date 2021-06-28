@@ -34,10 +34,14 @@
 use super::constants::*;
 use super::{DefaultWithId, ErrorKind, ILTag, ILTagFactory, Result};
 use crate::io::data::*;
-use crate::io::{Reader, Writer};
-use crate::tags::{deserialize_ilint, serialize_ilint, tag_size_to_usize, ILRawTag};
+use crate::io::{LimitedReader, Reader, Writer};
+use crate::tags::{
+    deserialize_bytes, deserialize_bytes_into_vec, deserialize_ilint, serialize_bytes,
+    serialize_ilint, tag_size_to_usize, ILRawTag,
+};
 use crate::{base_iltag_impl, iltag_default_impl};
 use ::std::any::Any;
+use ::std::collections::HashMap;
 
 macro_rules! std_byte_array_tag_func_impl {
     ($tag_id: expr) => {
@@ -115,7 +119,8 @@ macro_rules! std_byte_array_tag_iltag_impl {
 //=============================================================================
 // ILByteArrayTag
 //-----------------------------------------------------------------------------
-/// This struct the standard byte array tag.
+/// This struct the standard byte array tag. It is equivalent `ILRawTag` but
+/// always set the tag id to `IL_BYTES_TAG_ID`.
 pub struct ILByteArrayTag {
     inner: ILRawTag,
 }
@@ -145,7 +150,7 @@ impl Default for ILByteArrayTag {
 //=============================================================================
 // ILStringTag
 //-----------------------------------------------------------------------------
-/// This struct the standard big integer tag.
+/// This struct the standard string tag.
 pub struct ILStringTag {
     id: u64,
     value: String,
@@ -189,8 +194,7 @@ impl ILStringTag {
     }
 
     pub fn set_value(&mut self, value: &str) {
-        self.value.clear();
-        self.value.push_str(value);
+        self.value.replace_range(.., value);
     }
 }
 
@@ -202,11 +206,7 @@ impl ILTag for ILStringTag {
     }
 
     fn serialize_value(&self, writer: &mut dyn Writer) -> Result<()> {
-        match writer.write_all(self.value.as_bytes()) {
-            Ok(()) => (),
-            Err(e) => return Err(ErrorKind::IOError(e)),
-        };
-        Ok(())
+        serialize_bytes(self.value.as_bytes(), writer)
     }
 
     fn deserialize_value(
@@ -215,16 +215,10 @@ impl ILTag for ILStringTag {
         value_size: usize,
         reader: &mut dyn Reader,
     ) -> Result<()> {
-        let mut tmp: Vec<u8> = vec![0; value_size];
-
-        match reader.read_all(tmp.as_mut_slice()) {
-            Ok(()) => (),
-            Err(e) => return Err(ErrorKind::IOError(e)),
-        }
-        self.value.clear();
+        let tmp = deserialize_bytes(value_size, reader)?;
         match ::std::str::from_utf8(tmp.as_slice()) {
             Ok(v) => {
-                self.value.push_str(v);
+                self.value.replace_range(.., v);
                 Ok(())
             }
             Err(_) => Err(ErrorKind::CorruptedData),
@@ -234,37 +228,55 @@ impl ILTag for ILStringTag {
 
 iltag_default_impl!(ILStringTag);
 
+/// Computes the size of the standard string tag from its value,
+/// without the need to create a tag instance.
+///
+/// Arguments:
+/// - `s`: The string value;
+///
+/// Returns:
+/// - The size of the tag with the given value.
 pub fn string_tag_size_from_value(s: &str) -> u64 {
     let len = s.len() as u64;
     1 + crate::ilint::encoded_size(len) as u64 + len
 }
 
+/// Serializes a string into a standard string tag directly from
+/// its value.
+///
+/// Arguments:
+/// - `s`: The string;
+/// - `writer`: The writer;
+///
+/// Returns:
+/// - `Ok(())`: On success;
+/// - `Err(e)`: In case of error.
 pub fn serialize_string_tag_from_value(s: &str, writer: &mut dyn Writer) -> Result<()> {
     let len = s.len() as u64;
 
     serialize_ilint(IL_STRING_TAG_ID, writer)?;
     serialize_ilint(len, writer)?;
-    match writer.write_all(s.as_bytes()) {
-        Ok(()) => (),
-        Err(e) => return Err(ErrorKind::IOError(e)),
-    }
-    Ok(())
+    serialize_bytes(s.as_bytes(), writer)
 }
 
+/// Extracts a string value from a standard string tag directly from
+/// the data stream.
+///
+/// Arguments:
+/// - `reader`: The reader;
+///
+/// Returns:
+/// - `Ok(String)`: The string extracted from the data stream;
+/// - `Err(e)`: In case of error.
 pub fn deserialize_string_tag_from_value(reader: &mut dyn Reader) -> Result<String> {
     let id = deserialize_ilint(reader)?;
     if id != IL_STRING_TAG_ID {
         return Err(ErrorKind::CorruptedData);
     }
     let len = deserialize_ilint(reader)?;
+    // Performs this conversion to ensure that
     let usize_len = tag_size_to_usize(len)?;
-
-    let mut tmp: Vec<u8> = Vec::with_capacity(len as usize);
-    tmp.resize(usize_len, 0);
-    match reader.read_all(tmp.as_mut_slice()) {
-        Ok(()) => (),
-        Err(e) => return Err(ErrorKind::IOError(e)),
-    }
+    let tmp = deserialize_bytes(usize_len, reader)?;
     let s = match ::std::str::from_utf8(tmp.as_slice()) {
         Ok(v) => v,
         Err(_) => return Err(ErrorKind::CorruptedData),
@@ -275,7 +287,9 @@ pub fn deserialize_string_tag_from_value(reader: &mut dyn Reader) -> Result<Stri
 //=============================================================================
 // ILBigIntTag
 //-----------------------------------------------------------------------------
-/// This struct the standard big integer tag.
+/// This struct the standard big integer tag. It is equivalent to the `ILRawTag`
+/// but fixes the tag id to `IL_BINT_TAG_ID`. It assumes that the value is always
+/// encoded as a two's complement big endian value.
 pub struct ILBigIntTag {
     inner: ILRawTag,
 }
@@ -291,10 +305,13 @@ impl Default for ILBigIntTag {
         Self::new()
     }
 }
+
 //=============================================================================
 // ILBigDecTag
 //-----------------------------------------------------------------------------
-/// This struct the standard big decimal tag.
+/// This struct the standard big decimal tag. This tag serializes the data
+/// into a scale value (i32) and the integral part encoded as a two's complement
+/// big endian value.
 pub struct ILBigDecTag {
     inner: ILRawTag,
     scale: i32,
@@ -391,7 +408,8 @@ impl ILTag for ILBigDecTag {
             Ok(v) => v,
             Err(e) => return Err(ErrorKind::IOError(e)),
         };
-        self.inner.deserialize_value(factory, value_size, reader)
+        self.inner
+            .deserialize_value(factory, value_size - 4, reader)
     }
 }
 
@@ -400,7 +418,8 @@ iltag_default_impl!(ILBigDecTag);
 //=============================================================================
 // ILILIntArrayTag
 //-----------------------------------------------------------------------------
-/// This struct the standard big integer tag.
+/// This struct the standard ILInt array tag. It is an array of u64 values
+/// encoded using ILInt format.
 pub struct ILILIntArrayTag {
     id: u64,
     value: Vec<u64>,
@@ -486,19 +505,17 @@ impl ILTag for ILILIntArrayTag {
         value_size: usize,
         reader: &mut dyn Reader,
     ) -> Result<()> {
-        let count = match read_ilint(reader) {
-            Ok(v) => v,
-            Err(e) => return Err(ErrorKind::IOError(e)),
-        };
+        let mut lreader = LimitedReader::new(reader, value_size);
+        let count = deserialize_ilint(&mut lreader)?;
+        if count > value_size as u64 {
+            return Err(ErrorKind::CorruptedData);
+        }
         self.value.clear();
         self.value.reserve(count as usize);
         for _i in 0..count {
-            self.value.push(match read_ilint(reader) {
-                Ok(v) => v,
-                Err(e) => return Err(ErrorKind::IOError(e)),
-            });
+            self.value.push(deserialize_ilint(&mut lreader)?);
         }
-        if self.value_size() == value_size as u64 {
+        if lreader.empty() {
             Ok(())
         } else {
             Err(ErrorKind::CorruptedData)
@@ -511,7 +528,7 @@ iltag_default_impl!(ILILIntArrayTag);
 //=============================================================================
 // ILTagSeqTag
 //-----------------------------------------------------------------------------
-/// This struct the standard big integer tag.
+/// This struct the standard tag sequence tag.
 pub struct ILTagSeqTag {
     id: u64,
     value: Vec<Box<dyn ILTag>>,
@@ -586,7 +603,9 @@ iltag_default_impl!(ILTagSeqTag);
 //=============================================================================
 // ILTagArrayTag
 //-----------------------------------------------------------------------------
-/// This struct the standard big integer tag.
+/// This struct the standard tag array tag. It differs from ILTagSeqTag
+/// because it serializes the number of entries before the serialization of the
+/// tags.
 pub struct ILTagArrayTag {
     inner: ILTagSeqTag,
 }
@@ -628,10 +647,7 @@ impl ILTag for ILTagArrayTag {
     }
 
     fn serialize_value(&self, writer: &mut dyn Writer) -> Result<()> {
-        match write_ilint(self.inner.value.len() as u64, writer) {
-            Ok(()) => (),
-            Err(e) => return Err(ErrorKind::IOError(e)),
-        };
+        serialize_ilint(self.inner.value.len() as u64, writer)?;
         self.inner.serialize_value(writer)
     }
 
@@ -641,16 +657,18 @@ impl ILTag for ILTagArrayTag {
         value_size: usize,
         reader: &mut dyn Reader,
     ) -> Result<()> {
-        let count = match read_ilint(reader) {
-            Ok(v) => v,
-            Err(e) => return Err(ErrorKind::IOError(e)),
-        };
+        let mut lreader = LimitedReader::new(reader, value_size);
+
+        let count = deserialize_ilint(&mut lreader)?;
+        if count > value_size as u64 {
+            return Err(ErrorKind::CorruptedData);
+        }
         self.inner.value.clear();
         self.inner.value.reserve(count as usize);
         for _i in 0..count {
-            self.inner.value.push(factory.deserialize(reader)?);
+            self.inner.value.push(factory.deserialize(&mut lreader)?);
         }
-        if self.value_size() == value_size as u64 {
+        if lreader.empty() {
             Ok(())
         } else {
             Err(ErrorKind::CorruptedData)
@@ -663,7 +681,8 @@ iltag_default_impl!(ILTagArrayTag);
 //=============================================================================
 // ILRangeTag
 //-----------------------------------------------------------------------------
-/// This struct the standard big integer tag.
+/// This struct the standard range tag. The range tag consists of a starting
+/// value (u64) followed by the number of entries (u16).
 pub struct ILRangeTag {
     id: u64,
     start: u64,
@@ -743,15 +762,16 @@ impl ILTag for ILRangeTag {
         value_size: usize,
         reader: &mut dyn Reader,
     ) -> Result<()> {
-        self.start = match read_ilint(reader) {
+        let mut lreader = LimitedReader::new(reader, value_size);
+        self.start = match read_ilint(&mut lreader) {
             Ok(v) => v,
             Err(e) => return Err(ErrorKind::IOError(e)),
         };
-        self.count = match read_u16(reader) {
+        self.count = match read_u16(&mut lreader) {
             Ok(v) => v,
             Err(e) => return Err(ErrorKind::IOError(e)),
         };
-        if self.value_size() == value_size as u64 {
+        if lreader.empty() {
             Ok(())
         } else {
             Err(ErrorKind::CorruptedData)
@@ -764,7 +784,8 @@ iltag_default_impl!(ILRangeTag);
 //=============================================================================
 // ILVersionTag
 //-----------------------------------------------------------------------------
-/// This struct the standard big integer tag.
+/// This struct the standard version tag. It encodes the 4 parts of the version
+/// as i32 values. Those parts are named major, minor, revision and build.
 pub struct ILVersionTag {
     id: u64,
     value: [i32; 4],
@@ -882,7 +903,9 @@ iltag_default_impl!(ILVersionTag);
 //=============================================================================
 // ILOIDTag
 //-----------------------------------------------------------------------------
-/// This struct the standard big integer tag.
+/// This struct the standard OID tag. It is designed to store ITU Object
+/// identifier values as an array of u64 values. It uses the same encoding
+/// of `ILILIntArrayTag`.
 pub struct ILOIDTag {
     inner: ILILIntArrayTag,
 }
@@ -945,3 +968,81 @@ impl ILTag for ILOIDTag {
 }
 
 iltag_default_impl!(ILOIDTag);
+
+//=============================================================================
+// ILDictTag
+//-----------------------------------------------------------------------------
+/// This struct the standard OID tag. It is designed to store ITU Object
+/// identifier values as an array of u64 values. It uses the same encoding
+/// of `ILILIntArrayTag`.
+pub struct ILDictTag {
+    id: u64,
+    value: HashMap<String, Box<dyn ILTag>>,
+}
+
+impl ILDictTag {
+    /// Creates a new instance of this struct.
+    pub fn new() -> Self {
+        Self::with_id(IL_OID_TAG_ID)
+    }
+
+    /// Creates a new instance of this struct with the
+    /// specified initial value.
+    ///
+    /// Arguments:
+    /// * `value`: A byte slice with the initial value;
+    pub fn with_id(id: u64) -> Self {
+        Self {
+            id,
+            value: HashMap::default(),
+        }
+    }
+
+    pub fn value(&self) -> &HashMap<String, Box<dyn ILTag>> {
+        &self.value
+    }
+
+    pub fn mut_value(&mut self) -> &mut HashMap<String, Box<dyn ILTag>> {
+        &mut self.value
+    }
+}
+
+impl ILTag for ILDictTag {
+    base_iltag_impl!();
+
+    fn value_size(&self) -> u64 {
+        let mut size: u64 = 0;
+        for (key, value) in self.value.iter() {
+            size += string_tag_size_from_value(key);
+            size += value.size();
+        }
+        size
+    }
+
+    fn serialize_value(&self, writer: &mut dyn Writer) -> Result<()> {
+        for (key, value) in self.value.iter() {
+            serialize_string_tag_from_value(key, writer)?;
+            value.serialize(writer)?;
+        }
+        Ok(())
+    }
+
+    fn deserialize_value(
+        &mut self,
+        factory: &dyn ILTagFactory,
+        value_size: usize,
+        reader: &mut dyn Reader,
+    ) -> Result<()> {
+        let mut lreader = LimitedReader::new(reader, value_size);
+        self.value.clear();
+        while lreader.available() > 0 {
+            self.value.insert(
+                deserialize_string_tag_from_value(&mut lreader)?,
+                factory.deserialize(&mut lreader)?,
+            );
+        }
+        Ok(())
+    }
+}
+
+iltag_default_impl!(ILDictTag);
