@@ -184,6 +184,28 @@ macro_rules! test_simple_value_iltag_deserialize_impl {
     };
 }
 
+#[test]
+fn test_implicit_tag_size() {
+    assert_eq!(implicit_tag_size(IL_NULL_TAG_ID), 0);
+    assert_eq!(implicit_tag_size(IL_BOOL_TAG_ID), 1);
+    assert_eq!(implicit_tag_size(IL_INT8_TAG_ID), 1);
+    assert_eq!(implicit_tag_size(IL_UINT8_TAG_ID), 1);
+    assert_eq!(implicit_tag_size(IL_INT16_TAG_ID), 2);
+    assert_eq!(implicit_tag_size(IL_UINT16_TAG_ID), 2);
+    assert_eq!(implicit_tag_size(IL_INT32_TAG_ID), 4);
+    assert_eq!(implicit_tag_size(IL_UINT32_TAG_ID), 4);
+    assert_eq!(implicit_tag_size(IL_INT64_TAG_ID), 8);
+    assert_eq!(implicit_tag_size(IL_UINT64_TAG_ID), 8);
+    assert_eq!(implicit_tag_size(IL_ILINT_TAG_ID), 9); // Variable size
+    assert_eq!(implicit_tag_size(IL_BIN32_TAG_ID), 4);
+    assert_eq!(implicit_tag_size(IL_BIN64_TAG_ID), 8);
+    assert_eq!(implicit_tag_size(IL_BIN128_TAG_ID), 16);
+    assert_eq!(implicit_tag_size(14), 0);
+    assert_eq!(implicit_tag_size(15), 0);
+    assert_eq!(implicit_tag_size(16), 0);
+    assert_eq!(implicit_tag_size(32), 0);
+}
+
 //=============================================================================
 // ILNullTag
 //-----------------------------------------------------------------------------

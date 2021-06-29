@@ -165,15 +165,17 @@ macro_rules! int_iltag_impl {
     };
 }
 
-/// Returns the size of the implicit tag. With the
-/// exception of `ILILInt64Tag`, all implicity tags
-/// have fixed size
+/// Returns the size of the implicit tag.
+///
+/// With the exception of `ILILInt64Tag`, all implicity tags
+/// have fixed size. For `ILILInt64Tag`, it will always
+/// return its maximum size which is 9.
 ///
 /// Arguments:
 /// - id: The tag id;
 ///
 /// Returns:
-/// - The size of the tag in bytes or u64::MAX if the id is
+/// - The size of the tag in bytes or 0 if the id is
 /// not a valid implicit tag.
 pub fn implicit_tag_size(id: u64) -> u64 {
     match id {
@@ -191,7 +193,7 @@ pub fn implicit_tag_size(id: u64) -> u64 {
         IL_BIN32_TAG_ID => 4,
         IL_BIN64_TAG_ID => 8,
         IL_BIN128_TAG_ID => 16,
-        _ => u64::MAX,
+        _ => 0,
     }
 }
 
