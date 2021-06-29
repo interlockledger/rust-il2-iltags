@@ -510,6 +510,31 @@ fn test_iltagcreatorengine_strict() {
     }
 }
 
+#[test]
+fn test_iltagcreatorengine_deregister() {
+    let mut e: ILTagCreatorEngine = ILTagCreatorEngine::new(true);
+
+    e.register(16, Box::new(DummyTagCreator::new(16)));
+    e.register(17, Box::new(DummyTagCreator::new(17)));
+
+    let prev = match e.deregister(16) {
+        Some(v) => v,
+        None => panic!(),
+    };
+    let t = prev.create_empty_tag(16);
+    assert_eq!(t.id(), 16);
+
+    match e.deregister(16) {
+        None => (),
+        _ => panic!(),
+    }
+
+    match e.deregister(18) {
+        None => (),
+        _ => panic!(),
+    }
+}
+
 //=============================================================================
 // ILRawTag
 //-----------------------------------------------------------------------------

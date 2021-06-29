@@ -463,6 +463,18 @@ impl ILTagCreatorEngine {
         self.creators.insert(tag_id, creator)
     }
 
+    /// Deregisters a ILTagCreator.
+    ///
+    /// Arguments:
+    /// * `tag_id`: The tag id;
+    ///
+    /// Returns:
+    /// * `Some<Box<dyn ILTagCreator>>`: The previously registered creator for the specified id;
+    /// * `None`: If the id is not associated with a new creator;
+    pub fn deregister(&mut self, tag_id: u64) -> Option<Box<dyn ILTagCreator>> {
+        self.creators.remove(&tag_id)
+    }
+
     /// Creates a new empty tag for the given id. It uses the registered creators
     /// to perform the operation.
     ///
