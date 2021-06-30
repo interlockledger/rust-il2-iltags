@@ -340,6 +340,40 @@ fn test_tag_downcast_mut() {
     }
 }
 
+#[test]
+fn test_tag_id_downcast_ref() {
+    let tag = DummyTag::new(132, 1);
+    let t: &dyn ILTag = &tag;
+
+    match tag_id_downcast_ref::<DummyTag>(132, t) {
+        Ok(v) => assert_eq!(0, v.get_dummy()),
+        _ => panic!(),
+    }
+    match tag_id_downcast_ref::<DummyTag>(12, t) {
+        Err(ErrorKind::UnexpectedTagType) => (),
+        _ => panic!(),
+    }
+}
+
+#[test]
+fn test_tag_id_downcast_mut() {
+    let mut tag = DummyTag::new(132, 1);
+    let t: &mut dyn ILTag = &mut tag;
+
+    match tag_id_downcast_mut::<DummyTag>(132, t) {
+        Ok(v) => {
+            v.set_dummy(1234);
+            assert_eq!(1234, v.get_dummy())
+        }
+        _ => panic!(),
+    }
+
+    match tag_id_downcast_mut::<DummyTag>(12, t) {
+        Err(ErrorKind::UnexpectedTagType) => (),
+        _ => panic!(),
+    }
+}
+
 //=============================================================================
 // UntouchbleTagFactory
 //-----------------------------------------------------------------------------

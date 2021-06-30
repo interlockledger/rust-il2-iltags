@@ -54,6 +54,7 @@ pub enum ErrorKind {
     UnsupportedTag,
     CorruptedData,
     TagTooLarge,
+    UnexpectedTagType,
     IOError(crate::io::ErrorKind),
     Boxed(Box<dyn ::std::error::Error>),
 }
@@ -299,6 +300,7 @@ pub trait ILTag: Any {
 /// Returns:
 /// An option with a reference to the concrete type or None if
 /// the conversion is not possible.
+#[inline]
 pub fn tag_downcast_ref<T: ILTag + Any>(tag: &dyn ILTag) -> Option<&T> {
     tag.as_any().downcast_ref::<T>()
 }
@@ -311,8 +313,53 @@ pub fn tag_downcast_ref<T: ILTag + Any>(tag: &dyn ILTag) -> Option<&T> {
 /// Returns:
 /// An option with a reference to the concrete type or None if
 /// the conversion is not possible.
+#[inline]
 pub fn tag_downcast_mut<T: ILTag + Any>(tag: &mut dyn ILTag) -> Option<&mut T> {
     tag.as_mut_any().downcast_mut::<T>()
+}
+
+/// Downcasts a ILTag trait to its concrete type. It fails if the tag id or
+/// the concrete type does not match.
+///
+/// Arguments:
+/// - `tag_id`: The expected tag id;
+/// - `tag`: The tag to be downcast;
+///
+/// Returns:
+/// - Ok(v): ;
+/// - Err(ErrorKind::UnexpectedTagType): If the conversion is not possible;
+#[inline]
+pub fn tag_id_downcast_ref<T: ILTag + Any>(tag_id: u64, tag: &dyn ILTag) -> Result<&T> {
+    if tag.id() != tag_id {
+        Err(ErrorKind::UnexpectedTagType)
+    } else {
+        match tag_downcast_ref::<T>(tag) {
+            Some(v) => Ok(v),
+            None => Err(ErrorKind::UnexpectedTagType),
+        }
+    }
+}
+
+/// Downcasts a ILTag trait to its concrete type as a mutable reference. It fails
+/// if the tag id or the concrete type does not match.
+///
+/// Arguments:
+/// - `tag_id`: The expected tag id;
+/// * `tag`: The tag to be downcast;
+///
+/// Returns:
+/// An option with a reference to the concrete type or None if
+/// the conversion is not possible.
+#[inline]
+pub fn tag_id_downcast_mut<T: ILTag + Any>(tag_id: u64, tag: &mut dyn ILTag) -> Result<&mut T> {
+    if tag.id() != tag_id {
+        Err(ErrorKind::UnexpectedTagType)
+    } else {
+        match tag_downcast_mut::<T>(tag) {
+            Some(v) => Ok(v),
+            None => Err(ErrorKind::UnexpectedTagType),
+        }
+    }
 }
 
 //=============================================================================
