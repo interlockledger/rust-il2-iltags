@@ -54,10 +54,10 @@ pub enum ErrorKind {
     BoxedError(Box<dyn std::error::Error>),
 }
 
-/// A specialized `Result` for operations of this module.
+/// A specialized [`std::result::Result`] for operations of this module.
 pub type Result<T> = std::result::Result<T, ErrorKind>;
 
-/// The `Reader` trait is allows the extraction of bytes from a source.
+/// The [`Reader`] trait is allows the extraction of bytes from a source.
 ///
 /// It differs from most IO library as it defines all operations as
 /// all-or-nothing operations. No partial reads are allowed.
@@ -116,7 +116,7 @@ pub trait Reader {
     fn as_reader(&mut self) -> &mut dyn Reader;
 }
 
-/// The `Writer` trait allows the addition of bytes into the destination.
+/// The [`Writer`] trait allows the addition of bytes into the destination.
 ///
 /// It differs from most IO library as it defines all operations as
 /// all-or-nothing operations. No partial writes are allowed.
@@ -158,7 +158,7 @@ pub trait Writer {
 /// [`Reader`] but defines a limited to the amount of bytes that can be
 /// extracted from it.
 ///
-/// It is important to notice that `LimitedReader` will test the
+/// It is important to notice that [`LimitedReader`] will test the
 /// limits prior to the attempt to read the data, thus failed
 /// attempts will not consume data from the inner reader.
 ///
@@ -259,7 +259,7 @@ impl<'a> Reader for LimitedReader<'a> {
 }
 
 /// This struct implements a [`Reader`] that uses a
-/// `std::io::Read` as the source of bytes.
+/// [`std::io::Read`] as the source of bytes.
 ///
 /// [`Reader`]: trait.Reader.html
 pub struct ReadReader<'a, T: std::io::Read> {
@@ -298,7 +298,7 @@ impl<'a, T: std::io::Read> Reader for ReadReader<'a, T> {
 }
 
 /// This struct implements a [`Writer`] that uses a
-/// `std::io::Write` as the destination of bytes.
+/// [`std::io::Write`] as the destination of bytes.
 ///
 /// [`Writer`]: trait.Writer.html
 pub struct WriteWriter<'a> {

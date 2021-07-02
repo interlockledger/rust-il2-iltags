@@ -29,18 +29,19 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-//! This module implements extension traits for Reader and Writer that
-//! allows the manipulation of basic data types.
+//! This module implements extension traits for [`Reader`] and [`Writer`] that
+//! allows the manipulation of basic data types as defined by the **ILTags**
+//! standard.
 #[cfg(test)]
 mod tests;
 
 use super::{ErrorKind, Reader, Result, Writer};
 use crate::ilint::{decode, encode};
 
-/// Extracts an `u8` from the specified `Reader`.
+/// Extracts an `u8` from the specified [`Reader`].
 ///
 /// Arguments:
-/// - `reader`: The reader;
+/// - `reader`: The [`Reader`];
 ///
 /// Returns:
 /// - Ok(v): The value read;
@@ -49,10 +50,10 @@ pub fn read_u8(reader: &mut dyn Reader) -> Result<u8> {
     reader.read()
 }
 
-/// Extracts an `i8` from the specified `Reader`.
+/// Extracts an `i8` from the specified [`Reader`].
 ///
 /// Arguments:
-/// - `reader`: The reader;
+/// - `reader`: The [`Reader`];
 ///
 /// Returns:
 /// - Ok(v): The value read;
@@ -64,25 +65,24 @@ pub fn read_i8(reader: &mut dyn Reader) -> Result<i8> {
     }
 }
 
-/// Extracts an `u16` from the specified `Reader`.
+/// Extracts an `u16` from the specified [`Reader`].
 ///
 /// Arguments:
-/// - `reader`: The reader;
+/// - `reader`: The [`Reader`];
 ///
 /// Returns:
 /// - Ok(v): The value read;
 /// - Err(_): If the value could not be extracted;
-
 pub fn read_u16(reader: &mut dyn Reader) -> Result<u16> {
     let mut tmp: [u8; 2] = [0; 2];
     reader.read_all(&mut tmp)?;
     Ok(u16::from_be_bytes(tmp))
 }
 
-/// Extracts an `i16` from the specified `Reader`.
+/// Extracts an `i16` from the specified [`Reader`].
 ///
 /// Arguments:
-/// - `reader`: The reader;
+/// - `reader`: The [`Reader`];
 ///
 /// Returns:
 /// - Ok(v): The value read;
@@ -93,10 +93,10 @@ pub fn read_i16(reader: &mut dyn Reader) -> Result<i16> {
     Ok(i16::from_be_bytes(tmp))
 }
 
-/// Extracts an `u32` from the specified `Reader`.
+/// Extracts an `u32` from the specified [`Reader`].
 ///
 /// Arguments:
-/// - `reader`: The reader;
+/// - `reader`: The [`Reader`];
 ///
 /// Returns:
 /// - Ok(v): The value read;
@@ -107,10 +107,10 @@ pub fn read_u32(reader: &mut dyn Reader) -> Result<u32> {
     Ok(u32::from_be_bytes(tmp))
 }
 
-/// Extracts an `i32` from the specified `Reader`.
+/// Extracts an `i32` from the specified [`Reader`].
 ///
 /// Arguments:
-/// - `reader`: The reader;
+/// - `reader`: The [`Reader`];
 ///
 /// Returns:
 /// - Ok(v): The value read;
@@ -121,10 +121,10 @@ pub fn read_i32(reader: &mut dyn Reader) -> Result<i32> {
     Ok(i32::from_be_bytes(tmp))
 }
 
-/// Extracts an `u64` from the specified `Reader`.
+/// Extracts an `u64` from the specified [`Reader`].
 ///
 /// Arguments:
-/// - `reader`: The reader;
+/// - `reader`: The [`Reader`];
 ///
 /// Returns:
 /// - Ok(v): The value read;
@@ -135,10 +135,10 @@ pub fn read_u64(reader: &mut dyn Reader) -> Result<u64> {
     Ok(u64::from_be_bytes(tmp))
 }
 
-/// Extracts an `i64` from the specified `Reader`.
+/// Extracts an `i64` from the specified [`Reader`].
 ///
 /// Arguments:
-/// - `reader`: The reader;
+/// - `reader`: The [`Reader`];
 ///
 /// Returns:
 /// - Ok(v): The value read;
@@ -149,10 +149,10 @@ pub fn read_i64(reader: &mut dyn Reader) -> Result<i64> {
     Ok(i64::from_be_bytes(tmp))
 }
 
-/// Extracts an ILInt value from the specified `Reader`.
+/// Extracts an ILInt value from the specified [`Reader`].
 ///
 /// Arguments:
-/// - `reader`: The reader;
+/// - `reader`: The [`Reader`];
 ///
 /// Returns:
 /// - Ok(v): The value read;
@@ -165,12 +165,12 @@ pub fn read_ilint(reader: &mut dyn Reader) -> Result<u64> {
     }
 }
 
-/// Extracts an `f32` from the specified `Reader`. It is
+/// Extracts an `f32` from the specified [`Reader`]. It is
 /// always expected to be encoded as a `binary32`
 /// from *IEEE 754-2008*.
 ///
 /// Arguments:
-/// - `reader`: The reader;
+/// - `reader`: The [`Reader`];
 ///
 /// Returns:
 /// - Ok(v): The value read;
@@ -180,12 +180,12 @@ pub fn read_f32(reader: &mut dyn Reader) -> Result<f32> {
     Ok(f32::from_bits(tmp))
 }
 
-/// Extracts an `f64` from the specified `Reader`. It is
+/// Extracts an `f64` from the specified [`Reader`]. It is
 /// always expected to be encoded as a `binary64`
 /// from *IEEE 754-2008*.
 ///
 /// Arguments:
-/// - `reader`: The reader;
+/// - `reader`: The [`Reader`];
 ///
 /// Returns:
 /// - Ok(v): The value read;
@@ -195,10 +195,10 @@ pub fn read_f64(reader: &mut dyn Reader) -> Result<f64> {
     Ok(f64::from_bits(tmp))
 }
 
-/// Extracts an UTF-8 string from the specified `Reader`.
+/// Extracts an UTF-8 string from the specified [`Reader`].
 ///
 /// Arguments:
-/// - `reader`: The reader;
+/// - `reader`: The [`Reader`];
 /// - `size`: The size in bytes;
 ///
 /// Returns:
@@ -213,11 +213,11 @@ pub fn read_string(reader: &mut dyn Reader, size: usize) -> Result<String> {
     }
 }
 
-/// Writes an `u8` value to the specified `Writer`.
+/// Writes an `u8` value to the specified [`Writer`].
 ///
 /// Arguments:
 /// - `v`: The value;
-/// - `writer`: The reader;
+/// - `writer`: The [`Writer`];
 ///
 /// Returns:
 /// - Ok(()): For success;
@@ -226,11 +226,11 @@ pub fn write_u8(v: u8, writer: &mut dyn Writer) -> Result<()> {
     writer.write(v)
 }
 
-/// Writes an `i8` value to the specified `Writer`.
+/// Writes an `i8` value to the specified [`Writer`].
 ///
 /// Arguments:
 /// - `v`: The value;
-/// - `writer`: The reader;
+/// - `writer`: The [`Writer`];
 ///
 /// Returns:
 /// - Ok(()): For success;
@@ -239,11 +239,11 @@ pub fn write_i8(v: i8, writer: &mut dyn Writer) -> Result<()> {
     writer.write(v as u8)
 }
 
-/// Writes an `u16` value to the specified `Writer`.
+/// Writes an `u16` value to the specified [`Writer`].
 ///
 /// Arguments:
 /// - `v`: The value;
-/// - `writer`: The reader;
+/// - `writer`: The [`Writer`];
 ///
 /// Returns:
 /// - Ok(()): For success;
@@ -252,11 +252,11 @@ pub fn write_u16(v: u16, writer: &mut dyn Writer) -> Result<()> {
     writer.write_all(&v.to_be_bytes())
 }
 
-/// Writes an `i16` value to the specified `Writer`.
+/// Writes an `i16` value to the specified [`Writer`].
 ///
 /// Arguments:
 /// - `v`: The value;
-/// - `writer`: The reader;
+/// - `writer`: The [`Writer`];
 ///
 /// Returns:
 /// - Ok(()): For success;
@@ -265,11 +265,11 @@ pub fn write_i16(v: i16, writer: &mut dyn Writer) -> Result<()> {
     writer.write_all(&v.to_be_bytes())
 }
 
-/// Writes an `u32` value to the specified `Writer`.
+/// Writes an `u32` value to the specified [`Writer`].
 ///
 /// Arguments:
 /// - `v`: The value;
-/// - `writer`: The reader;
+/// - `writer`: The [`Writer`];
 ///
 /// Returns:
 /// - Ok(()): For success;
@@ -278,11 +278,11 @@ pub fn write_u32(v: u32, writer: &mut dyn Writer) -> Result<()> {
     writer.write_all(&v.to_be_bytes())
 }
 
-/// Writes an `i32` value to the specified `Writer`.
+/// Writes an `i32` value to the specified [`Writer`].
 ///
 /// Arguments:
 /// - `v`: The value;
-/// - `writer`: The reader;
+/// - `writer`: The [`Writer`];
 ///
 /// Returns:
 /// - Ok(()): For success;
@@ -291,11 +291,11 @@ pub fn write_i32(v: i32, writer: &mut dyn Writer) -> Result<()> {
     writer.write_all(&v.to_be_bytes())
 }
 
-/// Writes an `u64` value to the specified `Writer`.
+/// Writes an `u64` value to the specified [`Writer`].
 ///
 /// Arguments:
 /// - `v`: The value;
-/// - `writer`: The reader;
+/// - `writer`: The [`Writer`];
 ///
 /// Returns:
 /// - Ok(()): For success;
@@ -304,11 +304,11 @@ pub fn write_u64(v: u64, writer: &mut dyn Writer) -> Result<()> {
     writer.write_all(&v.to_be_bytes())
 }
 
-/// Writes an `i64` value to the specified `Writer`.
+/// Writes an `i64` value to the specified [`Writer`].
 ///
 /// Arguments:
 /// - `v`: The value;
-/// - `writer`: The reader;
+/// - `writer`: The [`Writer`];
 ///
 /// Returns:
 /// - Ok(()): For success;
@@ -317,11 +317,11 @@ pub fn write_i64(v: i64, writer: &mut dyn Writer) -> Result<()> {
     writer.write_all(&v.to_be_bytes())
 }
 
-/// Writes an ILInt value to the specified `Writer`.
+/// Writes an ILInt value to the specified [`Writer`].
 ///
 /// Arguments:
 /// - `v`: The value;
-/// - `writer`: The reader;
+/// - `writer`: The [`Writer`];
 ///
 /// Returns:
 /// - Ok(()): For success;
@@ -334,12 +334,12 @@ pub fn write_ilint(v: u64, writer: &mut dyn Writer) -> Result<()> {
     }
 }
 
-/// Writes an `f32` value to the specified `Writer`. It is
+/// Writes an `f32` value to the specified [`Writer`]. It is
 /// always encoded as a `binary32` from *IEEE 754-2008*.
 ///
 /// Arguments:
 /// - `v`: The value;
-/// - `writer`: The reader;
+/// - `writer`: The [`Writer`];
 ///
 /// Returns:
 /// - Ok(()): For success;
@@ -348,12 +348,12 @@ pub fn write_f32(v: f32, writer: &mut dyn Writer) -> Result<()> {
     writer.write_all(&v.to_be_bytes())
 }
 
-/// Writes an `f64` value to the specified `Writer`. It is
+/// Writes an `f64` value to the specified [`Writer`]. It is
 /// always encoded as a `binary64` from *IEEE 754-2008*.
 ///
 /// Arguments:
 /// - `v`: The value;
-/// - `writer`: The reader;
+/// - `writer`: The [`Writer`];
 ///
 /// Returns:
 /// - Ok(()): For success;
@@ -362,11 +362,11 @@ pub fn write_f64(v: f64, writer: &mut dyn Writer) -> Result<()> {
     writer.write_all(&v.to_be_bytes())
 }
 
-/// Writes an UTF-8 string to the specified `Writer`.
+/// Writes an UTF-8 string to the specified [`Writer`].
 ///
 /// Arguments:
 /// - `v`: The value;
-/// - `writer`: The reader;
+/// - `writer`: The [`Writer`];
 ///
 /// Returns:
 /// - Ok(()): For success;

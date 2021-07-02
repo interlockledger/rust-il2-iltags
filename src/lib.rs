@@ -29,6 +29,19 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+//! This crate implements the [IL2 ILTags](https://github.com/interlockledger/specification/tree/master/ILTags)
+//! standard used by **InterlockLedger** from [InterlockLedger Network](https://interlockledger.network/).
+//!
+//! The **IL2 ILTags** is a binary TLV (type, lenght and value) format designed
+//! to be easy to implement, lightweight and as compact as possible.
+//!
+//! This implementation is loosely based on the C++ implementation of this
+//! standard available [here](https://github.com/interlockledger/interlockrecord).
+//!
+//! # License
+//!
+//! This library is licensed under a **BSD 3-Clause**.
+//!
 pub mod ilint;
 pub mod io;
 pub mod tags;
