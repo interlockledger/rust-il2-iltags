@@ -34,7 +34,7 @@
 #[macro_use]
 mod macros;
 
-pub mod std;
+pub mod standard;
 
 #[cfg(test)]
 mod tests;
