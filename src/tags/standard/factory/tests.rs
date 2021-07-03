@@ -30,7 +30,16 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 use super::*;
+use crate::io::array::*;
+use crate::tags::ErrorKind;
 use crate::tags::ILRawTag;
+
+macro_rules! test_tag_type {
+    ($tag: expr, $tag_id: expr, $tag_type: ty) => {
+        assert_eq!($tag.id(), $tag_id);
+        assert_eq!(std::any::TypeId::of::<$tag_type>(), $tag.as_any().type_id());
+    };
+}
 
 macro_rules! test_engine_created_tag {
     ($engine: expr, $tag_id: expr, $tag_type: ty) => {
@@ -38,8 +47,7 @@ macro_rules! test_engine_created_tag {
             Some(boxed) => boxed,
             None => panic!("Tag expected tag {:?} not created.", $tag_id),
         };
-        assert_eq!(t.id(), $tag_id);
-        assert_eq!(std::any::TypeId::of::<$tag_type>(), t.as_any().type_id());
+        test_tag_type!(t, $tag_id, $tag_type);
     };
 }
 
@@ -159,4 +167,80 @@ fn test_ilstandardtagfactory_iltagfactory_create_tag_strict() {
     assert!(f.engine().strict());
     test_engine_standard_registration!(f);
     test_engine_standard_registration_strict!(f);
+}
+
+fn create_serialized(tag: &dyn ILTag) -> VecReader {
+    let mut writer = VecWriter::new();
+    match tag.serialize(&mut writer) {
+        Ok(()) => VecReader::new(writer.as_slice()),
+        _ => panic!("Unable to serialize the tag."),
+    }
+}
+
+macro_rules! test_deserialize_tag {
+    ($factory: expr, $tag: expr, $tag_type: ty) => {
+        let mut reader = create_serialized(&$tag);
+        let t = match $factory.deserialize(&mut reader) {
+            Ok(t) => t,
+            _ => panic!("Unable to read the tag."),
+        };
+        test_tag_type!(t, $tag.id(), $tag_type);
+        assert_eq!($tag.value_size(), t.value_size());
+    };
+}
+
+macro_rules! test_deserialize_tag_expect_none {
+    ($factory: expr, $tag: expr) => {
+        let mut reader = create_serialized(&$tag);
+        match $factory.deserialize(&mut reader) {
+            Err(ErrorKind::UnknownTag) => (),
+            _ => panic!("Unable to read the tag."),
+        };
+    };
+}
+
+#[test]
+fn test_ilstandardtagfactory_iltagfactory_deserialize_non_strict() {
+    let f = ILStandardTagFactory::new(false);
+
+    // Implicit tags
+    test_deserialize_tag!(f, ILNullTag::new(), ILNullTag);
+    test_deserialize_tag!(f, ILInt16Tag::new(), ILInt16Tag);
+    test_deserialize_tag!(f, ILILInt64Tag::with_value(127), ILILInt64Tag);
+    test_deserialize_tag!(f, ILILInt64Tag::with_value(12345), ILILInt64Tag);
+
+    // Invalid implicit tag
+    test_deserialize_tag_expect_none!(f, ILNullTag::with_id(15));
+
+    // Explicit tag
+    let mut t = ILByteArrayTag::new();
+    t.mut_value().extend_from_slice(&[0; 32]);
+    test_deserialize_tag!(f, t, ILByteArrayTag);
+
+    // Deserialization of unknown tags
+    test_deserialize_tag!(f, ILILInt64Tag::with_id_value(12345, 12345), ILRawTag);
+    test_deserialize_tag!(f, ILInt16Tag::with_id_value(123123323, 12345), ILRawTag);
+}
+
+#[test]
+fn test_ilstandardtagfactory_iltagfactory_deserialize_strict() {
+    let f = ILStandardTagFactory::new(true);
+
+    // Implicit tags
+    test_deserialize_tag!(f, ILNullTag::new(), ILNullTag);
+    test_deserialize_tag!(f, ILInt16Tag::new(), ILInt16Tag);
+    test_deserialize_tag!(f, ILILInt64Tag::with_value(127), ILILInt64Tag);
+    test_deserialize_tag!(f, ILILInt64Tag::with_value(12345), ILILInt64Tag);
+
+    // Invalid implicit tag
+    test_deserialize_tag_expect_none!(f, ILNullTag::with_id(15));
+
+    // Explicit tag
+    let mut t = ILByteArrayTag::new();
+    t.mut_value().extend_from_slice(&[0; 32]);
+    test_deserialize_tag!(f, t, ILByteArrayTag);
+
+    // Deserialization of unknown tags
+    test_deserialize_tag_expect_none!(f, ILILInt64Tag::with_id_value(12345, 12345));
+    test_deserialize_tag_expect_none!(f, ILInt16Tag::with_id_value(123123323, 12345));
 }
