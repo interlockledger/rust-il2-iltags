@@ -139,7 +139,6 @@ fn test_create_std_engine_strict() {
 //=============================================================================
 // ILStandardTagFactory
 //-----------------------------------------------------------------------------
-
 #[test]
 fn test_ilstandardtagfactory_struct() {
     let mut f = ILStandardTagFactory::new(false);
@@ -186,6 +185,10 @@ macro_rules! test_deserialize_tag {
         };
         test_tag_type!(t, $tag.id(), $tag_type);
         assert_eq!($tag.value_size(), t.value_size());
+        match reader.read() {
+            Err(_) => (),
+            _ => panic!("All bytes should have been consumed."),
+        };
     };
 }
 
@@ -220,6 +223,13 @@ fn test_ilstandardtagfactory_iltagfactory_deserialize_non_strict() {
     // Deserialization of unknown tags
     test_deserialize_tag!(f, ILILInt64Tag::with_id_value(12345, 12345), ILRawTag);
     test_deserialize_tag!(f, ILInt16Tag::with_id_value(123123323, 12345), ILRawTag);
+
+    // Simulate an error with an incomplete tag - This tag was expected to have 3 bytes
+    let mut reader = VecReader::new(&[4, 2]);
+    match f.deserialize(&mut reader) {
+        Err(ErrorKind::IOError(_)) => (),
+        _ => panic!("IO Error expected"),
+    }
 }
 
 #[test]
@@ -243,4 +253,11 @@ fn test_ilstandardtagfactory_iltagfactory_deserialize_strict() {
     // Deserialization of unknown tags
     test_deserialize_tag_expect_none!(f, ILILInt64Tag::with_id_value(12345, 12345));
     test_deserialize_tag_expect_none!(f, ILInt16Tag::with_id_value(123123323, 12345));
+
+    // Simulate an error with an incomplete tag - This tag was expected to have 3 bytes
+    let mut reader = VecReader::new(&[4, 2]);
+    match f.deserialize(&mut reader) {
+        Err(ErrorKind::IOError(_)) => (),
+        _ => panic!("IO Error expected"),
+    }
 }
