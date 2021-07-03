@@ -365,8 +365,8 @@ pub fn tag_id_downcast_mut<T: ILTag + Any>(tag_id: u64, tag: &mut dyn ILTag) -> 
 //=============================================================================
 // DefaultWithId
 //-----------------------------------------------------------------------------
-/// This trait defines a variant of the Default trait that takes an id as a
-/// parameter.
+/// This trait defines a variant of the [`std::default::Default`] trait that
+/// takes an id as a parameter.
 pub trait DefaultWithId {
     /// Creates a default tag with.
     ///
