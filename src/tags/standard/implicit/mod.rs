@@ -31,8 +31,10 @@
  */
 //! This module implements all standard implicit tags defined by
 //! [ILTags Specification](https://github.com/interlockledger/specification/tree/master/ILTags).
-use super::constants::*;
+#[cfg(test)]
+mod tests;
 
+use super::constants::*;
 use super::{DefaultWithId, ErrorKind, ILTag, ILTagFactory, Result};
 use crate::io::data::*;
 use crate::io::{Reader, Writer};

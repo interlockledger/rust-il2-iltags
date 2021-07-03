@@ -31,6 +31,9 @@
  */
 //! This module implements all standard explicit tags defined by
 //! [ILTags Specification](https://github.com/interlockledger/specification/tree/master/ILTags).
+#[cfg(test)]
+mod tests;
+
 use super::constants::{
     IL_BDEC_TAG_ID, IL_BIN128_TAG_ID, IL_BIN32_TAG_ID, IL_BIN64_TAG_ID, IL_BINT_TAG_ID,
     IL_BOOL_TAG_ID, IL_BYTES_TAG_ID, IL_DICTIONARY_TAG_ID, IL_ILINTARRAY_TAG_ID, IL_ILINT_TAG_ID,

@@ -29,14 +29,10 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-//! This is the base module for all standard tags and tag factories.
-use super::{DefaultWithId, ErrorKind, ILTag, ILTagFactory, Result};
+use super::*;
 
-pub mod constants;
-pub mod explicit;
-pub mod factory;
-pub mod implicit;
-pub mod prelude;
-
-#[cfg(test)]
-mod tests;
+#[test]
+fn test_dummy() {
+    let x = ILVersionTag::new();
+    assert_eq!(x.id(), IL_VERSION_TAG_ID);
+}
