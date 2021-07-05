@@ -379,6 +379,12 @@ fn test_tag_id_downcast_mut() {
 //-----------------------------------------------------------------------------
 pub struct UntouchbleTagFactory {}
 
+impl UntouchbleTagFactory {
+    pub fn new() -> Self {
+        Self {}
+    }
+}
+
 impl ILTagFactory for UntouchbleTagFactory {
     fn create_tag(&self, _tag_id: u64) -> Option<Box<dyn ILTag>> {
         panic!();
