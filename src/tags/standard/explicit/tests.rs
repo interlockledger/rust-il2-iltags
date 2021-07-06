@@ -470,3 +470,110 @@ fn test_ilbiginttag_default() {
 //=============================================================================
 // ILBigDecTag
 //-----------------------------------------------------------------------------
+#[test]
+fn test_ilbigdectag_impl() {
+    // new
+    let t = ILBigDecTag::new();
+    assert_eq!(t.id(), IL_BDEC_TAG_ID);
+    assert_eq!(t.scale(), 0);
+    assert_eq!(t.value().len(), 0);
+
+    // with_id
+    let t = ILBigDecTag::with_id(1234);
+    assert_eq!(t.id(), 1234);
+    assert_eq!(t.scale(), 0);
+    assert_eq!(t.value().len(), 0);
+
+    // with_value
+    let t = ILBigDecTag::with_value(-1, &SAMPLE_STRING_BIN);
+    assert_eq!(t.id(), IL_BDEC_TAG_ID);
+    assert_eq!(t.scale(), -1);
+    assert_eq!(t.value().as_slice(), &SAMPLE_STRING_BIN);
+
+    // with_id_value
+    let t = ILBigDecTag::with_id_value(1234, -1, &SAMPLE_STRING_BIN);
+    assert_eq!(t.id(), 1234);
+    assert_eq!(t.scale(), -1);
+    assert_eq!(t.value().as_slice(), &SAMPLE_STRING_BIN);
+
+    // Mut
+    let mut t = ILBigDecTag::new();
+    t.set_scale(-123);
+    assert_eq!(t.scale(), -123);
+    t.mut_value().extend_from_slice(&SAMPLE_STRING_BIN);
+    assert_eq!(t.value().as_slice(), &SAMPLE_STRING_BIN);
+}
+
+#[test]
+fn test_ilbigdectag_iltag_value_size() {
+    // new
+    let t = ILBigDecTag::new();
+    assert_eq!(t.value_size(), 4 + 0);
+
+    // with_value
+    let t = ILBigDecTag::with_value(-1, &SAMPLE_STRING_BIN);
+    assert_eq!(t.value_size(), (4 + SAMPLE_STRING_BIN.len()) as u64);
+}
+
+#[test]
+fn test_ilbigdectag_iltag_serialize_value() {
+    // Empty
+    let exp: [u8; 4] = [0; 4];
+    let t = ILBigDecTag::new();
+    let mut writer = VecWriter::new();
+    match t.serialize_value(&mut writer) {
+        Ok(()) => (),
+        _ => panic!("Unable to write the tag."),
+    }
+    assert_eq!(writer.vec().as_slice(), &exp);
+
+    // with_value
+    let exp: [u8; 10] = [0x12, 0x34, 0x56, 0x78, 0x41, 0x20, 0x6a, 0x75, 0x73, 0x74];
+    let t = ILBigDecTag::with_value(0x12345678, &SAMPLE_STRING_BIN[0..6]);
+    let mut writer = VecWriter::new();
+    match t.serialize_value(&mut writer) {
+        Ok(()) => (),
+        _ => panic!("Unable to write the tag."),
+    }
+    assert_eq!(writer.vec().as_slice(), &exp);
+}
+
+#[test]
+fn test_ilbigdectag_iltag_deserialize_value() {
+    let f = UntouchbleTagFactory::new();
+
+    // Empty
+    let exp: [u8; 4] = [0xFF, 0xFF, 0xFF, 0xFF];
+    let mut reader = ByteArrayReader::new(&exp);
+    let mut t = ILBigDecTag::with_value(0x12345678, &SAMPLE_STRING_BIN[0..6]);
+    match t.deserialize_value(&f, exp.len(), &mut reader) {
+        Ok(()) => (),
+        _ => panic!("Unable to write the tag."),
+    }
+    assert_eq!(t.scale(), -1);
+    assert_eq!(t.value().len(), 0);
+
+    // with_value
+    let exp: [u8; 10] = [0x12, 0x34, 0x56, 0x78, 0x41, 0x20, 0x6a, 0x75, 0x73, 0x74];
+    let mut reader = ByteArrayReader::new(&exp);
+    let mut t = ILBigDecTag::default();
+    match t.deserialize_value(&f, exp.len(), &mut reader) {
+        Ok(()) => (),
+        _ => panic!("Unable to write the tag."),
+    }
+    assert_eq!(t.scale(), 0x12345678);
+    assert_eq!(t.value().as_slice(), &SAMPLE_STRING_BIN[0..6]);
+
+    for size in 0..3 {
+        let mut reader = ByteArrayReader::new(&exp);
+        let mut t = ILBigDecTag::default();
+        match t.deserialize_value(&f, size, &mut reader) {
+            Err(ErrorKind::CorruptedData) => (),
+            _ => panic!("Unable to detect the data corruption."),
+        }
+    }
+}
+
+//=============================================================================
+// ILILIntArrayTag
+//-----------------------------------------------------------------------------
