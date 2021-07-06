@@ -456,7 +456,7 @@ impl ILILIntArrayTag {
     /// Arguments:
     /// * `value`: A byte slice with the initial value;
     pub fn with_value(value: &[u64]) -> Self {
-        Self::with_id_value(IL_BDEC_TAG_ID, value)
+        Self::with_id_value(IL_ILINTARRAY_TAG_ID, value)
     }
 
     /// Creates a new instance of this struct with the

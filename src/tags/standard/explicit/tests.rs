@@ -577,3 +577,178 @@ fn test_ilbigdectag_iltag_deserialize_value() {
 //=============================================================================
 // ILILIntArrayTag
 //-----------------------------------------------------------------------------
+
+static SAMPLE_ILINT: [u64; 9] = [
+    0xf7,
+    0xf8,
+    0xFEDC,
+    0xFEDCBA,
+    0xFEDCBA98,
+    0xFEDCBA76,
+    0xFEDCBA7654,
+    0xFEDCBA765432,
+    0xFEDCBA76543210,
+];
+
+#[test]
+fn test_ililintarraytag_impl() {
+    // new
+    let t = ILILIntArrayTag::new();
+    assert_eq!(t.id(), IL_ILINTARRAY_TAG_ID);
+    assert_eq!(t.value().len(), 0);
+
+    // with_id
+    let t = ILILIntArrayTag::with_id(1234);
+    assert_eq!(t.id(), 1234);
+    assert_eq!(t.value().len(), 0);
+
+    // with_value
+    let t = ILILIntArrayTag::with_value(&SAMPLE_ILINT);
+    assert_eq!(t.id(), IL_ILINTARRAY_TAG_ID);
+    assert_eq!(t.value().as_slice(), &SAMPLE_ILINT);
+
+    // with_id_value
+    let t = ILILIntArrayTag::with_id_value(1234, &SAMPLE_ILINT);
+    assert_eq!(t.id(), 1234);
+    assert_eq!(t.value().as_slice(), &SAMPLE_ILINT);
+
+    // mut
+    let mut t = ILILIntArrayTag::default();
+    t.mut_value().extend_from_slice(&SAMPLE_ILINT);
+    assert_eq!(t.value().as_slice(), &SAMPLE_ILINT);
+}
+
+#[test]
+fn test_ililintarraytag_iltag_value_size() {
+    // Empty
+    let t = ILILIntArrayTag::new();
+    let exp = crate::ilint::encoded_size(0);
+    assert_eq!(t.value_size(), exp as u64);
+
+    // With value
+    let t = ILILIntArrayTag::with_value(&SAMPLE_ILINT);
+    let mut exp = crate::ilint::encoded_size(SAMPLE_ILINT.len() as u64);
+    for v in SAMPLE_ILINT {
+        exp += crate::ilint::encoded_size(v);
+    }
+    assert_eq!(t.value_size(), exp as u64);
+}
+
+#[test]
+fn test_ililintarraytag_iltag_serialize_value() {
+    // Empty
+    let mut exp = VecWriter::default();
+    match write_ilint(0, &mut exp) {
+        Ok(()) => (),
+        _ => panic!("Unable to create the expected value."),
+    }
+    let t = ILILIntArrayTag::new();
+    let mut writer = VecWriter::default();
+    match t.serialize_value(&mut writer) {
+        Ok(()) => (),
+        _ => panic!("Unable to write the tag."),
+    }
+    assert_eq!(writer.vec().as_slice(), exp.vec().as_slice());
+
+    // With value
+    let mut exp = VecWriter::default();
+    match write_ilint(SAMPLE_ILINT.len() as u64, &mut exp) {
+        Ok(()) => (),
+        _ => panic!("Unable to create the expected value."),
+    }
+    for v in SAMPLE_ILINT {
+        match write_ilint(v, &mut exp) {
+            Ok(()) => (),
+            _ => panic!("Unable to create the expected value."),
+        }
+    }
+    let t = ILILIntArrayTag::with_value(&SAMPLE_ILINT);
+    let mut writer = VecWriter::default();
+    match t.serialize_value(&mut writer) {
+        Ok(()) => (),
+        _ => panic!("Unable to write the tag."),
+    }
+    assert_eq!(writer.vec().as_slice(), exp.vec().as_slice());
+}
+
+#[test]
+fn test_ililintarraytag_iltag_deserialize_value() {
+    let f = UntouchbleTagFactory::new();
+
+    // Empty
+    let mut exp = VecWriter::default();
+    match write_ilint(0, &mut exp) {
+        Ok(()) => (),
+        _ => panic!("Unable to create the expected value."),
+    }
+    let mut t = ILILIntArrayTag::with_value(&SAMPLE_ILINT);
+    let mut reader = ByteArrayReader::new(exp.vec().as_slice());
+    match t.deserialize_value(&f, exp.vec().len(), &mut reader) {
+        Ok(()) => (),
+        _ => panic!("Unable to write the tag."),
+    }
+    assert_eq!(t.value().len(), 0);
+
+    // With value
+    let mut exp = VecWriter::default();
+    match write_ilint(SAMPLE_ILINT.len() as u64, &mut exp) {
+        Ok(()) => (),
+        _ => panic!("Unable to create the expected value."),
+    }
+    for v in SAMPLE_ILINT {
+        match write_ilint(v, &mut exp) {
+            Ok(()) => (),
+            _ => panic!("Unable to create the expected value."),
+        }
+    }
+    let mut t = ILILIntArrayTag::default();
+    let mut reader = ByteArrayReader::new(exp.vec().as_slice());
+    match t.deserialize_value(&f, exp.vec().len(), &mut reader) {
+        Ok(()) => (),
+        _ => panic!("Unable to write the tag."),
+    }
+    assert_eq!(t.value().as_slice(), &SAMPLE_ILINT);
+
+    // Incomplete
+    let mut t = ILILIntArrayTag::default();
+    let mut reader = ByteArrayReader::new(exp.vec().as_slice());
+    match t.deserialize_value(&f, exp.vec().len() - 1, &mut reader) {
+        Err(ErrorKind::IOError(_)) => (),
+        _ => panic!("Error not detected."),
+    }
+
+    let mut t = ILILIntArrayTag::default();
+    let mut reader = ByteArrayReader::new(&exp.vec().as_slice()[0..exp.vec().len() - 1]);
+    match t.deserialize_value(&f, exp.vec().len(), &mut reader) {
+        Err(ErrorKind::IOError(_)) => (),
+        _ => panic!("Error not detected."),
+    }
+
+    // Corrupted
+    let mut exp = VecWriter::default();
+    match write_ilint((SAMPLE_ILINT.len() - 1) as u64, &mut exp) {
+        Ok(()) => (),
+        _ => panic!("Unable to create the expected value."),
+    }
+    for v in SAMPLE_ILINT {
+        match write_ilint(v, &mut exp) {
+            Ok(()) => (),
+            _ => panic!("Unable to create the expected value."),
+        }
+    }
+    let mut t = ILILIntArrayTag::default();
+    let mut reader = ByteArrayReader::new(exp.vec().as_slice());
+    match t.deserialize_value(&f, exp.vec().len(), &mut reader) {
+        Err(ErrorKind::CorruptedData) => (),
+        _ => panic!("Error not detected."),
+    }
+
+    // Broken ILInt size
+    let sample: [u8; 1] = [0xF8];
+    let mut t = ILILIntArrayTag::default();
+    let mut reader = ByteArrayReader::new(&sample);
+    match t.deserialize_value(&f, 1, &mut reader) {
+        Err(ErrorKind::IOError(_)) => (),
+        _ => panic!("Error not detected."),
+    }
+}
