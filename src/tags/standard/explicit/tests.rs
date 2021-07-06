@@ -280,6 +280,165 @@ fn test_ilstringtag_iltag_deserialize() {
     }
 }
 
+#[test]
+fn test_string_tag_size_from_value() {
+    let mut exp = crate::ilint::encoded_size(IL_STRING_TAG_ID);
+    exp += crate::ilint::encoded_size(0);
+    assert_eq!(string_tag_size_from_value(""), exp as u64);
+
+    let mut exp = crate::ilint::encoded_size(IL_STRING_TAG_ID);
+    exp += crate::ilint::encoded_size(SAMPLE_STRING.len() as u64);
+    exp += SAMPLE_STRING.len();
+    assert_eq!(string_tag_size_from_value(SAMPLE_STRING), exp as u64);
+}
+
+#[test]
+fn test_serialize_string_tag_from_value() {
+    // Empty
+    let t = ILStringTag::new();
+    let mut exp = VecWriter::new();
+    match t.serialize(&mut exp) {
+        Ok(()) => (),
+        _ => panic!("Unable to write the tag."),
+    }
+    let mut writer = VecWriter::new();
+    match serialize_string_tag_from_value("", &mut writer) {
+        Ok(()) => (),
+        _ => panic!("Unable to write the tag."),
+    }
+    assert_eq!(exp.as_slice(), writer.as_slice());
+
+    // With content
+    let t = ILStringTag::with_value(SAMPLE_STRING);
+    let mut exp = VecWriter::new();
+    match t.serialize(&mut exp) {
+        Ok(()) => (),
+        _ => panic!("Unable to write the tag."),
+    }
+    let mut writer = VecWriter::new();
+    match serialize_string_tag_from_value(SAMPLE_STRING, &mut writer) {
+        Ok(()) => (),
+        _ => panic!("Unable to write the tag."),
+    }
+    assert_eq!(exp.as_slice(), writer.as_slice());
+}
+
+#[test]
+fn test_deserialize_string_tag_from_value_into() {
+    let mut ret = String::default();
+
+    // Empty
+    let t = ILStringTag::new();
+    let mut exp = VecWriter::new();
+    match t.serialize(&mut exp) {
+        Ok(()) => (),
+        _ => panic!("Unable to write the tag."),
+    }
+    let mut reader = ByteArrayReader::new(exp.as_slice());
+    match deserialize_string_tag_from_value_into(&mut reader, &mut ret) {
+        Ok(()) => (),
+        _ => panic!("Unable to write the tag."),
+    }
+    assert_eq!(ret, "");
+
+    // With content
+    let t = ILStringTag::with_value(SAMPLE_STRING);
+    let mut exp = VecWriter::new();
+    match t.serialize(&mut exp) {
+        Ok(()) => (),
+        _ => panic!("Unable to write the tag."),
+    }
+    let mut reader = ByteArrayReader::new(exp.as_slice());
+    match deserialize_string_tag_from_value_into(&mut reader, &mut ret) {
+        Ok(()) => (),
+        _ => panic!("Unable to write the tag."),
+    }
+    assert_eq!(ret, SAMPLE_STRING);
+
+    // Incomplete
+    let t = ILStringTag::with_value(SAMPLE_STRING);
+    let mut exp = VecWriter::new();
+    match t.serialize(&mut exp) {
+        Ok(()) => (),
+        _ => panic!("Unable to write the tag."),
+    }
+    let mut reader = ByteArrayReader::new(&exp.as_slice()[0..SAMPLE_STRING.len() - 1]);
+    match deserialize_string_tag_from_value_into(&mut reader, &mut ret) {
+        Err(ErrorKind::IOError(_)) => (),
+        _ => panic!("Error not detected."),
+    }
+
+    // Corrupted UTF-8
+    let t = ILRawTag::with_value(IL_STRING_TAG_ID, &SAMPLE_STRING_BIN[..8]);
+    let mut exp = VecWriter::new();
+    match t.serialize(&mut exp) {
+        Ok(()) => (),
+        _ => panic!("Unable to write the tag."),
+    }
+    let mut reader = ByteArrayReader::new(exp.as_slice());
+    match deserialize_string_tag_from_value_into(&mut reader, &mut ret) {
+        Err(ErrorKind::CorruptedData) => (),
+        _ => panic!("Error not detected."),
+    }
+}
+
+#[test]
+fn test_deserialize_string_tag_from_value() {
+    // Empty
+    let t = ILStringTag::new();
+    let mut exp = VecWriter::new();
+    match t.serialize(&mut exp) {
+        Ok(()) => (),
+        _ => panic!("Unable to write the tag."),
+    }
+    let mut reader = ByteArrayReader::new(exp.as_slice());
+    let ret = match deserialize_string_tag_from_value(&mut reader) {
+        Ok(ret) => ret,
+        _ => panic!("Unable to write the tag."),
+    };
+    assert_eq!(ret, "");
+
+    // With content
+    let t = ILStringTag::with_value(SAMPLE_STRING);
+    let mut exp = VecWriter::new();
+    match t.serialize(&mut exp) {
+        Ok(()) => (),
+        _ => panic!("Unable to write the tag."),
+    }
+    let mut reader = ByteArrayReader::new(exp.as_slice());
+    let ret = match deserialize_string_tag_from_value(&mut reader) {
+        Ok(ret) => ret,
+        _ => panic!("Unable to write the tag."),
+    };
+    assert_eq!(ret, SAMPLE_STRING);
+
+    // Incomplete
+    let t = ILStringTag::with_value(SAMPLE_STRING);
+    let mut exp = VecWriter::new();
+    match t.serialize(&mut exp) {
+        Ok(()) => (),
+        _ => panic!("Unable to write the tag."),
+    }
+    let mut reader = ByteArrayReader::new(&exp.as_slice()[0..SAMPLE_STRING.len() - 1]);
+    match deserialize_string_tag_from_value(&mut reader) {
+        Err(ErrorKind::IOError(_)) => (),
+        _ => panic!("Error not detected."),
+    };
+
+    // Corrupted UTF-8
+    let t = ILRawTag::with_value(IL_STRING_TAG_ID, &SAMPLE_STRING_BIN[..8]);
+    let mut exp = VecWriter::new();
+    match t.serialize(&mut exp) {
+        Ok(()) => (),
+        _ => panic!("Unable to write the tag."),
+    }
+    let mut reader = ByteArrayReader::new(exp.as_slice());
+    match deserialize_string_tag_from_value(&mut reader) {
+        Err(ErrorKind::CorruptedData) => (),
+        _ => panic!("Error not detected."),
+    };
+}
+
 //=============================================================================
 // ILBigIntTag
 //-----------------------------------------------------------------------------

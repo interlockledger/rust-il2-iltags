@@ -244,15 +244,22 @@ pub fn serialize_string_tag_from_value(s: &str, writer: &mut dyn Writer) -> Resu
 }
 
 /// Extracts a string value from a standard string tag directly from
-/// the data stream.
+/// the data stream and put it inside an existing [`std::string::String`].
+///
+/// This function was designed to allow the reuse of existing
+/// [`std::string::String`] instances.
 ///
 /// Arguments:
 /// - `reader`: The reader;
+/// - `output`: The string instance that will hold the result;
 ///
 /// Returns:
 /// - `Ok(String)`: The string extracted from the data stream;
 /// - `Err(e)`: In case of error.
-pub fn deserialize_string_tag_from_value(reader: &mut dyn Reader) -> Result<String> {
+pub fn deserialize_string_tag_from_value_into(
+    reader: &mut dyn Reader,
+    output: &mut String,
+) -> Result<()> {
     let id = deserialize_ilint(reader)?;
     if id != IL_STRING_TAG_ID {
         return Err(ErrorKind::CorruptedData);
@@ -265,7 +272,23 @@ pub fn deserialize_string_tag_from_value(reader: &mut dyn Reader) -> Result<Stri
         Ok(v) => v,
         Err(_) => return Err(ErrorKind::CorruptedData),
     };
-    Ok(String::from(s))
+    output.replace_range(.., s);
+    Ok(())
+}
+
+/// Extracts a string value from a standard string tag directly from
+/// the data stream.
+///
+/// Arguments:
+/// - `reader`: The reader;
+///
+/// Returns:
+/// - `Ok(std::string::String)`: The string extracted from the data stream;
+/// - `Err(e)`: In case of error.
+pub fn deserialize_string_tag_from_value(reader: &mut dyn Reader) -> Result<String> {
+    let mut ret = String::default();
+    deserialize_string_tag_from_value_into(reader, &mut ret)?;
+    Ok(ret)
 }
 
 //=============================================================================
