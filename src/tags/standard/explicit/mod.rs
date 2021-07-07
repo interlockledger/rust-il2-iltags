@@ -1013,7 +1013,7 @@ impl ILTag for ILDictTag {
         for key in self.value.keys() {
             keys.push(key);
         }
-        keys.sort();
+        keys.sort_unstable();
         for key in keys {
             let value = match self.value.get(key) {
                 Some(s) => s,
@@ -1099,7 +1099,7 @@ impl ILTag for ILStrDictTag {
         for key in self.value.keys() {
             keys.push(key);
         }
-        keys.sort();
+        keys.sort_unstable();
         for key in keys {
             let value = match self.value.get(key) {
                 Some(s) => s,
