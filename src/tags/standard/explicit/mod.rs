@@ -962,6 +962,9 @@ iltag_default_impl!(ILOIDTag);
 //-----------------------------------------------------------------------------
 /// This struct implements the standard dictionary tag. It always maps string
 /// to tags.
+///
+/// To ensure maximum the stability of the serialized data, the keys are sorted
+/// before the serialization.
 pub struct ILDictTag {
     id: u64,
     value: HashMap<String, Box<dyn ILTag>>,
@@ -1007,7 +1010,16 @@ impl ILTag for ILDictTag {
     }
 
     fn serialize_value(&self, writer: &mut dyn Writer) -> Result<()> {
-        for (key, value) in self.value.iter() {
+        let mut keys: Vec<&str> = Vec::with_capacity(self.value.len());
+        for key in self.value.keys() {
+            keys.push(key);
+        }
+        keys.sort();
+        for key in keys {
+            let value = match self.value.get(key) {
+                Some(s) => s,
+                None => return Err(ErrorKind::UnableToSerialize),
+            };
             serialize_string_tag_from_value(key, writer)?;
             value.serialize(writer)?;
         }
@@ -1084,7 +1096,16 @@ impl ILTag for ILStrDictTag {
     }
 
     fn serialize_value(&self, writer: &mut dyn Writer) -> Result<()> {
-        for (key, value) in self.value.iter() {
+        let mut keys: Vec<&str> = Vec::with_capacity(self.value.len());
+        for key in self.value.keys() {
+            keys.push(key);
+        }
+        keys.sort();
+        for key in keys {
+            let value = match self.value.get(key) {
+                Some(s) => s,
+                None => return Err(ErrorKind::UnableToSerialize),
+            };
             serialize_string_tag_from_value(key, writer)?;
             serialize_string_tag_from_value(value, writer)?;
         }

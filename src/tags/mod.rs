@@ -35,6 +35,7 @@
 mod macros;
 
 pub mod standard;
+pub mod util;
 
 #[cfg(test)]
 mod tests;
@@ -55,6 +56,7 @@ pub enum ErrorKind {
     CorruptedData,
     TagTooLarge,
     UnexpectedTagType,
+    UnableToSerialize,
     IOError(crate::io::ErrorKind),
     Boxed(Box<dyn ::std::error::Error>),
 }
@@ -206,9 +208,8 @@ pub fn deserialize_bytes_into_vec(
 //=============================================================================
 // ILTag
 //-----------------------------------------------------------------------------
-
 /// This trait must be implemented by all ILTags on this library.
-pub trait ILTag: Any {
+pub trait ILTag: Any + Send {
     /// Returns the ID of the tag.
     fn id(&self) -> u64;
 
@@ -380,7 +381,7 @@ pub trait DefaultWithId {
 // ILTagFactory
 //-----------------------------------------------------------------------------
 /// This trait must be implemented by all tag factories.
-pub trait ILTagFactory {
+pub trait ILTagFactory: Send {
     fn create_tag(&self, tag_id: u64) -> Option<Box<dyn ILTag>>;
 
     fn deserialize(&self, reader: &mut dyn Reader) -> Result<Box<dyn ILTag>>;
@@ -390,7 +391,7 @@ pub trait ILTagFactory {
 // ILTagCreator
 //-----------------------------------------------------------------------------
 /// This trait must be implemented by all tag creators.
-pub trait ILTagCreator {
+pub trait ILTagCreator: Send {
     /// Creates a new boxed instance of the the class.
     ///
     /// Arguments:

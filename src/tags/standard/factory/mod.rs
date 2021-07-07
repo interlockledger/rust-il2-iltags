@@ -112,7 +112,6 @@ pub fn create_std_engine(strict: bool) -> ILTagCreatorEngine {
 //-----------------------------------------------------------------------------
 /// This struct implements the standard ILTagFactory factory. It
 /// can be extended to include custom tags if necessary.
-///
 pub struct ILStandardTagFactory {
     engine: ILTagCreatorEngine,
 }
