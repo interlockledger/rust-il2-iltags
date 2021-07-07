@@ -594,11 +594,10 @@ impl ILTag for ILTagSeqTag {
         value_size: usize,
         reader: &mut dyn Reader,
     ) -> Result<()> {
+        let mut lreader = LimitedReader::new(reader, value_size);
         self.value.clear();
-        let mut read: u64 = value_size as u64;
-        while read > 0 {
-            let t = factory.deserialize(reader)?;
-            read -= t.size();
+        while !lreader.empty() {
+            let t = factory.deserialize(&mut lreader)?;
             self.value.push(t);
         }
         Ok(())

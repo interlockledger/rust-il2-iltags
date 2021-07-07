@@ -32,7 +32,9 @@
 use super::*;
 use crate::io::array::{ByteArrayReader, VecWriter};
 use crate::tags::standard::factory::ILStandardTagFactory;
+use crate::tags::standard::implicit::*;
 use crate::tags::tests::UntouchbleTagFactory;
+use crate::tags::util::*;
 
 /// Test the functions defined by std_byte_array_tag_func_impl macro.
 macro_rules! test_std_byte_array_tag_func_impl {
@@ -868,12 +870,184 @@ fn test_iltagseqtag_iltag_deserialize_value_non_strict() {
     }
     assert_eq!(t.value().len(), 0);
 
-    // To be continued from here!
+    let mut sample: Vec<Box<dyn ILTag>> = Vec::new();
 
-    // with one
+    // with one tag
+    sample.push(Box::new(ILStringTag::with_value(SAMPLE_STRING)));
+    let mut exp = VecWriter::default();
+    serialize_box_tag_slice_size(sample.as_slice(), &mut exp);
+    let mut t = ILTagSeqTag::new();
+    let mut reader = ByteArrayReader::new(exp.as_slice());
+    match t.deserialize_value(&f, exp.vec().len(), &mut reader) {
+        Ok(()) => (),
+        _ => panic!("Unable to serialize the tag."),
+    }
+    assert_eq!(t.value().len(), sample.len());
+    for i in 0..sample.len() {
+        assert!(iltag_are_equal(t.value()[i].as_ref(), sample[i].as_ref()));
+    }
+
+    // with multiple tags
+    let mut exp = VecWriter::default();
+    sample.push(Box::new(ILILInt64Tag::with_value(12345678)));
+    sample.push(Box::new(ILILInt64Tag::with_id_value(1234, 12345678)));
+    sample.push(Box::new(ILNullTag::default()));
+    serialize_box_tag_slice_size(sample.as_slice(), &mut exp);
+    let mut t = ILTagSeqTag::new();
+    let mut reader = ByteArrayReader::new(exp.as_slice());
+    match t.deserialize_value(&f, exp.vec().len(), &mut reader) {
+        Ok(()) => (),
+        _ => panic!("Unable to deserialize the tag."),
+    }
+    assert_eq!(t.value().len(), sample.len());
+    for i in 0..sample.len() {
+        assert!(iltag_are_equal(t.value()[i].as_ref(), sample[i].as_ref()));
+    }
+
+    // Errors
+    let mut reader = ByteArrayReader::new(exp.as_slice());
+    match t.deserialize_value(&f, exp.vec().len() - 2, &mut reader) {
+        Err(ErrorKind::IOError(_)) => (),
+        _ => panic!("Unable to deserialize the tag."),
+    }
+}
+
+#[test]
+fn test_iltagseqtag_iltag_deserialize_value_strict() {
+    let f = ILStandardTagFactory::new(true);
+
+    // empty
+    let exp: [u8; 0] = [];
     let mut t = ILTagSeqTag::new();
     t.mut_value().push(Box::new(ILStringTag::default()));
+
+    let mut reader = ByteArrayReader::new(&exp);
+    match t.deserialize_value(&f, 0, &mut reader) {
+        Ok(()) => (),
+        _ => panic!("Unable to deserialize the tag."),
+    }
+    assert_eq!(t.value().len(), 0);
+
+    let mut sample: Vec<Box<dyn ILTag>> = Vec::new();
+
+    // with one tag
+    sample.push(Box::new(ILStringTag::with_value(SAMPLE_STRING)));
     let mut exp = VecWriter::default();
+    serialize_box_tag_slice_size(sample.as_slice(), &mut exp);
+    let mut t = ILTagSeqTag::new();
+    let mut reader = ByteArrayReader::new(exp.as_slice());
+    match t.deserialize_value(&f, exp.vec().len(), &mut reader) {
+        Ok(()) => (),
+        _ => panic!("Unable to deserialize the tag."),
+    }
+    assert_eq!(t.value().len(), sample.len());
+    for i in 0..sample.len() {
+        assert!(iltag_are_equal(t.value()[i].as_ref(), sample[i].as_ref()));
+    }
+
+    // with multiple tags
+    let mut exp = VecWriter::default();
+    sample.push(Box::new(ILILInt64Tag::with_value(12345678)));
+    sample.push(Box::new(ILNullTag::default()));
+    serialize_box_tag_slice_size(sample.as_slice(), &mut exp);
+    let mut t = ILTagSeqTag::new();
+    let mut reader = ByteArrayReader::new(exp.as_slice());
+    match t.deserialize_value(&f, exp.vec().len(), &mut reader) {
+        Ok(()) => (),
+        _ => panic!("Unable to deserialize the tag."),
+    }
+    assert_eq!(t.value().len(), sample.len());
+    for i in 0..sample.len() {
+        assert!(iltag_are_equal(t.value()[i].as_ref(), sample[i].as_ref()));
+    }
+
+    // Errors
+    let mut reader = ByteArrayReader::new(exp.as_slice());
+    match t.deserialize_value(&f, exp.vec().len() - 2, &mut reader) {
+        Err(ErrorKind::IOError(_)) => (),
+        _ => panic!("Unable to serialize the tag."),
+    }
+
+    // with unknown tag
+    let mut exp = VecWriter::default();
+    sample.push(Box::new(ILILInt64Tag::with_value(12345678)));
+    sample.push(Box::new(ILILInt64Tag::with_id_value(1234, 12345678)));
+    sample.push(Box::new(ILNullTag::default()));
+    serialize_box_tag_slice_size(sample.as_slice(), &mut exp);
+    let mut t = ILTagSeqTag::new();
+    let mut reader = ByteArrayReader::new(exp.as_slice());
+    match t.deserialize_value(&f, exp.vec().len(), &mut reader) {
+        Err(_) => (),
+        _ => panic!("Unable to deserialize the tag."),
+    }
+}
+
+//=============================================================================
+// ILTagArrayTag
+//-----------------------------------------------------------------------------
+#[test]
+fn test_iltagarraytag_impl() {
+    // new
+    let t = ILTagArrayTag::new();
+    assert_eq!(t.id(), IL_ILTAGARRAY_TAG_ID);
+    assert_eq!(t.value().len(), 0);
+
+    // with_id
+    let t = ILTagArrayTag::with_id(1234);
+    assert_eq!(t.id(), 1234);
+    assert_eq!(t.value().len(), 0);
+
+    // mut
+    let mut t = ILTagArrayTag::default();
+    t.mut_value().push(Box::new(ILStringTag::default()));
+    assert_eq!(t.value().len(), 1);
+}
+
+#[test]
+fn test_iltagarraytag_iltag_value_size() {
+    // empty
+    let t = ILTagArrayTag::new();
+    assert_eq!(t.value_size(), 1);
+
+    // with one
+    let mut t = ILTagArrayTag::new();
+    t.mut_value().push(Box::new(ILStringTag::default()));
+    assert_eq!(
+        t.value_size(),
+        ((crate::ilint::encoded_size(t.value().len() as u64) as u64)
+            + compute_box_tag_slice_size(t.value().as_slice()))
+    );
+
+    // with two
+    t.mut_value()
+        .push(Box::new(ILStringTag::with_value(SAMPLE_STRING)));
+    assert_eq!(
+        t.value_size(),
+        ((crate::ilint::encoded_size(t.value().len() as u64) as u64)
+            + compute_box_tag_slice_size(t.value().as_slice()))
+    );
+}
+
+#[test]
+fn test_iltagarraytag_iltag_serialize_value() {
+    // empty
+    let exp: [u8; 1] = [0];
+    let t = ILTagArrayTag::new();
+    let mut writer = VecWriter::default();
+    match t.serialize_value(&mut writer) {
+        Ok(()) => (),
+        _ => panic!("Unable to serialize the tag."),
+    }
+    assert_eq!(writer.vec().as_slice(), &exp);
+
+    // with one
+    let mut t = ILTagArrayTag::new();
+    t.mut_value().push(Box::new(ILStringTag::default()));
+    let mut exp = VecWriter::default();
+    match write_ilint(t.value().len() as u64, &mut exp) {
+        Ok(()) => (),
+        _ => panic!("Unable to serialize the tag count."),
+    }
     serialize_box_tag_slice_size(t.value().as_slice(), &mut exp);
     let mut writer = VecWriter::default();
     match t.serialize_value(&mut writer) {
@@ -886,6 +1060,10 @@ fn test_iltagseqtag_iltag_deserialize_value_non_strict() {
     t.mut_value()
         .push(Box::new(ILStringTag::with_value(SAMPLE_STRING)));
     let mut exp = VecWriter::default();
+    match write_ilint(t.value().len() as u64, &mut exp) {
+        Ok(()) => (),
+        _ => panic!("Unable to serialize the tag count."),
+    }
     serialize_box_tag_slice_size(t.value().as_slice(), &mut exp);
     let mut writer = VecWriter::default();
     match t.serialize_value(&mut writer) {
@@ -893,4 +1071,163 @@ fn test_iltagseqtag_iltag_deserialize_value_non_strict() {
         _ => panic!("Unable to serialize the tag."),
     }
     assert_eq!(writer.vec().as_slice(), exp.as_slice());
+}
+
+#[test]
+fn test_iltagarraytag_iltag_deserialize_value_non_strict() {
+    let f = ILStandardTagFactory::new(false);
+
+    // empty
+    let exp: [u8; 1] = [0];
+    let mut t = ILTagArrayTag::new();
+    t.mut_value().push(Box::new(ILStringTag::default()));
+    let mut reader = ByteArrayReader::new(&exp);
+    match t.deserialize_value(&f, 1, &mut reader) {
+        Ok(()) => (),
+        _ => panic!("Unable to serialize the tag."),
+    }
+    assert_eq!(t.value().len(), 0);
+
+    let mut sample: Vec<Box<dyn ILTag>> = Vec::new();
+
+    // with one tag
+    sample.push(Box::new(ILStringTag::with_value(SAMPLE_STRING)));
+    let mut exp = VecWriter::default();
+    match write_ilint(sample.len() as u64, &mut exp) {
+        Ok(()) => (),
+        _ => panic!("Unable to serialize the tag count."),
+    }
+    serialize_box_tag_slice_size(sample.as_slice(), &mut exp);
+    let mut t = ILTagArrayTag::new();
+    let mut reader = ByteArrayReader::new(exp.as_slice());
+    match t.deserialize_value(&f, exp.vec().len(), &mut reader) {
+        Ok(()) => (),
+        _ => panic!("Unable to serialize the tag."),
+    }
+    assert_eq!(t.value().len(), sample.len());
+    for i in 0..sample.len() {
+        assert!(iltag_are_equal(t.value()[i].as_ref(), sample[i].as_ref()));
+    }
+
+    // with multiple tags
+    let mut exp = VecWriter::default();
+    sample.push(Box::new(ILILInt64Tag::with_value(12345678)));
+    sample.push(Box::new(ILILInt64Tag::with_id_value(1234, 12345678)));
+    sample.push(Box::new(ILNullTag::default()));
+    match write_ilint(sample.len() as u64, &mut exp) {
+        Ok(()) => (),
+        _ => panic!("Unable to serialize the tag count."),
+    }
+    serialize_box_tag_slice_size(sample.as_slice(), &mut exp);
+    let mut t = ILTagArrayTag::new();
+    let mut reader = ByteArrayReader::new(exp.as_slice());
+    match t.deserialize_value(&f, exp.vec().len(), &mut reader) {
+        Ok(()) => (),
+        _ => panic!("Unable to serialize the tag."),
+    }
+    assert_eq!(t.value().len(), sample.len());
+    for i in 0..sample.len() {
+        assert!(iltag_are_equal(t.value()[i].as_ref(), sample[i].as_ref()));
+    }
+
+    // Error - last is corrupted
+    let mut reader = ByteArrayReader::new(exp.as_slice());
+    match t.deserialize_value(&f, exp.vec().len() - 2, &mut reader) {
+        Err(ErrorKind::IOError(_)) => (),
+        _ => panic!("Unable to serialize the tag."),
+    }
+
+    // Error - Counter is corrupted
+    match t.deserialize_value(&f, exp.vec().len() - 1, &mut reader) {
+        Err(ErrorKind::CorruptedData) => (),
+        _ => panic!("Unable to serialize the tag."),
+    }
+}
+
+#[test]
+fn test_iltagarraytag_iltag_deserialize_value_strict() {
+    let f = ILStandardTagFactory::new(true);
+
+    // empty
+    let exp: [u8; 1] = [0];
+    let mut t = ILTagArrayTag::new();
+    t.mut_value().push(Box::new(ILStringTag::default()));
+
+    let mut reader = ByteArrayReader::new(&exp);
+    match t.deserialize_value(&f, 1, &mut reader) {
+        Ok(()) => (),
+        _ => panic!("Unable to deserialize the tag."),
+    }
+    assert_eq!(t.value().len(), 0);
+
+    let mut sample: Vec<Box<dyn ILTag>> = Vec::new();
+
+    // with one tag
+    sample.push(Box::new(ILStringTag::with_value(SAMPLE_STRING)));
+    let mut exp = VecWriter::default();
+    match write_ilint(sample.len() as u64, &mut exp) {
+        Ok(()) => (),
+        _ => panic!("Unable to serialize the tag count."),
+    }
+    serialize_box_tag_slice_size(sample.as_slice(), &mut exp);
+    let mut t = ILTagArrayTag::new();
+    let mut reader = ByteArrayReader::new(exp.as_slice());
+    match t.deserialize_value(&f, exp.vec().len(), &mut reader) {
+        Ok(()) => (),
+        _ => panic!("Unable to deserialize the tag."),
+    }
+    assert_eq!(t.value().len(), sample.len());
+    for i in 0..sample.len() {
+        assert!(iltag_are_equal(t.value()[i].as_ref(), sample[i].as_ref()));
+    }
+
+    // with multiple tags
+    let mut exp = VecWriter::default();
+    sample.push(Box::new(ILILInt64Tag::with_value(12345678)));
+    sample.push(Box::new(ILNullTag::default()));
+    match write_ilint(sample.len() as u64, &mut exp) {
+        Ok(()) => (),
+        _ => panic!("Unable to serialize the tag count."),
+    }
+    serialize_box_tag_slice_size(sample.as_slice(), &mut exp);
+    let mut t = ILTagArrayTag::new();
+    let mut reader = ByteArrayReader::new(exp.as_slice());
+    match t.deserialize_value(&f, exp.vec().len(), &mut reader) {
+        Ok(()) => (),
+        _ => panic!("Unable to deserialize the tag."),
+    }
+    assert_eq!(t.value().len(), sample.len());
+    for i in 0..sample.len() {
+        assert!(iltag_are_equal(t.value()[i].as_ref(), sample[i].as_ref()));
+    }
+
+    // Error - last is corrupted
+    let mut reader = ByteArrayReader::new(exp.as_slice());
+    match t.deserialize_value(&f, exp.vec().len() - 2, &mut reader) {
+        Err(ErrorKind::IOError(_)) => (),
+        _ => panic!("Unable to serialize the tag."),
+    }
+
+    // Error - Counter is corrupted
+    match t.deserialize_value(&f, exp.vec().len() - 1, &mut reader) {
+        Err(ErrorKind::CorruptedData) => (),
+        _ => panic!("Unable to serialize the tag."),
+    }
+
+    // with unknown tag
+    let mut exp = VecWriter::default();
+    sample.push(Box::new(ILILInt64Tag::with_value(12345678)));
+    sample.push(Box::new(ILILInt64Tag::with_id_value(1234, 12345678)));
+    sample.push(Box::new(ILNullTag::default()));
+    match write_ilint(sample.len() as u64, &mut exp) {
+        Ok(()) => (),
+        _ => panic!("Unable to serialize the tag count."),
+    }
+    serialize_box_tag_slice_size(sample.as_slice(), &mut exp);
+    let mut t = ILTagArrayTag::new();
+    let mut reader = ByteArrayReader::new(exp.as_slice());
+    match t.deserialize_value(&f, exp.vec().len(), &mut reader) {
+        Err(_) => (),
+        _ => panic!("Unable to deserialize the tag."),
+    }
 }
