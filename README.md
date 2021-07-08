@@ -13,3 +13,8 @@ Rust standard library.
 ## License
 
 This library is licensed under a 3-Clause BSD license.
+
+## Maintainers
+
+- Fabio Jun Takada Chino
+- Cesar Luiz Ferracin

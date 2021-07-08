@@ -46,22 +46,30 @@ use crate::io::{Reader, Writer};
 use ::std::any::Any;
 use ::std::collections::HashMap;
 
-/// Maximum tag size that can be handled by this library.
+/// Maximum tag size that can be handled by this library. It in this version it is set to 512MB.
 pub const MAX_TAG_SIZE: u64 = 1024 * 1024 * 512;
 
 /// Definition of the errors from this package.
 pub enum ErrorKind {
+    /// If an unknown tag is found.
     UnknownTag,
+    /// If an unsupported tag is found.
     UnsupportedTag,
+    /// If the tag data is corrupted.
     CorruptedData,
+    /// If the tag cannot be handled due to memory constraints.
     TagTooLarge,
+    /// If an unexpected tag type is found in the data stream.
     UnexpectedTagType,
+    /// If the tag cannot be serialized.
     UnableToSerialize,
+    /// Wraper to I/O errors.
     IOError(crate::io::ErrorKind),
+    /// Wrapper to boxed errors.
     Boxed(Box<dyn ::std::error::Error>),
 }
 
-/// Alias to errors from this package.
+/// A specialized [`std::result::Result`] for operations of this module.
 pub type Result<T> = ::std::result::Result<T, ErrorKind>;
 
 /// Maximum tag id value for implicit tags.
@@ -135,7 +143,7 @@ pub fn serialize_ilint(value: u64, writer: &mut dyn Writer) -> Result<()> {
     }
 }
 
-/// Unserializes an u64 from a reader.
+/// Unserializes an ILInt value.
 ///
 /// Arguments:
 /// - `reader`: The reader;
@@ -208,7 +216,12 @@ pub fn deserialize_bytes_into_vec(
 //=============================================================================
 // ILTag
 //-----------------------------------------------------------------------------
-/// This trait must be implemented by all ILTags on this library.
+/// This trait must be implemented by all **ILTags** on this library. It defines
+/// the basic methods for tag identification, serialization and deserialization
+/// of values.
+///
+/// The actual manipulation of the information inside the tags must be handled
+/// directly by each tag implementation by the use of [`std::any::Any`] trait.
 pub trait ILTag: Any + Send {
     /// Returns the ID of the tag.
     fn id(&self) -> u64;
@@ -293,7 +306,7 @@ pub trait ILTag: Any + Send {
     fn as_mut_any(&mut self) -> &mut dyn Any;
 }
 
-/// Downcasts a ILTag trait to its concrete type.
+/// Downcasts a [`ILTag`] to its concrete type.
 ///
 /// Arguments:
 /// * `tag`: The tag to be downcast;
@@ -306,7 +319,7 @@ pub fn tag_downcast_ref<T: ILTag + Any>(tag: &dyn ILTag) -> Option<&T> {
     tag.as_any().downcast_ref::<T>()
 }
 
-/// Downcasts a ILTag trait to its concrete type as a mutable reference.
+/// Downcasts a [`ILTag`] to its concrete type as a mutable reference.
 ///
 /// Arguments:
 /// * `tag`: The tag to be downcast;
@@ -319,7 +332,7 @@ pub fn tag_downcast_mut<T: ILTag + Any>(tag: &mut dyn ILTag) -> Option<&mut T> {
     tag.as_mut_any().downcast_mut::<T>()
 }
 
-/// Downcasts a ILTag trait to its concrete type. It fails if the tag id or
+/// Downcasts a [`ILTag`] to its concrete type. It fails if the tag id or
 /// the concrete type does not match.
 ///
 /// Arguments:
@@ -341,7 +354,7 @@ pub fn tag_id_downcast_ref<T: ILTag + Any>(tag_id: u64, tag: &dyn ILTag) -> Resu
     }
 }
 
-/// Downcasts a ILTag trait to its concrete type as a mutable reference. It fails
+/// Downcasts a [`ILTag`] to its concrete type as a mutable reference. It fails
 /// if the tag id or the concrete type does not match.
 ///
 /// Arguments:
@@ -368,6 +381,9 @@ pub fn tag_id_downcast_mut<T: ILTag + Any>(tag_id: u64, tag: &mut dyn ILTag) -> 
 //-----------------------------------------------------------------------------
 /// This trait defines a variant of the [`std::default::Default`] trait that
 /// takes an id as a parameter.
+///
+/// Most of the tags implemented by this library do implement this trait but it
+/// is not mandatory.
 pub trait DefaultWithId {
     /// Creates a default tag with.
     ///
@@ -380,17 +396,35 @@ pub trait DefaultWithId {
 //=============================================================================
 // ILTagFactory
 //-----------------------------------------------------------------------------
-/// This trait must be implemented by all tag factories.
+/// This trait must be implemented by all tag factories. Factories are used
+/// to deserialize tags into the most appropriate concreate implemetation that
+/// will handle a given tag id.
 pub trait ILTagFactory: Send {
+    /// Creates an empty tag for the given id.
+    ///
+    /// Arguments:
+    /// - `tag_id`: The tag id;
+    ///
+    /// Returns:
+    /// - Some(t): A boxed tag that implements the given tag id;
+    /// - None: If the tag id does not have a suitable implementation;
     fn create_tag(&self, tag_id: u64) -> Option<Box<dyn ILTag>>;
 
+    /// Deserializes a tag from a reader.
+    ///
+    /// Arguments:
+    /// - `reader`: The reader that contains the tag;
+    ///
+    /// Retunrs:
+    /// The boxed deserialized tag or an error in case of failure.
     fn deserialize(&self, reader: &mut dyn Reader) -> Result<Box<dyn ILTag>>;
 }
 
 //=============================================================================
 // ILTagCreator
 //-----------------------------------------------------------------------------
-/// This trait must be implemented by all tag creators.
+/// This trait must be implemented by all tag creators. A tag creator is used
+///  by [`ILTagCreatorEngine`] to create new tag instances.
 pub trait ILTagCreator: Send {
     /// Creates a new boxed instance of the the class.
     ///
@@ -466,7 +500,7 @@ impl<T: ILTag + DefaultWithId> ILTagCreator for ILDefaultWithIdTagCreator<T> {
 }
 
 //=============================================================================
-// ILCreatorEngine
+// ILTagCreatorEngine
 //-----------------------------------------------------------------------------
 /// This struct implements an engine that maps the ILTagCreators
 /// to the associated tag ID. It can be used as a component to implement

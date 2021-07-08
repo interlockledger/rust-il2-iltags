@@ -29,9 +29,12 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-//! This module implements extension traits for [`Reader`] and [`Writer`] that
+//! This module implements functions for [`Reader`] and [`Writer`] that
 //! allows the manipulation of basic data types as defined by the **ILTags**
 //! standard.
+//!
+//! All interger types are handled as being encoded as Big Endian values as
+//! defined by the **ILTags** specification.
 #[cfg(test)]
 mod tests;
 

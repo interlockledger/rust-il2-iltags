@@ -31,9 +31,6 @@
  */
 //! This module contains the implementation of [`Reader`] and [`Writer`] for
 //! arrays, slices and vectors.
-//!
-//! [`Reader`]: ../trait.Reader.html
-//! [`Writer`]: ../trait.Writer.html
 use super::{ErrorKind, Reader, Result, Writer};
 
 #[cfg(test)]
@@ -42,7 +39,7 @@ mod tests;
 //=============================================================================
 // ByteArrayReader
 //-----------------------------------------------------------------------------
-/// `ByteArrayReader` implements a [`Reader`] that
+/// [`ByteArrayReader`] implements a [`Reader`] that
 /// can extract bytes from a borrowed slice of bytes.
 ///
 /// [`Reader`]: ../trait.Reader.html
@@ -135,7 +132,7 @@ impl<'a> Reader for ByteArrayReader<'a> {
 //=============================================================================
 // VecReader
 //-----------------------------------------------------------------------------
-/// `VecReader` implements a [`Writer`] that uses a Vec<u8> a
+/// [`VecReader`] implements a [`Writer`] that uses a Vec<u8> a
 /// its backend.
 ///
 /// [`Reader`]: ../trait.Reader.html
@@ -238,7 +235,7 @@ impl<'a> Reader for VecReader {
 //=============================================================================
 // VecWriter
 //-----------------------------------------------------------------------------
-/// `VecWriter` implements a [`Writer`] that uses a Vec<u8> a
+/// [`VecWriter`] implements a [`Writer`] that uses a Vec<u8> a
 /// its backend.
 ///
 /// [`Writer`]: ../trait.Writer.html
