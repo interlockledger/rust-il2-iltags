@@ -479,6 +479,12 @@ impl ILILIntArrayTag {
     pub fn mut_value(&mut self) -> &mut Vec<u64> {
         &mut self.value
     }
+
+    /// Sets the value.
+    pub fn set_value(&mut self, value: &[u64]) {
+        self.value.clear();
+        self.value.extend_from_slice(value);
+    }
 }
 
 impl ILTag for ILILIntArrayTag {
@@ -769,10 +775,7 @@ impl ILTag for ILRangeTag {
         reader: &mut dyn Reader,
     ) -> Result<()> {
         let mut lreader = LimitedReader::new(reader, value_size);
-        self.start = match read_ilint(&mut lreader) {
-            Ok(v) => v,
-            Err(e) => return Err(ErrorKind::IOError(e)),
-        };
+        self.start = deserialize_ilint(&mut lreader)?;
         self.count = match read_u16(&mut lreader) {
             Ok(v) => v,
             Err(e) => return Err(ErrorKind::IOError(e)),
@@ -798,6 +801,15 @@ pub struct ILVersionTag {
 }
 
 impl ILVersionTag {
+    /// Index of major component.
+    pub const MAJOR: usize = 0;
+    /// Index of minor component.
+    pub const MINOR: usize = 1;
+    /// Index of revision component.
+    pub const REVISION: usize = 2;
+    /// Index of build component.
+    pub const BUILD: usize = 3;
+
     /// Creates a new instance of this struct.
     pub fn new() -> Self {
         Self::with_id(IL_VERSION_TAG_ID)
@@ -823,36 +835,46 @@ impl ILVersionTag {
         }
     }
 
+    pub fn with_value_from_slice(version: &[i32; 4]) -> Self {
+        Self::with_id_value_from_slice(IL_VERSION_TAG_ID, version)
+    }
+
+    pub fn with_id_value_from_slice(id: u64, version: &[i32; 4]) -> Self {
+        let mut ret = Self { id, value: [0; 4] };
+        ret.set_value_from_slice(version);
+        ret
+    }
+
     pub fn major(&self) -> i32 {
-        self.value[0]
+        self.value[ILVersionTag::MAJOR]
     }
 
     pub fn set_major(&mut self, major: i32) {
-        self.value[0] = major;
+        self.value[ILVersionTag::MAJOR] = major;
     }
 
     pub fn minor(&self) -> i32 {
-        self.value[1]
+        self.value[ILVersionTag::MINOR]
     }
 
     pub fn set_minor(&mut self, minor: i32) {
-        self.value[1] = minor;
+        self.value[ILVersionTag::MINOR] = minor;
     }
 
-    pub fn release(&self) -> i32 {
-        self.value[2]
+    pub fn revision(&self) -> i32 {
+        self.value[ILVersionTag::REVISION]
     }
 
-    pub fn set_release(&mut self, release: i32) {
-        self.value[2] = release;
+    pub fn set_revision(&mut self, release: i32) {
+        self.value[ILVersionTag::REVISION] = release;
     }
 
     pub fn build(&self) -> i32 {
-        self.value[3]
+        self.value[ILVersionTag::BUILD]
     }
 
     pub fn set_build(&mut self, build: i32) {
-        self.value[3] = build;
+        self.value[ILVersionTag::BUILD] = build;
     }
 
     pub fn value(&self) -> &[i32; 4] {
@@ -876,8 +898,8 @@ impl ILTag for ILVersionTag {
     }
 
     fn serialize_value(&self, writer: &mut dyn Writer) -> Result<()> {
-        for v in &self.value {
-            match write_i32(*v, writer) {
+        for v in self.value {
+            match write_i32(v, writer) {
                 Ok(()) => (),
                 Err(e) => return Err(ErrorKind::IOError(e)),
             };
@@ -894,8 +916,8 @@ impl ILTag for ILVersionTag {
         if value_size != 16 {
             return Err(ErrorKind::CorruptedData);
         }
-        for i in 0..4 {
-            self.value[i] = match read_i32(reader) {
+        for v in &mut self.value {
+            *v = match read_i32(reader) {
                 Ok(v) => v,
                 Err(e) => return Err(ErrorKind::IOError(e)),
             };
@@ -943,12 +965,17 @@ impl ILOIDTag {
         }
     }
 
-    pub fn value(&self) -> &[u64] {
+    pub fn value(&self) -> &Vec<u64> {
         self.inner.value()
     }
 
-    pub fn mut_value(&mut self) -> &mut [u64] {
+    pub fn mut_value(&mut self) -> &mut Vec<u64> {
         self.inner.mut_value()
+    }
+
+    /// Sets the value.
+    pub fn set_value(&mut self, value: &[u64]) {
+        self.inner.set_value(value);
     }
 }
 
@@ -994,18 +1021,33 @@ impl ILDictTag {
     pub fn mut_value(&mut self) -> &mut HashMap<String, Box<dyn ILTag>> {
         &mut self.value
     }
+
+    pub fn len(&self) -> usize {
+        self.value.len()
+    }
+
+    pub fn insert(&mut self, k: &str, v: Box<dyn ILTag>) -> Option<Box<dyn ILTag>> {
+        self.value.insert(String::from(k), v)
+    }
+
+    pub fn get(&self, k: &str) -> Option<&dyn ILTag> {
+        match self.value.get(k) {
+            Some(t) => Some(t.as_ref()),
+            None => None,
+        }
+    }
 }
 
 impl ILTag for ILDictTag {
     iltag_base_func_impl!();
 
     fn value_size(&self) -> u64 {
-        let mut size: u64 = 0;
-        for (key, value) in self.value.iter() {
-            size += string_tag_size_from_value(key);
-            size += value.size();
-        }
-        size
+        (crate::ilint::encoded_size(self.value.len() as u64) as u64)
+            + self
+                .value
+                .iter()
+                .map(|(k, v)| string_tag_size_from_value(k) + v.size())
+                .sum::<u64>()
     }
 
     fn serialize_value(&self, writer: &mut dyn Writer) -> Result<()> {
@@ -1014,6 +1056,7 @@ impl ILTag for ILDictTag {
             keys.push(key);
         }
         keys.sort_unstable();
+        serialize_ilint(self.value.len() as u64, writer)?;
         for key in keys {
             let value = match self.value.get(key) {
                 Some(s) => s,
@@ -1032,14 +1075,19 @@ impl ILTag for ILDictTag {
         reader: &mut dyn Reader,
     ) -> Result<()> {
         let mut lreader = LimitedReader::new(reader, value_size);
+        let count = deserialize_ilint(&mut lreader)?;
         self.value.clear();
-        while lreader.available() > 0 {
+        for _ in 0..count {
             self.value.insert(
                 deserialize_string_tag_from_value(&mut lreader)?,
                 factory.deserialize(&mut lreader)?,
             );
         }
-        Ok(())
+        if lreader.empty() {
+            Ok(())
+        } else {
+            Err(ErrorKind::CorruptedData)
+        }
     }
 }
 
@@ -1080,18 +1128,33 @@ impl ILStrDictTag {
     pub fn mut_value(&mut self) -> &mut HashMap<String, String> {
         &mut self.value
     }
+
+    pub fn len(&self) -> usize {
+        self.value.len()
+    }
+
+    pub fn insert(&mut self, k: &str, v: &str) -> Option<String> {
+        self.value.insert(String::from(k), String::from(v))
+    }
+
+    pub fn get(&self, k: &str) -> Option<&str> {
+        match self.value.get(k) {
+            Some(t) => Some(t.as_ref()),
+            None => None,
+        }
+    }
 }
 
 impl ILTag for ILStrDictTag {
     iltag_base_func_impl!();
 
     fn value_size(&self) -> u64 {
-        let mut size: u64 = 0;
-        for (key, value) in self.value.iter() {
-            size += string_tag_size_from_value(key);
-            size += string_tag_size_from_value(value);
-        }
-        size
+        (crate::ilint::encoded_size(self.value.len() as u64) as u64)
+            + self
+                .value
+                .iter()
+                .map(|(k, v)| string_tag_size_from_value(k) + string_tag_size_from_value(v))
+                .sum::<u64>()
     }
 
     fn serialize_value(&self, writer: &mut dyn Writer) -> Result<()> {
@@ -1100,6 +1163,7 @@ impl ILTag for ILStrDictTag {
             keys.push(key);
         }
         keys.sort_unstable();
+        serialize_ilint(self.value().len() as u64, writer)?;
         for key in keys {
             let value = match self.value.get(key) {
                 Some(s) => s,
@@ -1118,14 +1182,19 @@ impl ILTag for ILStrDictTag {
         reader: &mut dyn Reader,
     ) -> Result<()> {
         let mut lreader = LimitedReader::new(reader, value_size);
+        let count = deserialize_ilint(&mut lreader)?;
         self.value.clear();
-        while lreader.available() > 0 {
+        for _ in 0..count {
             self.value.insert(
                 deserialize_string_tag_from_value(&mut lreader)?,
                 deserialize_string_tag_from_value(&mut lreader)?,
             );
         }
-        Ok(())
+        if lreader.empty() {
+            Ok(())
+        } else {
+            Err(ErrorKind::CorruptedData)
+        }
     }
 }
 
