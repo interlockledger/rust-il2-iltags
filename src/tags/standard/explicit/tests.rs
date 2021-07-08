@@ -1884,3 +1884,162 @@ fn test_ildicttag_iltag_deserialze_value_strict() {
         _ => panic!("Unable to serialize the tag."),
     }
 }
+
+//=============================================================================
+// ILDictTag
+//-----------------------------------------------------------------------------
+#[test]
+fn test_ilstrdicttag_impl() {
+    let t = ILStrDictTag::new();
+    assert_eq!(t.id(), IL_STRING_DICTIONARY_TAG_ID);
+    assert_eq!(t.len(), 0);
+
+    let t = ILStrDictTag::with_id(1234);
+    assert_eq!(t.id(), 1234);
+    assert_eq!(t.len(), 0);
+
+    let mut t = ILStrDictTag::default();
+    assert_eq!(t.id(), IL_STRING_DICTIONARY_TAG_ID);
+    assert_eq!(t.len(), 0);
+    match t.insert("test1", "test2") {
+        None => (),
+        _ => panic!("Should be empty."),
+    }
+    let v = match t.get("test1") {
+        Some(v) => v,
+        _ => panic!("Value not found!"),
+    };
+    assert_eq!(v, "test2");
+}
+
+fn create_sample_ilstrdicttag() -> ILStrDictTag {
+    let mut t = ILStrDictTag::new();
+    t.insert("c", "c");
+    t.insert("a", "A");
+    t.insert("b", "b");
+    t
+}
+
+#[test]
+fn test_ilstrdicttag_iltag_value_size() {
+    // Empty
+    let t = ILStrDictTag::new();
+    assert_eq!(t.value_size(), 1);
+
+    // With multiple tags
+    let t = create_sample_ilstrdicttag();
+    let exp = (crate::ilint::encoded_size(t.len() as u64) as u64)
+        + t.value()
+            .iter()
+            .map(|(k, v)| (string_tag_size_from_value(k) + string_tag_size_from_value(v)) as u64)
+            .sum::<u64>();
+    assert_eq!(t.value_size(), exp);
+}
+
+#[test]
+fn test_ilstrdicttag_iltag_serialze_value() {
+    // Empty
+    let exp: [u8; 1] = [0];
+    let t = ILStrDictTag::new();
+    let mut writer = VecWriter::default();
+    match t.serialize_value(&mut writer) {
+        Ok(()) => (),
+        _ => panic!("Unable to serialize the tag."),
+    }
+    assert_eq!(writer.as_slice(), &exp);
+
+    // With multiple tags - check the order
+    let t = create_sample_ilstrdicttag();
+    let mut exp = VecWriter::default();
+    write_value_for_testing!(write_ilint, t.len() as u64, &mut exp);
+    for k in SAMPLE_SORTED_KEYS {
+        write_value_for_testing!(serialize_string_tag_from_value, k, &mut exp);
+        write_value_for_testing!(serialize_string_tag_from_value, t.get(k).unwrap(), &mut exp);
+    }
+
+    let mut writer = VecWriter::default();
+    match t.serialize_value(&mut writer) {
+        Ok(()) => (),
+        _ => panic!("Unable to serialize the tag."),
+    }
+    assert_eq!(writer.as_slice(), exp.as_slice());
+}
+
+#[test]
+fn test_ilstrdicttag_iltag_deserialze_value() {
+    let f = UntouchbleTagFactory::new();
+
+    // Empty
+    let exp: [u8; 1] = [0];
+    let mut t = ILStrDictTag::new();
+    t.insert("x", "y");
+    let mut reader = ByteArrayReader::new(&exp);
+    match t.deserialize_value(&f, exp.len(), &mut reader) {
+        Ok(()) => (),
+        _ => panic!("Unable to serialize the tag."),
+    }
+    assert_eq!(t.len(), 0);
+
+    // With multiple tags - check the order
+    let sample = create_sample_ilstrdicttag();
+    let mut exp = VecWriter::default();
+    write_value_for_testing!(write_ilint, sample.len() as u64, &mut exp);
+    for k in SAMPLE_SORTED_KEYS {
+        write_value_for_testing!(serialize_string_tag_from_value, k, &mut exp);
+        write_value_for_testing!(
+            serialize_string_tag_from_value,
+            sample.get(k).unwrap(),
+            &mut exp
+        );
+    }
+
+    let mut t = ILStrDictTag::new();
+    let mut reader = ByteArrayReader::new(exp.as_slice());
+    match t.deserialize_value(&f, exp.as_slice().len(), &mut reader) {
+        Ok(()) => (),
+        _ => panic!("Unable to serialize the tag."),
+    }
+    assert_eq!(t.len(), sample.len());
+    for k in SAMPLE_SORTED_KEYS {
+        assert_eq!(sample.get(k).unwrap(), t.get(k).unwrap());
+    }
+
+    // Error - Missing tag
+    let mut t = ILStrDictTag::new();
+    let mut reader = ByteArrayReader::new(exp.as_slice());
+    match t.deserialize_value(&f, exp.as_slice().len() - 1, &mut reader) {
+        Err(_) => (),
+        _ => panic!("Unable to serialize the tag."),
+    }
+
+    // Error - Missing pair
+    let mut t = ILStrDictTag::new();
+    let mut reader = ByteArrayReader::new(exp.as_slice());
+    match t.deserialize_value(&f, exp.as_slice().len() - 3 - 1, &mut reader) {
+        Err(_) => (),
+        _ => panic!("Unable to serialize the tag."),
+    }
+
+    // Error - Too much data
+    let mut t = ILStrDictTag::new();
+    let mut reader = ByteArrayReader::new(exp.as_slice());
+    match t.deserialize_value(&f, exp.as_slice().len() + 1, &mut reader) {
+        Err(_) => (),
+        _ => panic!("Unable to serialize the tag."),
+    }
+
+    // With multiple tags - check the order
+    let sample = create_sample_ildicttag();
+    let mut exp = VecWriter::default();
+    write_value_for_testing!(write_ilint, sample.len() as u64, &mut exp);
+    for k in SAMPLE_SORTED_KEYS {
+        write_value_for_testing!(serialize_string_tag_from_value, k, &mut exp);
+        serialize_tag_for_testing(sample.get(k).unwrap(), &mut exp);
+    }
+    let mut t = ILStrDictTag::new();
+    let mut reader = ByteArrayReader::new(exp.as_slice());
+    match t.deserialize_value(&f, exp.as_slice().len(), &mut reader) {
+        Err(_) => (),
+        _ => panic!("Unable to detect issues."),
+    }
+}
