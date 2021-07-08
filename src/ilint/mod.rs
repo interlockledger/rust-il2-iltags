@@ -45,12 +45,13 @@ use super::io::{Reader, Writer};
 pub enum ErrorKind {
     /// The encoded value is larger than 2^64 - 1.
     ValueOverflow,
+    /// In case of an invalid format.
     InvalidFormat,
     /// I/O error.
     IOError(crate::io::ErrorKind),
 }
 
-/// Alias to the errors .
+/// A specialized [`std::result::Result`] for operations of this module.
 pub type Result<T> = std::result::Result<T, ErrorKind>;
 
 /// LInt base value. All values smaller than this value are encoded as

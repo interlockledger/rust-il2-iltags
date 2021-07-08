@@ -30,7 +30,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 use super::*;
-use crate::io::{ByteArrayReader, VecWriter};
+use crate::io::array::{ByteArrayReader, VecWriter};
 
 pub struct SampleILInt {
     pub value: u64,

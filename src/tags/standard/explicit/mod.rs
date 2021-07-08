@@ -1014,22 +1014,61 @@ impl ILDictTag {
         }
     }
 
+    /// Returns an immutable reference to the [`std::collections::hash_map::HashMap`]
+    /// used to hold the key/value pairs.
     pub fn value(&self) -> &HashMap<String, Box<dyn ILTag>> {
         &self.value
     }
 
+    /// Returns a mutable reference to the [`std::collections::hash_map::HashMap`]
+    /// used to hold the key/value pairs.
     pub fn mut_value(&mut self) -> &mut HashMap<String, Box<dyn ILTag>> {
         &mut self.value
     }
 
+    /// Returns the number of pairs inside this tag.
     pub fn len(&self) -> usize {
         self.value.len()
     }
 
+    /// Returns true if this tag is empty or false otherwise.
+    pub fn is_empty(&self) -> bool {
+        self.value.is_empty()
+    }
+
+    /// Inserts a new pair into this tag. It is a shortcut to:
+    ///
+    /// ```
+    /// let ret = tag.mut_value().insert(String::from(k), v);
+    /// ```
+    ///
+    /// Arguments:
+    /// `k`: The key;
+    /// `v`: The boxed value;
+    ///
+    /// Returns:
+    /// - `Some(old)`: The value of the older value;
+    /// - `None`: If it is the first insertion of this key;    
     pub fn insert(&mut self, k: &str, v: Box<dyn ILTag>) -> Option<Box<dyn ILTag>> {
         self.value.insert(String::from(k), v)
     }
 
+    /// Returns an immutable reference to the value associated with a
+    /// given key. It is a shortcut to:
+    ///
+    /// ```
+    /// let ret = match tag.mut_value().get(k) {
+    ///     Some(t) => Some(t.as_ref()),
+    ///     None => None,
+    /// }
+    /// ```
+    ///
+    /// Arguments:
+    /// `k`: The key;
+    ///
+    /// Returns:
+    /// - `Some(v)`: The value associated with the key;
+    /// - `None`: If the key is not inside this tag;
     pub fn get(&self, k: &str) -> Option<&dyn ILTag> {
         match self.value.get(k) {
             Some(t) => Some(t.as_ref()),
@@ -1098,6 +1137,10 @@ iltag_default_impl!(ILDictTag);
 //-----------------------------------------------------------------------------
 /// This struct implements the standard string dictionary tag. It always maps
 /// strings to strings.
+///
+/// This tag is binary compatible with the implementation of [`ILDictTag`]
+/// however, this implementation is optimized to handle strings and offer
+/// easier ways to deal with them.
 pub struct ILStrDictTag {
     id: u64,
     value: HashMap<String, String>,
@@ -1121,22 +1164,61 @@ impl ILStrDictTag {
         }
     }
 
+    /// Returns an immutable reference to the [`std::collections::hash_map::HashMap`]
+    /// used to hold the key/value pairs.
     pub fn value(&self) -> &HashMap<String, String> {
         &self.value
     }
 
+    /// Returns a mutable reference to the [`std::collections::hash_map::HashMap`]
+    /// used to hold the key/value pairs.
     pub fn mut_value(&mut self) -> &mut HashMap<String, String> {
         &mut self.value
     }
 
+    /// Returns the number of pairs inside this tag.
     pub fn len(&self) -> usize {
         self.value.len()
     }
 
+    /// Returns true if this tag is empty or false otherwise.
+    pub fn is_empty(&self) -> bool {
+        self.value.is_empty()
+    }
+
+    /// Inserts a new pair into this tag. It is a shortcut to:
+    ///
+    /// ```
+    /// let ret = tag.mut_value().insert(String::from(k), String::from(v));
+    /// ```
+    ///
+    /// Arguments:
+    /// `k`: The key;
+    /// `v`: The value;
+    ///
+    /// Returns:
+    /// - `Some(old)`: The value of the older value;
+    /// - `None`: If it is the first insertion of this key;
     pub fn insert(&mut self, k: &str, v: &str) -> Option<String> {
         self.value.insert(String::from(k), String::from(v))
     }
 
+    /// Returns an immutable reference to the value associated with a
+    /// given key. It is a shortcut to:
+    ///
+    /// ```
+    /// let ret = match tag.mut_value().get(k) {
+    ///     Some(t) => Some(t.as_ref()),
+    ///     None => None,
+    /// }
+    /// ```
+    ///
+    /// Arguments:
+    /// `k`: The key;
+    ///
+    /// Returns:
+    /// - `Some(v)`: The value associated with the key;
+    /// - `None`: If the key is not inside this tag;
     pub fn get(&self, k: &str) -> Option<&str> {
         match self.value.get(k) {
             Some(t) => Some(t.as_ref()),

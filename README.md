@@ -7,7 +7,7 @@ the [specification of IL2](https://github.com/interlockledger/specification/tree
 
 ## Dependencies
 
-This library has been developed to run without any external dependencies aside from the
+This library has been developed to run without any external dependencies aside for the
 Rust standard library.
 
 ## License
