@@ -18,3 +18,10 @@ This library is licensed under a 3-Clause BSD license.
 
 - Fabio Jun Takada Chino
 - Cesar Luiz Ferracin
+
+## Version history
+
+- 1.0.1:
+    - Issue #1 - Invalid code snippets marked as ignored;
+- 1.0.0:
+    - Initial release;
