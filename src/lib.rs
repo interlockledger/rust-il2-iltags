@@ -40,6 +40,10 @@
 //! This implementation is loosely based on the C++ implementation of this
 //! standard available [here](https://github.com/interlockledger/interlockrecord).
 //!
+//! ## Project location
+//!
+//! This project is hosted at [Github](https://github.com/interlockledger/rust-il2-iltags).
+//!
 //! ## License
 //!
 //! This library is licensed under a **BSD 3-Clause**.
