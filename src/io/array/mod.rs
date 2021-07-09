@@ -41,8 +41,6 @@ mod tests;
 //-----------------------------------------------------------------------------
 /// [`ByteArrayReader`] implements a [`Reader`] that
 /// can extract bytes from a borrowed slice of bytes.
-///
-/// [`Reader`]: ../trait.Reader.html
 pub struct ByteArrayReader<'a> {
     array: &'a [u8],
     offset: usize,
@@ -128,10 +126,11 @@ impl<'a> Reader for ByteArrayReader<'a> {
 //=============================================================================
 // VecReader
 //-----------------------------------------------------------------------------
-/// [`VecReader`] implements a [`Writer`] that uses a Vec<u8> a
-/// its backend.
+/// [`VecReader`] implements a [`Writer`] that uses a Vec<u8> a its backend.
 ///
-/// [`Reader`]: ../trait.Reader.html
+/// It differs from [`ByteArrayReader`] by the fact that it copies the data
+/// into a vector owned by it instead of borrowing the data from a byte array
+/// slice.
 pub struct VecReader {
     vector: Vec<u8>,
     offset: usize,
@@ -227,10 +226,7 @@ impl<'a> Reader for VecReader {
 //=============================================================================
 // VecWriter
 //-----------------------------------------------------------------------------
-/// [`VecWriter`] implements a [`Writer`] that uses a Vec<u8> a
-/// its backend.
-///
-/// [`Writer`]: ../trait.Writer.html
+/// [`VecWriter`] implements a [`Writer`] that uses a Vec<u8> a its backend.
 pub struct VecWriter {
     vector: Vec<u8>,
     offset: usize,
