@@ -104,8 +104,8 @@ macro_rules! std_byte_array_tag_func_impl {
 //=============================================================================
 // ILByteArrayTag
 //-----------------------------------------------------------------------------
-/// This struct the standard byte array tag. It is equivalent `ILRawTag` but
-/// always set the tag id to `IL_BYTES_TAG_ID`.
+/// This struct implements the standard byte array tag. It is equivalent
+/// [`ILRawTag`] but always set the tag id to [`IL_BYTES_TAG_ID`].
 pub struct ILByteArrayTag {
     inner: ILRawTag,
 }
@@ -135,7 +135,9 @@ impl Default for ILByteArrayTag {
 //=============================================================================
 // ILStringTag
 //-----------------------------------------------------------------------------
-/// This struct the standard string tag.
+/// This struct implements the standard string tag.
+///
+/// By default it sets the tag id to [`IL_STRING_TAG_ID`].
 pub struct ILStringTag {
     id: u64,
     value: String,
@@ -151,7 +153,7 @@ impl ILStringTag {
     /// specified initial value.
     ///
     /// Arguments:
-    /// * `value`: A byte slice with the initial value;
+    /// * `id`: The alternative tag id;
     pub fn with_id(id: u64) -> Self {
         Self {
             id,
@@ -159,10 +161,21 @@ impl ILStringTag {
         }
     }
 
+    /// Creates a new instance of this struct with the
+    /// specified initial value.
+    ///
+    /// Arguments:
+    /// - `value`: The initial value;
     pub fn with_value(value: &str) -> Self {
         Self::with_id_value(IL_STRING_TAG_ID, value)
     }
 
+    /// Creates a new instance of this struct with the
+    /// specified initial value.
+    ///
+    /// Arguments:
+    /// * `id`: The alternative tag id;
+    /// - `value`: The initial value;
     pub fn with_id_value(id: u64, value: &str) -> Self {
         Self {
             id,
@@ -170,14 +183,21 @@ impl ILStringTag {
         }
     }
 
-    pub fn value(&self) -> &String {
+    /// Returns a reference to the value of this tag.
+    pub fn value(&self) -> &str {
         &self.value
     }
 
+    /// Returns a mutable reference to the value of this
+    /// tag.
     pub fn mut_value(&mut self) -> &mut String {
         &mut self.value
     }
 
+    /// Sets the value of this tag.
+    ///
+    /// Arguments:
+    /// - `value`: The new value.
     pub fn set_value(&mut self, value: &str) {
         self.value.replace_range(.., value);
     }
@@ -295,9 +315,9 @@ pub fn deserialize_string_tag_from_value(reader: &mut dyn Reader) -> Result<Stri
 //=============================================================================
 // ILBigIntTag
 //-----------------------------------------------------------------------------
-/// This struct the standard big integer tag. It is equivalent to the `ILRawTag`
-/// but fixes the tag id to `IL_BINT_TAG_ID`. It assumes that the value is always
-/// encoded as a two's complement big endian value.
+/// This struct implements the standard big integer tag. It is equivalent to
+/// the [`ILRawTag`] but fixes the tag id to [`IL_BINT_TAG_ID`]. It assumes that
+/// the value is always encoded as a two's complement big endian value.
 pub struct ILBigIntTag {
     inner: ILRawTag,
 }
@@ -317,9 +337,11 @@ impl Default for ILBigIntTag {
 //=============================================================================
 // ILBigDecTag
 //-----------------------------------------------------------------------------
-/// This struct the standard big decimal tag. This tag serializes the data
-/// into a scale value (i32) and the integral part encoded as a two's complement
-/// big endian value.
+/// This struct implements the standard big decimal tag. This tag serializes
+/// the data into a scale value (i32) and the integral part encoded as a two's
+/// complement big endian value.
+///
+/// By default it sets the tag id to [`IL_BDEC_TAG_ID`].
 pub struct ILBigDecTag {
     inner: ILRawTag,
     scale: i32,
@@ -426,8 +448,10 @@ iltag_default_impl!(ILBigDecTag);
 //=============================================================================
 // ILILIntArrayTag
 //-----------------------------------------------------------------------------
-/// This struct the standard ILInt array tag. It is an array of u64 values
-/// encoded using ILInt format.
+/// This struct implements the standard ILInt array tag. It is an array of u64
+/// values encoded using ILInt format.
+///
+/// By default it sets the tag id to [`IL_ILINTARRAY_TAG_ID`].
 pub struct ILILIntArrayTag {
     id: u64,
     value: Vec<u64>,
@@ -538,7 +562,9 @@ iltag_default_impl!(ILILIntArrayTag);
 //=============================================================================
 // ILTagSeqTag
 //-----------------------------------------------------------------------------
-/// This struct the standard tag sequence tag.
+/// This struct implements the standard tag sequence tag.
+///
+/// By default it sets the tag id to [`IL_ILTAGSEQ_TAG_ID`].
 pub struct ILTagSeqTag {
     id: u64,
     value: Vec<Box<dyn ILTag>>,
@@ -612,9 +638,11 @@ iltag_default_impl!(ILTagSeqTag);
 //=============================================================================
 // ILTagArrayTag
 //-----------------------------------------------------------------------------
-/// This struct the standard tag array tag. It differs from ILTagSeqTag
-/// because it serializes the number of entries before the serialization of the
-/// tags.
+/// This struct implements the standard tag array tag. It differs from
+/// [`ILTagSeqTag`] because it serializes the number of entries before the
+/// serialization of the tags.
+///
+/// By default it sets the tag id to [`IL_ILTAGARRAY_TAG_ID`].
 pub struct ILTagArrayTag {
     inner: ILTagSeqTag,
 }
@@ -686,8 +714,10 @@ iltag_default_impl!(ILTagArrayTag);
 //=============================================================================
 // ILRangeTag
 //-----------------------------------------------------------------------------
-/// This struct the standard range tag. The range tag consists of a starting
-/// value (u64) followed by the number of entries (u16).
+/// This struct implemens the standard range tag. The range tag consists of a
+/// starting value (u64) followed by the number of entries (u16).
+///
+/// By default it sets the tag id to [`IL_RANGE_TAG_ID`].
 pub struct ILRangeTag {
     id: u64,
     start: u64,
@@ -782,8 +812,11 @@ iltag_default_impl!(ILRangeTag);
 //=============================================================================
 // ILVersionTag
 //-----------------------------------------------------------------------------
-/// This struct the standard version tag. It encodes the 4 parts of the version
-/// as i32 values. Those parts are named major, minor, revision and build.
+/// This struct implements the standard version tag. It encodes the 4 parts of
+/// the version as i32 values. Those parts are named major, minor, revision and
+/// build.
+///
+/// By default it sets the tag id to [`IL_VERSION_TAG_ID`].
 pub struct ILVersionTag {
     id: u64,
     value: [i32; 4],
@@ -920,9 +953,11 @@ iltag_default_impl!(ILVersionTag);
 //=============================================================================
 // ILOIDTag
 //-----------------------------------------------------------------------------
-/// This struct the standard OID tag. It is designed to store ITU Object
-/// identifier values as an array of u64 values. It uses the same encoding
-/// of `ILILIntArrayTag`.
+/// This struct implements the standard OID tag. It is designed to store ITU
+/// Object identifier values as an array of u64 values. It uses the same
+/// encoding of [`ILILIntArrayTag`].
+///
+/// By default it sets the tag id to [`IL_OID_TAG_ID`].
 pub struct ILOIDTag {
     inner: ILILIntArrayTag,
 }
@@ -975,11 +1010,13 @@ iltag_default_impl!(ILOIDTag);
 //=============================================================================
 // ILDictTag
 //-----------------------------------------------------------------------------
-/// This struct implements the standard dictionary tag. It always maps string
-/// to tags.
+/// This struct implements the standard dictionary tag. It maps strings to
+/// tags.
 ///
 /// To ensure maximum the stability of the serialized data, the keys are sorted
-/// before the serialization.
+/// according to the lexicographic order before the serialization.
+///
+/// By default it sets the tag id to [`IL_DICTIONARY_TAG_ID`].
 pub struct ILDictTag {
     id: u64,
     value: HashMap<String, Box<dyn ILTag>>,
@@ -1126,6 +1163,8 @@ iltag_default_impl!(ILDictTag);
 /// This tag is binary compatible with the implementation of [`ILDictTag`]
 /// however, this implementation is optimized to handle strings and offer
 /// easier ways to deal with them.
+///
+/// By default it sets the tag id to [`IL_STRING_DICTIONARY_TAG_ID`].
 pub struct ILStrDictTag {
     id: u64,
     value: HashMap<String, String>,

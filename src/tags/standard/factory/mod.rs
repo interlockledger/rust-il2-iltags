@@ -57,6 +57,13 @@ use crate::tags::{
     ILTagCreatorEngine, ILTagFactory, Result,
 };
 
+/// This macro is a shortcut to the registration of a new [`ILDefaultTagCreator`] for
+/// the specified tag id and struct.
+///
+/// Arguments:
+/// - `$engine`: The engie instance;
+/// - `$tag_id`: The tag id;
+/// - `$tag_type`: The type that implements the tag;
 macro_rules! engine_register_macro {
     ($engine: ident, $tag_id: expr, $tag_type: ty) => {
         $engine.register(
@@ -66,14 +73,16 @@ macro_rules! engine_register_macro {
     };
 }
 
-/// This function crates a new ILTagCreatorEngine with all standard
+/// This function crates a new [`ILTagCreatorEngine`] with all standard
 /// tags already registered.
 ///
 /// Arguments:
-/// - `strict`: Defines if the ILTagCreatorEngine will be created in strict mode or not;
+/// - `strict`: Defines if the [`ILTagCreatorEngine`] will be created in
+///   strict mode or not;
 ///
 /// Returns:
-/// - The new instance of ILTagCreatorEngine with all standard tags already registered.
+/// - The new instance of [`ILTagCreatorEngine`] with all standard tags already
+///   registered.
 pub fn create_std_engine(strict: bool) -> ILTagCreatorEngine {
     let mut engine = ILTagCreatorEngine::new(strict);
     // Implicit
@@ -110,8 +119,10 @@ pub fn create_std_engine(strict: bool) -> ILTagCreatorEngine {
 //=============================================================================
 // ILStandardTagFactory
 //-----------------------------------------------------------------------------
-/// This struct implements the standard ILTagFactory factory. It
-/// can be extended to include custom tags if necessary.
+/// This struct implements the [`ILTagFactory`] for all standard tags.
+///
+/// It can be extended to include custom tags if necessary by registering new
+/// tag creators for the desired tag id.
 pub struct ILStandardTagFactory {
     engine: ILTagCreatorEngine,
 }
@@ -128,7 +139,7 @@ impl ILStandardTagFactory {
     }
 
     /// Grants a mutable access to the inner engine. It allows the
-    /// registration of new tag creators if
+    /// registration of new tag creators.
     ///
     /// Returns:
     /// - A mutable reference to the inner engine;

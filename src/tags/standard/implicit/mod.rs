@@ -203,6 +203,8 @@ pub fn implicit_tag_size(id: u64) -> u64 {
 // ILNullTag
 //-----------------------------------------------------------------------------
 /// This struct implements the null standard tag.
+///
+/// By default it sets the tag id to [`IL_NULL_TAG_ID`].
 pub struct ILNullTag {
     id: u64,
 }
@@ -247,6 +249,8 @@ iltag_default_impl!(ILNullTag);
 // ILBoolTag
 //-----------------------------------------------------------------------------
 /// This struct implements the boolean standard tag.
+///
+/// By default it sets the tag id to [`IL_BOOL_TAG_ID`].
 pub struct ILBoolTag {
     id: u64,
     value: bool,
@@ -295,6 +299,8 @@ iltag_default_impl!(ILBoolTag);
 // ILInt8Tag
 //-----------------------------------------------------------------------------
 /// This struct implements the i8 standard tag.
+///
+/// By default it sets the tag id to [`IL_INT8_TAG_ID`].
 pub struct ILInt8Tag {
     id: u64,
     value: i8,
@@ -310,6 +316,8 @@ iltag_default_impl!(ILInt8Tag);
 // ILUInt8Tag
 //-----------------------------------------------------------------------------
 /// This struct implements the u8 standard tag.
+///
+/// By default it sets the tag id to [`IL_UINT8_TAG_ID`].
 pub struct ILUInt8Tag {
     id: u64,
     value: u8,
@@ -325,6 +333,8 @@ iltag_default_impl!(ILUInt8Tag);
 // ILInt16Tag
 //-----------------------------------------------------------------------------
 /// This struct implements the i16 standard tag.
+///
+/// By default it sets the tag id to [`IL_INT16_TAG_ID`].
 pub struct ILInt16Tag {
     id: u64,
     value: i16,
@@ -340,6 +350,8 @@ iltag_default_impl!(ILInt16Tag);
 // ILUInt16Tag
 //-----------------------------------------------------------------------------
 /// This struct implements the u16 standard tag.
+///
+/// By default it sets the tag id to [`IL_UINT16_TAG_ID`].
 pub struct ILUInt16Tag {
     id: u64,
     value: u16,
@@ -355,6 +367,8 @@ iltag_default_impl!(ILUInt16Tag);
 // ILInt32Tag
 //-----------------------------------------------------------------------------
 /// This struct implements the i32 standard tag.
+///
+/// By default it sets the tag id to [`IL_INT32_TAG_ID`].
 pub struct ILInt32Tag {
     id: u64,
     value: i32,
@@ -370,6 +384,8 @@ iltag_default_impl!(ILInt32Tag);
 // ILUInt32Tag
 //-----------------------------------------------------------------------------
 /// This struct implements the u32 standard tag.
+///
+/// By default it sets the tag id to [`IL_UINT32_TAG_ID`].
 pub struct ILUInt32Tag {
     id: u64,
     value: u32,
@@ -385,6 +401,8 @@ iltag_default_impl!(ILUInt32Tag);
 // ILInt64Tag
 //-----------------------------------------------------------------------------
 /// This struct implements the i64 standard tag.
+///
+/// By default it sets the tag id to [`IL_INT64_TAG_ID`].
 pub struct ILInt64Tag {
     id: u64,
     value: i64,
@@ -400,6 +418,8 @@ iltag_default_impl!(ILInt64Tag);
 // ILUInt64Tag
 //-----------------------------------------------------------------------------
 /// This struct implements the u64 standard tag.
+///
+/// By default it sets the tag id to [`IL_UINT64_TAG_ID`].
 pub struct ILUInt64Tag {
     id: u64,
     value: u64,
@@ -415,6 +435,8 @@ iltag_default_impl!(ILUInt64Tag);
 // ILBin32Tag
 //-----------------------------------------------------------------------------
 /// This struct implements the bin32 (f32) standard tag.
+///
+/// By default it sets the tag id to [`IL_BIN32_TAG_ID`].
 pub struct ILBin32Tag {
     id: u64,
     value: f32,
@@ -430,6 +452,8 @@ iltag_default_impl!(ILBin32Tag);
 // ILBin64Tag
 //-----------------------------------------------------------------------------
 /// This struct implements the bin64 (f64) standard tag.
+///
+/// By default it sets the tag id to [`IL_BIN64_TAG_ID`].
 pub struct ILBin64Tag {
     id: u64,
     value: f64,
@@ -444,7 +468,11 @@ iltag_default_impl!(ILBin64Tag);
 //=============================================================================
 // ILILint64Tag
 //-----------------------------------------------------------------------------
-/// This struct implements the bin128 standard tag.
+/// This struct implements the bin128 standard tag. Since Rust does not
+/// implement the IEEE754 128-bit floating point yet, this tag only holds its
+/// raw bytes.
+///
+/// By default it sets the tag id to [`IL_BIN128_TAG_ID`].
 pub struct ILBin128Tag {
     id: u64,
     value: [u8; 16],
@@ -541,7 +569,10 @@ iltag_default_impl!(ILBin128Tag);
 //=============================================================================
 // ILILint64Tag
 //-----------------------------------------------------------------------------
-/// This struct implements the ILInt standard tag.
+/// This struct implements the ILInt standard tag. It is the only implicit tag
+/// which its value size can vary from 1 to 9 bytes.
+///
+/// By default it sets the tag id to [`IL_ILINT_TAG_ID`].
 pub struct ILILInt64Tag {
     id: u64,
     value: u64,

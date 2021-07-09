@@ -29,8 +29,8 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-//! This module contains some utility functions that may help the usage of this
-//! library.
+//! This module contains some utility functions that may help the usage and/or
+//! implementation of this library.
 
 #[cfg(test)]
 mod tests;
@@ -44,8 +44,8 @@ use crate::io::LimitedReader;
 /// This function compares ILTag instances by serializing them and
 /// compare if the serialization matches.
 ///
-/// This is, by far, the least efficient way to perform the comparison but it
-/// is guaranteed to work for all scenarios, including those when
+/// This is, by far, the least efficient way to perform the comparison between
+/// tags but it is guaranteed to work for all situations, including those when
 /// the same tag is implemented by distinct structs.
 ///
 /// Arguments:
@@ -72,9 +72,12 @@ pub fn iltag_are_equal(a: &dyn ILTag, b: &dyn ILTag) -> bool {
 /// Clones the given tag using a serialization/deserialization process.
 ///
 /// It is not the most efficient way to perform the cloning but it allows
-/// the copy of any tag that can be built by the specified factory.
-/// Furthermore it guarantees no relationship with the original tag
-/// and its clone.
+/// the cloning of any tag, regardless of how it is implemented.
+///
+/// It is important to notice that the cloned tag may not share the
+/// same implementation of the cloned tag as the resulting tag will be
+/// implemented by the tag created by the specified factory for the source
+/// tag id.
 ///
 /// Arguments:
 /// * `factory`: The tag factory to be used;
@@ -97,7 +100,10 @@ pub fn iltag_clone_with_factory(
 /// It is similar to [`iltag_clone_with_factory()`] but uses a
 /// [`ILStandardTagFactory`] instance runing on non strict mode.
 ///
-///
+/// It is important to notice that the cloned tag may not share the
+/// same implementation of the cloned tag as the resulting tag will be
+/// implemented only by the standard tags implemented by this library or
+/// by instances of [`super::ILRawTag`] for all unknown tags.
 ///
 /// Arguments:
 /// * `tag`: The tag to be cloned;
@@ -111,7 +117,9 @@ pub fn iltag_clone(tag: &dyn ILTag) -> Result<Box<dyn ILTag>> {
 }
 
 /// This helper function tests if the given [`LimitedReader`] is empty and
-/// return the specified result according to the status of the reader.
+/// return the specified result according to the status of the reader. It is
+/// very useful to implement the final verification for certain tag deserialization
+/// procedures.
 ///
 /// Arguments:
 /// - `on_error_kind`: The type of error to return if the reader is not empty;
