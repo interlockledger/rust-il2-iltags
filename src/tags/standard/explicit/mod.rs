@@ -38,6 +38,7 @@ use super::constants::*;
 use super::{DefaultWithId, ErrorKind, ILTag, ILTagFactory, Result};
 use crate::io::data::*;
 use crate::io::{LimitedReader, Reader, Writer};
+use crate::tags::util::limited_reader_ensure_empty;
 use crate::tags::{
     deserialize_bytes, deserialize_ilint, serialize_bytes, serialize_ilint, tag_size_to_usize,
     ILRawTag,
@@ -528,11 +529,7 @@ impl ILTag for ILILIntArrayTag {
         for _i in 0..count {
             self.value.push(deserialize_ilint(&mut lreader)?);
         }
-        if lreader.empty() {
-            Ok(())
-        } else {
-            Err(ErrorKind::CorruptedData)
-        }
+        limited_reader_ensure_empty(&lreader, ErrorKind::CorruptedData)
     }
 }
 
@@ -680,11 +677,7 @@ impl ILTag for ILTagArrayTag {
         for _i in 0..count {
             self.inner.value.push(factory.deserialize(&mut lreader)?);
         }
-        if lreader.empty() {
-            Ok(())
-        } else {
-            Err(ErrorKind::CorruptedData)
-        }
+        limited_reader_ensure_empty(&lreader, ErrorKind::CorruptedData)
     }
 }
 
@@ -780,11 +773,7 @@ impl ILTag for ILRangeTag {
             Ok(v) => v,
             Err(e) => return Err(ErrorKind::IOError(e)),
         };
-        if lreader.empty() {
-            Ok(())
-        } else {
-            Err(ErrorKind::CorruptedData)
-        }
+        limited_reader_ensure_empty(&lreader, ErrorKind::CorruptedData)
     }
 }
 
@@ -1122,11 +1111,7 @@ impl ILTag for ILDictTag {
                 factory.deserialize(&mut lreader)?,
             );
         }
-        if lreader.empty() {
-            Ok(())
-        } else {
-            Err(ErrorKind::CorruptedData)
-        }
+        limited_reader_ensure_empty(&lreader, ErrorKind::CorruptedData)
     }
 }
 
@@ -1272,11 +1257,7 @@ impl ILTag for ILStrDictTag {
                 deserialize_string_tag_from_value(&mut lreader)?,
             );
         }
-        if lreader.empty() {
-            Ok(())
-        } else {
-            Err(ErrorKind::CorruptedData)
-        }
+        limited_reader_ensure_empty(&lreader, ErrorKind::CorruptedData)
     }
 }
 
