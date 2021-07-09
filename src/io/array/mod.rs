@@ -123,10 +123,6 @@ impl<'a> Reader for ByteArrayReader<'a> {
         self.offset += count;
         Ok(())
     }
-
-    fn as_reader(&mut self) -> &mut dyn Reader {
-        self
-    }
 }
 
 //=============================================================================
@@ -225,10 +221,6 @@ impl<'a> Reader for VecReader {
         self.can_read(count)?;
         self.offset += count;
         Ok(())
-    }
-
-    fn as_reader(&mut self) -> &mut dyn Reader {
-        self
     }
 }
 

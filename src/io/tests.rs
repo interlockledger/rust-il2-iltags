@@ -61,10 +61,6 @@ impl<'a> Reader for DummyReader {
             Err(ErrorKind::UnableToReadData)
         }
     }
-
-    fn as_reader(&mut self) -> &mut dyn Reader {
-        self
-    }
 }
 
 //=============================================================================

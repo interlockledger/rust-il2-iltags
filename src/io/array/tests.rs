@@ -167,16 +167,6 @@ fn test_bytearrayreader_skip() {
     }
 }
 
-#[test]
-fn test_bytearrayreader_as_reader() {
-    let src: [u8; 20] = [0; 20];
-    let mut ba = ByteArrayReader::new(&src);
-
-    let m = ba.as_reader();
-    assert!(m.skip(1).is_ok());
-    assert_eq!(ba.offset(), 1);
-}
-
 //=============================================================================
 // VecReader
 //-----------------------------------------------------------------------------
@@ -310,16 +300,6 @@ fn test_vecreader_skip() {
         Err(ErrorKind::UnableToReadData) => (),
         _ => panic!(),
     }
-}
-
-#[test]
-fn test_vecreader_as_reader() {
-    let src: [u8; 20] = [0; 20];
-    let mut ba = VecReader::new(&src);
-
-    let m = ba.as_reader();
-    assert!(m.skip(1).is_ok());
-    assert_eq!(ba.offset(), 1);
 }
 
 //=============================================================================
