@@ -115,3 +115,25 @@ fn test_iltag_clone() {
     );
     assert!(iltag_are_equal(&a, clone.as_ref()));
 }
+
+#[test]
+fn test_limited_reader_ensure_empty() {
+    let sample: [u8; 1] = [0];
+    let mut reader = ByteArrayReader::new(&sample);
+    let lreader = LimitedReader::new(&mut reader, 1);
+
+    match limited_reader_ensure_empty(&lreader, ErrorKind::TagTooLarge) {
+        Err(ErrorKind::TagTooLarge) => (),
+        _ => panic!("Error expected."),
+    }
+    match limited_reader_ensure_empty(&lreader, ErrorKind::CorruptedData) {
+        Err(ErrorKind::CorruptedData) => (),
+        _ => panic!("Error expected."),
+    }
+
+    let lreader = LimitedReader::new(&mut reader, 0);
+    match limited_reader_ensure_empty(&lreader, ErrorKind::CorruptedData) {
+        Ok(()) => (),
+        _ => panic!("Error not expected."),
+    }
+}

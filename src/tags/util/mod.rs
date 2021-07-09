@@ -36,8 +36,10 @@
 mod tests;
 
 use super::standard::factory::ILStandardTagFactory;
+use super::ErrorKind;
 use super::{ILTag, ILTagFactory, Result};
 use crate::io::array::{ByteArrayReader, VecWriter};
+use crate::io::LimitedReader;
 
 /// This function compares ILTag instances by serializing them and
 /// compare if the serialization matches.
@@ -106,4 +108,22 @@ pub fn iltag_clone_with_factory(
 pub fn iltag_clone(tag: &dyn ILTag) -> Result<Box<dyn ILTag>> {
     let factory = ILStandardTagFactory::new(false);
     iltag_clone_with_factory(&factory, tag)
+}
+
+/// This helper function tests if the given [`LimitedReader`] is empty and
+/// return the specified result according to the status of the reader.
+///
+/// Arguments:
+/// - `on_error_kind`: The type of error to return if the reader is not empty;
+///
+/// Returns:
+/// - `Ok(())`: if the reader is empty;
+/// - `Err(on_error_kind)`: if the reader is not empty;
+#[inline]
+pub fn limited_reader_ensure_empty(reader: &LimitedReader, on_error_kind: ErrorKind) -> Result<()> {
+    if reader.empty() {
+        Ok(())
+    } else {
+        Err(on_error_kind)
+    }
 }
