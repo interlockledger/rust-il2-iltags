@@ -1064,7 +1064,7 @@ impl ILDictTag {
 
     /// Inserts a new pair into this tag. It is a shortcut to:
     ///
-    /// ```
+    /// ```ignore
     /// let ret = tag.mut_value().insert(String::from(k), v);
     /// ```
     ///
@@ -1082,7 +1082,7 @@ impl ILDictTag {
     /// Returns an immutable reference to the value associated with a
     /// given key. It is a shortcut to:
     ///
-    /// ```
+    /// ```ignore
     /// let ret = match tag.mut_value().get(k) {
     ///     Some(t) => Some(t.as_ref()),
     ///     None => None,
@@ -1212,7 +1212,7 @@ impl ILStrDictTag {
 
     /// Inserts a new pair into this tag. It is a shortcut to:
     ///
-    /// ```
+    /// ```ignore
     /// let ret = tag.mut_value().insert(String::from(k), String::from(v));
     /// ```
     ///
@@ -1230,7 +1230,7 @@ impl ILStrDictTag {
     /// Returns an immutable reference to the value associated with a
     /// given key. It is a shortcut to:
     ///
-    /// ```
+    /// ```ignore
     /// let ret = match tag.mut_value().get(k) {
     ///     Some(t) => Some(t.as_ref()),
     ///     None => None,
