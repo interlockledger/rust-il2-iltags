@@ -30,7 +30,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 use super::*;
-use crate::io::test_utils::fill_sample;
+use crate::tests::fill_sample;
 
 //=============================================================================
 // ByteArrayReader

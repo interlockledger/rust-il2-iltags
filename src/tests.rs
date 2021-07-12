@@ -29,3 +29,10 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+
+/// Fills the an array with values from 0 to src.len() -1.
+pub fn fill_sample(src: &mut [u8]) {
+    for i in 0..src.len() {
+        src[i] = i as u8;
+    }
+}

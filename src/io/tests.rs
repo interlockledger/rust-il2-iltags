@@ -29,8 +29,8 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-use super::test_utils::fill_sample;
 use super::*;
+use crate::tests::fill_sample;
 
 struct DummyReader {
     pub available: usize,
