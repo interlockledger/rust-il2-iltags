@@ -23,6 +23,8 @@ This library is licensed under a 3-Clause BSD license.
 
 - 1.1.0:
     - `il2_iltags::io::BorrowedVecWriter` added;
+    - Adding new traits to the module `il2_iltags::io::data` to make the usage of
+      the read/write functions easier to use over `Reader` and `Writer` implementators;
 - 1.0.1:
     - Issue #1 - Invalid code snippets marked as ignored;
 - 1.0.0:

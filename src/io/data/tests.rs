@@ -32,6 +32,37 @@
 use super::*;
 use crate::io::array::{ByteArrayReader, VecWriter};
 
+//=============================================================================
+// Test values
+//-----------------------------------------------------------------------------
+const SAMPLE_VALUES_00_U8: u8 = 0x00;
+const SAMPLE_VALUES_01_U16: u16 = 0x0102;
+const SAMPLE_VALUES_02_U32: u32 = 0x0304_0506;
+const SAMPLE_VALUES_03_U64: u64 = 0x0708_090A_0B0C_0D0E;
+const SAMPLE_VALUES_04_IU8: i8 = 0x0f;
+const SAMPLE_VALUES_05_I16: i16 = 0x1011;
+const SAMPLE_VALUES_06_I32: i32 = 0x1213_1415;
+const SAMPLE_VALUES_07_I64: i64 = 0x1617_1819_1A1B_1C1D;
+const SAMPLE_VALUES_08_F32: f32 = 0.000000000000000000008424034;
+const SAMPLE_VALUES_09_F64: f64 = 0.0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000030657805298494026;
+const SAMPLE_VALUES_10_STR: &str = "Lágrimas não são argumentos";
+const SAMPLE_VALUES_11_ILINT: u64 = 0x494c_496e_7456_6264;
+
+// This constant contains the serialization of the values described in
+// SAMPLE_VALUES_xx_type
+//
+// This frase is attibuted to Machado de Assis. It was
+// choosen because it contains Latin characters that
+// result in a multi-byte characters in UTF-8.
+const SAMPLE_VALUES_BIN: [u8; 81] = [
+    0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
+    0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f,
+    0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x29, 0x4c, 0xc3, 0xa1, 0x67, 0x72, 0x69,
+    0x6d, 0x61, 0x73, 0x20, 0x6e, 0xc3, 0xa3, 0x6f, 0x20, 0x73, 0xc3, 0xa3, 0x6f, 0x20, 0x61, 0x72,
+    0x67, 0x75, 0x6d, 0x65, 0x6e, 0x74, 0x6f, 0x73, 0xFF, 0x49, 0x4C, 0x49, 0x6E, 0x74, 0x56, 0x61,
+    0x6C,
+];
+
 macro_rules! test_int_data_reader_t {
     ($type: ty, $sample : expr, $expected: expr, $func: ident) => {{
         let mut reader = ByteArrayReader::new($sample);
@@ -190,63 +221,58 @@ fn test_string_data_reader() {
 
 #[test]
 fn test_data_reader() {
-    // This frase is attibuted to Machado de Assis. It was
-    // choosen because it contains Latin characters that
-    // result in a multi-byte characters in UTF-8.
-    let sample: [u8; 72] = [
-        0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e,
-        0x0f, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d,
-        0x1e, 0x1f, 0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x29, 0x4c, 0xc3, 0xa1,
-        0x67, 0x72, 0x69, 0x6d, 0x61, 0x73, 0x20, 0x6e, 0xc3, 0xa3, 0x6f, 0x20, 0x73, 0xc3, 0xa3,
-        0x6f, 0x20, 0x61, 0x72, 0x67, 0x75, 0x6d, 0x65, 0x6e, 0x74, 0x6f, 0x73,
-    ];
-    let mut reader = ByteArrayReader::new(&sample);
+    let mut reader = ByteArrayReader::new(&SAMPLE_VALUES_BIN);
     let dr: &mut dyn Reader = &mut reader;
 
     match read_u8(dr) as Result<u8> {
-        Ok(v) => assert_eq!(0x00, v),
+        Ok(v) => assert_eq!(SAMPLE_VALUES_00_U8, v),
         _ => panic!(),
     }
     match read_u16(dr) as Result<u16> {
-        Ok(v) => assert_eq!(0x0102, v),
+        Ok(v) => assert_eq!(SAMPLE_VALUES_01_U16, v),
         _ => panic!(),
     }
     match read_u32(dr) as Result<u32> {
-        Ok(v) => assert_eq!(0x0304_0506, v),
+        Ok(v) => assert_eq!(SAMPLE_VALUES_02_U32, v),
         _ => panic!(),
     }
     match read_u64(dr) as Result<u64> {
-        Ok(v) => assert_eq!(0x0708_090A_0B0C_0D0E, v),
+        Ok(v) => assert_eq!(SAMPLE_VALUES_03_U64, v),
         _ => panic!(),
     }
     match read_i8(dr) as Result<i8> {
-        Ok(v) => assert_eq!(0x0f, v),
+        Ok(v) => assert_eq!(SAMPLE_VALUES_04_IU8, v),
         _ => panic!(),
     }
     match read_i16(dr) as Result<i16> {
-        Ok(v) => assert_eq!(0x1011, v),
+        Ok(v) => assert_eq!(SAMPLE_VALUES_05_I16, v),
         _ => panic!(),
     }
     match read_i32(dr) as Result<i32> {
-        Ok(v) => assert_eq!(0x1213_1415, v),
+        Ok(v) => assert_eq!(SAMPLE_VALUES_06_I32, v),
         _ => panic!(),
     }
     match read_i64(dr) as Result<i64> {
-        Ok(v) => assert_eq!(0x1617_1819_1A1B_1C1D, v),
+        Ok(v) => assert_eq!(SAMPLE_VALUES_07_I64, v),
         _ => panic!(),
     }
     match read_f32(dr) as Result<f32> {
-        Ok(v) => assert_eq!(0.000000000000000000008424034, v),
+        Ok(v) => assert_eq!(SAMPLE_VALUES_08_F32, v),
         _ => panic!(),
     }
     match read_f64(dr) as Result<f64> {
-        Ok(v) =>  assert_eq!(0.0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000030657805298494026,  v),
-        _ => panic!()
-    }
-    match read_string(dr, 30) {
-        Ok(v) => assert_eq!("Lágrimas não são argumentos", v),
+        Ok(v) => assert_eq!(SAMPLE_VALUES_09_F64, v),
         _ => panic!(),
     }
+    match read_string(dr, SAMPLE_VALUES_10_STR.len()) {
+        Ok(v) => assert_eq!(SAMPLE_VALUES_10_STR, v),
+        _ => panic!(),
+    }
+    match read_ilint(dr) {
+        Ok(v) => assert_eq!(v, SAMPLE_VALUES_11_ILINT),
+        Err(_) => panic!(),
+    }
+
     match read_u8(dr) as Result<u8> {
         Ok(_) => panic!(),
         _ => (),
@@ -424,61 +450,271 @@ fn test_ilint_data_writer() {
 
 #[test]
 fn test_data_writer() {
-    let exp: [u8; 72] = [
-        0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
-        0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e,
-        0x1e, 0x1f, 0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x29, 0x4c, 0xc3, 0xa1,
-        0x67, 0x72, 0x69, 0x6d, 0x61, 0x73, 0x20, 0x6e, 0xc3, 0xa3, 0x6f, 0x20, 0x73, 0xc3, 0xa3,
-        0x6f, 0x20, 0x61, 0x72, 0x67, 0x75, 0x6d, 0x65, 0x6e, 0x74, 0x6f, 0x73,
-    ];
     let mut writer = VecWriter::new();
 
     //let dw: &mut dyn Writer = &mut writer;
 
-    match write_u8(0x01 as u8, &mut writer) {
+    match write_u8(SAMPLE_VALUES_00_U8, &mut writer) {
         Ok(_) => (),
         Err(_) => panic!(),
     }
-    match write_u16(0x0203 as u16, &mut writer) {
+    match write_u16(SAMPLE_VALUES_01_U16, &mut writer) {
         Ok(_) => (),
         Err(_) => panic!(),
     }
-    match write_u32(0x0405_0607 as u32, &mut writer) {
+    match write_u32(SAMPLE_VALUES_02_U32, &mut writer) {
         Ok(_) => (),
         Err(_) => panic!(),
     }
-    match write_u64(0x0809_0A0B_0C0D_0E0F as u64, &mut writer) {
+    match write_u64(SAMPLE_VALUES_03_U64, &mut writer) {
         Ok(_) => (),
         Err(_) => panic!(),
     }
-    match write_i8(0x10 as i8, &mut writer) {
+    match write_i8(SAMPLE_VALUES_04_IU8, &mut writer) {
         Ok(_) => (),
         Err(_) => panic!(),
     }
-    match write_i16(0x1112 as i16, &mut writer) {
+    match write_i16(SAMPLE_VALUES_05_I16, &mut writer) {
         Ok(_) => (),
         Err(_) => panic!(),
     }
-    match write_i32(0x1314_1516 as i32, &mut writer) {
+    match write_i32(SAMPLE_VALUES_06_I32, &mut writer) {
         Ok(_) => (),
         Err(_) => panic!(),
     }
-    match write_i64(0x1718_191A_1B1C_1D1E as i64, &mut writer) {
+    match write_i64(SAMPLE_VALUES_07_I64, &mut writer) {
         Ok(_) => (),
         Err(_) => panic!(),
     }
-    match write_f32(0.000000000000000000008424034 as f32, &mut writer) {
+    match write_f32(SAMPLE_VALUES_08_F32 as f32, &mut writer) {
         Ok(_) => (),
         Err(_) => panic!(),
     }
-    match write_f64(0.0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000030657805298494026 as f64, 
-        &mut writer) {
-        Ok(_) => (),
-        Err(_) => panic!()
-    }
-    match write_string("Lágrimas não são argumentos", &mut writer) {
+    match write_f64(SAMPLE_VALUES_09_F64, &mut writer) {
         Ok(_) => (),
         Err(_) => panic!(),
     }
-    assert_eq!(exp, writer.as_slice());
+    match write_string(SAMPLE_VALUES_10_STR, &mut writer) {
+        Ok(_) => (),
+        Err(_) => panic!(),
+    }
+    match write_ilint(SAMPLE_VALUES_11_ILINT, &mut writer) {
+        Ok(_) => (),
+        Err(_) => panic!(),
+    }
+
+    assert_eq!(&SAMPLE_VALUES_BIN, writer.as_slice());
+}
+
+//=============================================================================
+// Data Reader Traits
+//-----------------------------------------------------------------------------
+macro_rules! test_valuereader_read_value_item {
+    ($reader: ident, $type: ty, $exp: expr) => {
+        match $reader.read_value() as Result<$type> {
+            Ok(v) => assert_eq!(v, $exp),
+            _ => panic!("Unable to read the value"),
+        };
+    };
+}
+
+macro_rules! test_valuereader_read_value_item_error {
+    ($reader: ident, $type: ty) => {
+        match $reader.read_value() as Result<$type> {
+            Err(_) => (),
+            _ => panic!("Error expected!"),
+        };
+    };
+}
+
+fn test_datareader_trait_dyn_reader(reader: &mut dyn Reader) {
+    // Test Read
+    test_valuereader_read_value_item!(reader, u8, SAMPLE_VALUES_00_U8);
+    test_valuereader_read_value_item!(reader, u16, SAMPLE_VALUES_01_U16);
+    test_valuereader_read_value_item!(reader, u32, SAMPLE_VALUES_02_U32);
+    test_valuereader_read_value_item!(reader, u64, SAMPLE_VALUES_03_U64);
+    test_valuereader_read_value_item!(reader, i8, SAMPLE_VALUES_04_IU8);
+    test_valuereader_read_value_item!(reader, i16, SAMPLE_VALUES_05_I16);
+    test_valuereader_read_value_item!(reader, i32, SAMPLE_VALUES_06_I32);
+    test_valuereader_read_value_item!(reader, i64, SAMPLE_VALUES_07_I64);
+    test_valuereader_read_value_item!(reader, f32, SAMPLE_VALUES_08_F32);
+    test_valuereader_read_value_item!(reader, f64, SAMPLE_VALUES_09_F64);
+    match reader.read_string(SAMPLE_VALUES_10_STR.len()) {
+        Ok(v) => assert_eq!(v, SAMPLE_VALUES_10_STR),
+        _ => panic!("Unable to read the value"),
+    }
+    match reader.read_ilint() {
+        Ok(v) => assert_eq!(v, SAMPLE_VALUES_11_ILINT),
+        _ => panic!("Unable to read the value"),
+    }
+
+    // Test errors
+    test_valuereader_read_value_item_error!(reader, u8);
+    test_valuereader_read_value_item_error!(reader, u16);
+    test_valuereader_read_value_item_error!(reader, u32);
+    test_valuereader_read_value_item_error!(reader, u64);
+    test_valuereader_read_value_item_error!(reader, i8);
+    test_valuereader_read_value_item_error!(reader, i16);
+    test_valuereader_read_value_item_error!(reader, i32);
+    test_valuereader_read_value_item_error!(reader, i64);
+    test_valuereader_read_value_item_error!(reader, f32);
+    test_valuereader_read_value_item_error!(reader, f64);
+    match reader.read_string(SAMPLE_VALUES_10_STR.len()) {
+        Err(_) => (),
+        _ => panic!("Error expected!"),
+    }
+    match reader.read_ilint() {
+        Err(_) => (),
+        _ => panic!("Error expected!"),
+    }
+}
+
+#[test]
+fn test_datareader_trait_impl() {
+    // Test for dyn Reader
+    let mut reader = crate::io::array::ByteArrayReader::new(&SAMPLE_VALUES_BIN);
+    test_datareader_trait_dyn_reader(&mut reader);
+
+    // Test for T:Reader
+    let mut reader = crate::io::array::ByteArrayReader::new(&SAMPLE_VALUES_BIN);
+    test_valuereader_read_value_item!(reader, u8, SAMPLE_VALUES_00_U8);
+    test_valuereader_read_value_item!(reader, u16, SAMPLE_VALUES_01_U16);
+    test_valuereader_read_value_item!(reader, u32, SAMPLE_VALUES_02_U32);
+    test_valuereader_read_value_item!(reader, u64, SAMPLE_VALUES_03_U64);
+    test_valuereader_read_value_item!(reader, i8, SAMPLE_VALUES_04_IU8);
+    test_valuereader_read_value_item!(reader, i16, SAMPLE_VALUES_05_I16);
+    test_valuereader_read_value_item!(reader, i32, SAMPLE_VALUES_06_I32);
+    test_valuereader_read_value_item!(reader, i64, SAMPLE_VALUES_07_I64);
+    test_valuereader_read_value_item!(reader, f32, SAMPLE_VALUES_08_F32);
+    test_valuereader_read_value_item!(reader, f64, SAMPLE_VALUES_09_F64);
+    match reader.read_string(SAMPLE_VALUES_10_STR.len()) {
+        Ok(v) => assert_eq!(v, SAMPLE_VALUES_10_STR),
+        _ => panic!("Unable to read the value"),
+    }
+    match reader.read_ilint() {
+        Ok(v) => assert_eq!(v, SAMPLE_VALUES_11_ILINT),
+        _ => panic!("Unable to read the value"),
+    }
+
+    // Test errors
+    test_valuereader_read_value_item_error!(reader, u8);
+    test_valuereader_read_value_item_error!(reader, u16);
+    test_valuereader_read_value_item_error!(reader, u32);
+    test_valuereader_read_value_item_error!(reader, u64);
+    test_valuereader_read_value_item_error!(reader, i8);
+    test_valuereader_read_value_item_error!(reader, i16);
+    test_valuereader_read_value_item_error!(reader, i32);
+    test_valuereader_read_value_item_error!(reader, i64);
+    test_valuereader_read_value_item_error!(reader, f32);
+    test_valuereader_read_value_item_error!(reader, f64);
+    match reader.read_string(SAMPLE_VALUES_10_STR.len()) {
+        Err(_) => (),
+        _ => panic!("Error expected!"),
+    }
+    match reader.read_ilint() {
+        Err(_) => (),
+        _ => panic!("Error expected!"),
+    }
+}
+
+macro_rules! test_valuewriter_write_value_item {
+    ($writer: ident, $type: ty, $val: expr) => {
+        match $writer.write_value($val as $type) {
+            Ok(()) => (),
+            _ => panic!("Unable to read the value!"),
+        };
+    };
+}
+
+macro_rules! test_valuewriter_write_value_item_err {
+    ($writer: ident, $type: ty, $val: expr) => {
+        match $writer.write_value($val as $type) {
+            Err(_) => (),
+            _ => panic!("Error expected!"),
+        };
+    };
+}
+
+fn test_datawriter_trait_dyn_writer(writer: &mut dyn Writer) {
+    test_valuewriter_write_value_item!(writer, u8, SAMPLE_VALUES_00_U8);
+    test_valuewriter_write_value_item!(writer, u16, SAMPLE_VALUES_01_U16);
+    test_valuewriter_write_value_item!(writer, u32, SAMPLE_VALUES_02_U32);
+    test_valuewriter_write_value_item!(writer, u64, SAMPLE_VALUES_03_U64);
+    test_valuewriter_write_value_item!(writer, i8, SAMPLE_VALUES_04_IU8);
+    test_valuewriter_write_value_item!(writer, i16, SAMPLE_VALUES_05_I16);
+    test_valuewriter_write_value_item!(writer, i32, SAMPLE_VALUES_06_I32);
+    test_valuewriter_write_value_item!(writer, i64, SAMPLE_VALUES_07_I64);
+    test_valuewriter_write_value_item!(writer, f32, SAMPLE_VALUES_08_F32);
+    test_valuewriter_write_value_item!(writer, f64, SAMPLE_VALUES_09_F64);
+    test_valuewriter_write_value_item!(writer, &str, SAMPLE_VALUES_10_STR);
+    match writer.write_ilint(SAMPLE_VALUES_11_ILINT) {
+        Ok(()) => (),
+        _ => panic!("Unable to write the value."),
+    }
+}
+
+fn test_datawriter_trait_dyn_writer_err(writer: &mut dyn Writer) {
+    test_valuewriter_write_value_item_err!(writer, u8, SAMPLE_VALUES_00_U8);
+    test_valuewriter_write_value_item_err!(writer, u16, SAMPLE_VALUES_01_U16);
+    test_valuewriter_write_value_item_err!(writer, u32, SAMPLE_VALUES_02_U32);
+    test_valuewriter_write_value_item_err!(writer, u64, SAMPLE_VALUES_03_U64);
+    test_valuewriter_write_value_item_err!(writer, i8, SAMPLE_VALUES_04_IU8);
+    test_valuewriter_write_value_item_err!(writer, i16, SAMPLE_VALUES_05_I16);
+    test_valuewriter_write_value_item_err!(writer, i32, SAMPLE_VALUES_06_I32);
+    test_valuewriter_write_value_item_err!(writer, i64, SAMPLE_VALUES_07_I64);
+    test_valuewriter_write_value_item_err!(writer, f32, SAMPLE_VALUES_08_F32);
+    test_valuewriter_write_value_item_err!(writer, f64, SAMPLE_VALUES_09_F64);
+    test_valuewriter_write_value_item_err!(writer, &str, SAMPLE_VALUES_10_STR);
+    match writer.write_ilint(SAMPLE_VALUES_11_ILINT) {
+        Err(_) => (),
+        _ => panic!("Error expected!"),
+    }
+}
+
+#[test]
+fn test_datawriter_trait_impl() {
+    // Test for dyn Reader
+    let mut vec: Vec<u8> = Vec::new();
+    let mut writer = crate::io::array::BorrowedVecWriter::new(&mut vec);
+    test_datawriter_trait_dyn_writer(&mut writer);
+    writer.set_read_only(true);
+    test_datawriter_trait_dyn_writer_err(&mut writer);
+    assert_eq!(vec.as_slice(), &SAMPLE_VALUES_BIN);
+
+    // Test for T:Reader
+    let mut vec: Vec<u8> = Vec::new();
+    let mut writer = crate::io::array::BorrowedVecWriter::new(&mut vec);
+    test_valuewriter_write_value_item!(writer, u8, SAMPLE_VALUES_00_U8);
+    test_valuewriter_write_value_item!(writer, u16, SAMPLE_VALUES_01_U16);
+    test_valuewriter_write_value_item!(writer, u32, SAMPLE_VALUES_02_U32);
+    test_valuewriter_write_value_item!(writer, u64, SAMPLE_VALUES_03_U64);
+    test_valuewriter_write_value_item!(writer, i8, SAMPLE_VALUES_04_IU8);
+    test_valuewriter_write_value_item!(writer, i16, SAMPLE_VALUES_05_I16);
+    test_valuewriter_write_value_item!(writer, i32, SAMPLE_VALUES_06_I32);
+    test_valuewriter_write_value_item!(writer, i64, SAMPLE_VALUES_07_I64);
+    test_valuewriter_write_value_item!(writer, f32, SAMPLE_VALUES_08_F32);
+    test_valuewriter_write_value_item!(writer, f64, SAMPLE_VALUES_09_F64);
+    test_valuewriter_write_value_item!(writer, &str, SAMPLE_VALUES_10_STR);
+    match writer.write_ilint(SAMPLE_VALUES_11_ILINT) {
+        Ok(()) => (),
+        _ => panic!("Unable to write the value."),
+    }
+    writer.set_read_only(true);
+    test_valuewriter_write_value_item_err!(writer, u8, SAMPLE_VALUES_00_U8);
+    test_valuewriter_write_value_item_err!(writer, u16, SAMPLE_VALUES_01_U16);
+    test_valuewriter_write_value_item_err!(writer, u32, SAMPLE_VALUES_02_U32);
+    test_valuewriter_write_value_item_err!(writer, u64, SAMPLE_VALUES_03_U64);
+    test_valuewriter_write_value_item_err!(writer, i8, SAMPLE_VALUES_04_IU8);
+    test_valuewriter_write_value_item_err!(writer, i16, SAMPLE_VALUES_05_I16);
+    test_valuewriter_write_value_item_err!(writer, i32, SAMPLE_VALUES_06_I32);
+    test_valuewriter_write_value_item_err!(writer, i64, SAMPLE_VALUES_07_I64);
+    test_valuewriter_write_value_item_err!(writer, f32, SAMPLE_VALUES_08_F32);
+    test_valuewriter_write_value_item_err!(writer, f64, SAMPLE_VALUES_09_F64);
+    test_valuewriter_write_value_item_err!(writer, &str, SAMPLE_VALUES_10_STR);
+    match writer.write_ilint(SAMPLE_VALUES_11_ILINT) {
+        Err(_) => (),
+        _ => panic!("Error expected!"),
+    }
+
+    assert_eq!(vec.as_slice(), &SAMPLE_VALUES_BIN);
 }

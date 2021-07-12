@@ -29,9 +29,9 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-//! This module implements functions for [`Reader`] and [`Writer`] that
-//! allows the manipulation of basic data types as defined by the **ILTags**
-//! standard.
+//! This module implements functions and traits for [`Reader`] and [`Writer`]
+//! that allows the manipulation of basic data types as defined by the
+//! **ILTags** standard.
 //!
 //! All interger types are handled as being encoded as Big Endian values as
 //! defined by the **ILTags** specification.
@@ -376,4 +376,183 @@ pub fn write_f64(v: f64, writer: &mut dyn Writer) -> Result<()> {
 /// - Err(_): For failure;
 pub fn write_string(v: &str, writer: &mut dyn Writer) -> Result<()> {
     writer.write_all(&v.as_bytes())
+}
+
+//=============================================================================
+// ValueReader
+//-----------------------------------------------------------------------------
+/// This trait adds the ability to read fixed size values.
+///
+/// Since 1.1.0.
+pub trait ValueReader<T: Sized + Copy> {
+    /// Reads the value.
+    ///
+    /// Returns:
+    /// - Ok(v): For success;
+    /// - Err(_): For failure;
+    fn read_value(&mut self) -> Result<T>;
+}
+
+// Default implementation of ValueReader for the concrete type and dyn Reader.
+macro_rules! valuereader_def_impl {
+    ($type: ty, $read_func: ident) => {
+        impl ValueReader<$type> for dyn Reader + '_ {
+            #[inline]
+            fn read_value(&mut self) -> Result<$type> {
+                $read_func(self)
+            }
+        }
+
+        impl<T: Reader> ValueReader<$type> for T {
+            #[inline]
+            fn read_value(&mut self) -> Result<$type> {
+                $read_func(self)
+            }
+        }
+    };
+}
+
+valuereader_def_impl!(u8, read_u8);
+valuereader_def_impl!(i8, read_i8);
+valuereader_def_impl!(u16, read_u16);
+valuereader_def_impl!(i16, read_i16);
+valuereader_def_impl!(u32, read_u32);
+valuereader_def_impl!(i32, read_i32);
+valuereader_def_impl!(u64, read_u64);
+valuereader_def_impl!(i64, read_i64);
+valuereader_def_impl!(f32, read_f32);
+valuereader_def_impl!(f64, read_f64);
+
+//=============================================================================
+// ILIntReader
+//-----------------------------------------------------------------------------
+/// This trait adds the ability to read ILInt values.
+pub trait ILIntReader {
+    /// Reads the ILInt.
+    ///
+    /// Returns:
+    /// - Ok(v): For success;
+    /// - Err(_): For failure;
+    fn read_ilint(&mut self) -> Result<u64>;
+}
+
+impl ILIntReader for dyn Reader + '_ {
+    #[inline]
+    fn read_ilint(&mut self) -> Result<u64> {
+        read_ilint(self)
+    }
+}
+
+impl<T: Reader> ILIntReader for T {
+    #[inline]
+    fn read_ilint(&mut self) -> Result<u64> {
+        read_ilint(self)
+    }
+}
+
+//=============================================================================
+// StringValueReader
+//-----------------------------------------------------------------------------
+/// This trait adds the ability to read UTF-8 String values.
+pub trait StringValueReader {
+    /// Reads an UTF-8 String with a given size.
+    ///
+    /// Arguments:
+    /// - `size`: Number of bytes to read.
+    ///
+    /// Returns:
+    /// - Ok(v): For success;
+    /// - Err(_): For failure;
+    fn read_string(&mut self, size: usize) -> Result<String>;
+}
+
+impl StringValueReader for dyn Reader + '_ {
+    #[inline]
+    fn read_string(&mut self, size: usize) -> Result<String> {
+        read_string(self, size)
+    }
+}
+
+impl<T: Reader> StringValueReader for T {
+    #[inline]
+    fn read_string(&mut self, size: usize) -> Result<String> {
+        read_string(self, size)
+    }
+}
+
+//=============================================================================
+// ValueWriter
+//-----------------------------------------------------------------------------
+/// This trait adds the ability to write fixed size values.
+pub trait ValueWriter<T> {
+    /// Writes the value.
+    ///
+    /// Arguments:
+    /// - `value`: The value to write;
+    ///
+    /// Returns:
+    /// - Ok(()): For success;
+    /// - Err(_): For failure;
+    fn write_value(&mut self, value: T) -> Result<()>;
+}
+
+// Default implementation of ValueWriter for the concrete type and dyn Writer.
+macro_rules! valuewriter_def_impl {
+    ($type: ty, $write_func: ident) => {
+        impl ValueWriter<$type> for dyn Writer + '_ {
+            #[inline]
+            fn write_value(&mut self, value: $type) -> Result<()> {
+                $write_func(value, self)
+            }
+        }
+
+        impl<T: Writer> ValueWriter<$type> for T {
+            #[inline]
+            fn write_value(&mut self, value: $type) -> Result<()> {
+                $write_func(value, self)
+            }
+        }
+    };
+}
+
+valuewriter_def_impl!(u8, write_u8);
+valuewriter_def_impl!(i8, write_i8);
+valuewriter_def_impl!(u16, write_u16);
+valuewriter_def_impl!(i16, write_i16);
+valuewriter_def_impl!(u32, write_u32);
+valuewriter_def_impl!(i32, write_i32);
+valuewriter_def_impl!(u64, write_u64);
+valuewriter_def_impl!(i64, write_i64);
+valuewriter_def_impl!(f32, write_f32);
+valuewriter_def_impl!(f64, write_f64);
+valuewriter_def_impl!(&str, write_string);
+
+//=============================================================================
+// ILIntWriter
+//-----------------------------------------------------------------------------
+/// This trait adds the ability to write ILInt values.
+pub trait ILIntWriter {
+    /// Writes the ILInt value.
+    ///
+    /// Arguments:
+    /// - `value`: The value to write;
+    ///
+    /// Returns:
+    /// - Ok(()): For success;
+    /// - Err(_): For failure;    
+    fn write_ilint(&mut self, value: u64) -> Result<()>;
+}
+
+impl ILIntWriter for dyn Writer + '_ {
+    #[inline]
+    fn write_ilint(&mut self, value: u64) -> Result<()> {
+        write_ilint(value, self)
+    }
+}
+
+impl<T: Writer> ILIntWriter for T {
+    #[inline]
+    fn write_ilint(&mut self, value: u64) -> Result<()> {
+        write_ilint(value, self)
+    }
 }
