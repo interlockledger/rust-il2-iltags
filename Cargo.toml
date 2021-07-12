@@ -1,6 +1,6 @@
 [package]
 name = "il2-iltags"
-version = "1.0.1"
+version = "1.1.0"
 description = "InterlockLedger's ILTag implementation in Rust."
 authors = ["InterlockLedger Network", "Fabio Jun Takada Chino", "Cesar Luiz Ferracin"]
 homepage = "https://github.com/interlockledger/rust-il2-iltags"
