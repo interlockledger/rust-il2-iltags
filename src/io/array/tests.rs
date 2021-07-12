@@ -429,3 +429,175 @@ fn test_vecwriter_writer_write_all() {
     exp[8..16].copy_from_slice(&src2);
     assert_eq!(exp, baw.as_slice());
 }
+
+//=============================================================================
+// BorrowedVecWriter
+//-----------------------------------------------------------------------------
+#[test]
+fn test_borrowedvecwriter_new() {
+    let mut vec: Vec<u8> = Vec::new();
+
+    let w = BorrowedVecWriter::new(&mut vec);
+    assert!(!w.is_read_only());
+    assert_eq!(w.get_offset(), 0);
+    assert_eq!(w.bytes_written(), 0);
+
+    vec.push(0);
+    vec.push(1);
+    let w = BorrowedVecWriter::with_offset(&mut vec, 1);
+    assert!(!w.is_read_only());
+    assert_eq!(w.get_offset(), 1);
+    assert_eq!(w.bytes_written(), 0);
+
+    let w = BorrowedVecWriter::with_offset(&mut vec, 1000);
+    assert!(!w.is_read_only());
+    assert_eq!(w.get_offset(), 2);
+    assert_eq!(w.bytes_written(), 0);
+}
+
+#[test]
+fn test_borrowedvecwriter_get_set_read_only() {
+    let mut vec: Vec<u8> = Vec::new();
+    let mut w = BorrowedVecWriter::new(&mut vec);
+
+    assert!(!w.is_read_only());
+    w.set_read_only(true);
+    assert!(w.is_read_only());
+    w.set_read_only(false);
+    assert!(!w.is_read_only());
+}
+
+#[test]
+fn test_borrowedvecwriter_can_write() {
+    let mut vec: Vec<u8> = Vec::new();
+    let mut w = BorrowedVecWriter::new(&mut vec);
+
+    match w.can_write() {
+        Ok(()) => (),
+        _ => panic!(),
+    }
+    w.set_read_only(true);
+    match w.can_write() {
+        Err(ErrorKind::UnableToWriteData) => (),
+        _ => panic!(),
+    }
+    w.set_read_only(false);
+    match w.can_write() {
+        Ok(()) => (),
+        _ => panic!(),
+    }
+}
+
+#[test]
+fn test_borrowedvecwriter_get_vec() {
+    let mut src: [u8; 10] = [0; 10];
+    fill_sample(&mut src);
+
+    let mut vec: Vec<u8> = Vec::new();
+    let mut w = BorrowedVecWriter::new(&mut vec);
+
+    assert_eq!(w.vec().len(), 0);
+    for s in &src {
+        match w.write(*s) {
+            Ok(()) => (),
+            _ => panic!(),
+        }
+    }
+    assert_eq!(w.vec().len(), src.len());
+    assert_eq!(w.vec().as_slice(), &src);
+}
+
+#[test]
+fn test_borrowedvecwriter_writer_write() {
+    // Default
+    let mut vec: Vec<u8> = Vec::new();
+    let mut w = BorrowedVecWriter::new(&mut vec);
+
+    let mut src2 = [0u8; 8];
+    fill_sample(&mut src2);
+
+    let mut count: usize = 0;
+    for sample in src2.iter() {
+        match w.write(*sample) {
+            Ok(_) => (),
+            _ => panic!("Unexpected read_all error!"),
+        }
+        count += 1;
+        assert_eq!(w.bytes_written(), count);
+    }
+    assert_eq!(&src2, w.as_slice());
+
+    // Append
+    let mut vec: Vec<u8> = Vec::new();
+    vec.push(0xFF);
+    let mut w = BorrowedVecWriter::with_offset(&mut vec, 1);
+
+    let mut src2 = [0u8; 8];
+    fill_sample(&mut src2);
+
+    let mut count: usize = 0;
+    for sample in src2.iter() {
+        match w.write(*sample) {
+            Ok(_) => (),
+            _ => panic!("Unexpected read_all error!"),
+        }
+        count += 1;
+        assert_eq!(w.bytes_written(), count);
+    }
+    assert_eq!(&src2, &w.as_slice()[1..]);
+    assert_eq!(0xFF, vec[0]);
+}
+
+#[test]
+fn test_borrowedvecwriter_writer_write_all() {
+    let mut vec: Vec<u8> = Vec::new();
+    let mut w = BorrowedVecWriter::new(&mut vec);
+
+    let mut src2 = [0u8; 8];
+    fill_sample(&mut src2);
+
+    let mut count = 0 as usize;
+    match w.write_all(&src2) {
+        Ok(_) => (),
+        _ => panic!("Unexpected read_all error!"),
+    }
+    count += src2.len();
+    assert_eq!(w.bytes_written(), count);
+
+    match w.write_all(&src2) {
+        Ok(_) => (),
+        _ => panic!("Unexpected read_all error!"),
+    }
+    count += src2.len();
+    assert_eq!(w.bytes_written(), count);
+
+    let mut exp = [0u8; 16];
+    exp[0..8].copy_from_slice(&src2);
+    exp[8..16].copy_from_slice(&src2);
+    assert_eq!(exp, w.as_slice());
+
+    // With a vector with a given size
+    let mut vec: Vec<u8> = Vec::new();
+    vec.resize(10, 0);
+    let mut w = BorrowedVecWriter::new(&mut vec);
+
+    let mut count = 0 as usize;
+    match w.write_all(&src2) {
+        Ok(_) => (),
+        _ => panic!("Unexpected read_all error!"),
+    }
+    count += src2.len();
+    assert_eq!(w.bytes_written(), count);
+
+    match w.write_all(&src2) {
+        Ok(_) => (),
+        _ => panic!("Unexpected read_all error!"),
+    }
+    count += src2.len();
+    assert_eq!(w.bytes_written(), count);
+
+    let mut exp = [0u8; 16];
+    exp[0..8].copy_from_slice(&src2);
+    exp[8..16].copy_from_slice(&src2);
+    assert_eq!(exp, w.as_slice());
+}

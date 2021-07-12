@@ -21,6 +21,8 @@ This library is licensed under a 3-Clause BSD license.
 
 ## Version history
 
+- 1.1.0:
+    - `il2_iltags::io::BorrowedVecWriter` added;
 - 1.0.1:
     - Issue #1 - Invalid code snippets marked as ignored;
 - 1.0.0:

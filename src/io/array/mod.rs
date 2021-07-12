@@ -32,6 +32,7 @@
 //! This module contains the implementation of [`Reader`] and [`Writer`] for
 //! arrays, slices and vectors.
 use super::{ErrorKind, Reader, Result, Writer};
+use std::cmp::min;
 
 #[cfg(test)]
 mod tests;
@@ -224,6 +225,100 @@ impl<'a> Reader for VecReader {
 }
 
 //=============================================================================
+// Base VecWriter methods
+//-----------------------------------------------------------------------------
+macro_rules! basevecwriter_basic_impl {
+    () => {
+        /// Returns the current writing position.
+        ///
+        /// Returns:
+        /// - The current offset. It is guaranteed to be at most
+        /// the total size of the data.
+        pub fn get_offset(&self) -> usize {
+            self.offset
+        }
+
+        /// Sets the current writing position.
+        ///
+        /// Arguments:
+        /// - `offset`: The new position. It if is larger
+        ///   than the total length, it will assume the
+        ///   total length;
+        pub fn set_offset(&mut self, offset: usize) {
+            self.offset = std::cmp::min(offset, self.vector.len());
+        }
+
+        /// Returns true if this instance is locked for writing.
+        pub fn is_read_only(&self) -> bool {
+            self.read_only
+        }
+
+        /// Sets the read-only flag.
+        ///
+        /// Arguments:
+        /// - `read_only`: The new value;
+        pub fn set_read_only(&mut self, read_only: bool) {
+            self.read_only = read_only;
+        }
+
+        /// Verifies if the it is possible to write into this
+        /// `VecWriter`.
+        ///
+        /// Returns:
+        /// - `Ok(())`: If it is possible to write;
+        /// - `Err(ErrorKind::UnableToWriteData)`: If it is not possible
+        /// to write;
+        pub fn can_write(&self) -> Result<()> {
+            if self.read_only {
+                Err(ErrorKind::UnableToWriteData)
+            } else {
+                Ok(())
+            }
+        }
+
+        /// Returns the current data as a slice.
+        pub fn as_slice(&self) -> &[u8] {
+            &self.vector.as_slice()
+        }
+
+        /// Returns aread-only reference to the inner vector.
+        pub fn vec(&self) -> &Vec<u8> {
+            &self.vector
+        }
+    };
+}
+
+macro_rules! basevecwriter_writer_impl {
+    () => {
+        fn write(&mut self, value: u8) -> Result<()> {
+            self.can_write()?;
+            if self.offset == self.vector.len() {
+                self.vector.push(value);
+            } else {
+                self.vector[self.offset] = value;
+            }
+            self.offset += 1;
+            Ok(())
+        }
+
+        fn write_all(&mut self, buff: &[u8]) -> Result<()> {
+            self.can_write()?;
+            let new_offset = self.offset + buff.len();
+            if new_offset > self.vector.len() {
+                self.vector.resize(new_offset, 0);
+            }
+            self.vector[self.offset..new_offset].copy_from_slice(buff);
+            self.offset = new_offset;
+            Ok(())
+        }
+
+        fn as_writer(&mut self) -> &mut dyn Writer {
+            self
+        }
+    };
+}
+
+//=============================================================================
 // VecWriter
 //-----------------------------------------------------------------------------
 /// [`VecWriter`] implements a [`Writer`] that uses a Vec<u8> a its backend.
@@ -257,94 +352,71 @@ impl VecWriter {
         }
     }
 
-    /// Returns the current writing position.
-    ///
-    /// Returns:
-    /// - The current offset. It is guaranteed to be at most
-    /// the total size of the data.
-    pub fn get_offset(&self) -> usize {
-        self.offset
-    }
-
-    /// Sets the current writing position.
-    ///
-    /// Arguments:
-    /// - `offset`: The new position. It if is larger
-    ///   than the total length, it will assume the
-    ///   total length;
-    pub fn set_offset(&mut self, offset: usize) {
-        self.offset = std::cmp::min(offset, self.vector.len());
-    }
-
-    /// Returns true if this instance is locked for writing.
-    pub fn is_read_only(&self) -> bool {
-        self.read_only
-    }
-
-    /// Sets the read-only flag.
-    ///
-    /// Arguments:
-    /// - `read_only`: The new value;
-    pub fn set_read_only(&mut self, read_only: bool) {
-        self.read_only = read_only;
-    }
-
-    /// Verifies if the it is possible to write into this
-    /// `VecWriter`.
-    ///
-    /// Returns:
-    /// - `Ok(())`: If it is possible to write;
-    /// - `Err(ErrorKind::UnableToWriteData)`: If it is not possible
-    /// to write;
-    pub fn can_write(&self) -> Result<()> {
-        if self.read_only {
-            Err(ErrorKind::UnableToWriteData)
-        } else {
-            Ok(())
-        }
-    }
-
-    /// Returns the current data as a slice.
-    pub fn as_slice(&self) -> &[u8] {
-        &self.vector.as_slice()
-    }
-
-    /// Returns aread-only reference to the inner vector.
-    pub fn vec(&self) -> &Vec<u8> {
-        &self.vector
-    }
+    basevecwriter_basic_impl!();
 }
 
 impl Writer for VecWriter {
-    fn write(&mut self, value: u8) -> Result<()> {
-        self.can_write()?;
-        if self.offset == self.vector.len() {
-            self.vector.push(value);
-        } else {
-            self.vector[self.offset] = value;
-        }
-        self.offset += 1;
-        Ok(())
-    }
-
-    fn write_all(&mut self, buff: &[u8]) -> Result<()> {
-        self.can_write()?;
-        let new_offset = self.offset + buff.len();
-        if new_offset > self.vector.len() {
-            self.vector.resize(new_offset, 0);
-        }
-        self.vector[self.offset..new_offset].copy_from_slice(buff);
-        self.offset = new_offset;
-        Ok(())
-    }
-
-    fn as_writer(&mut self) -> &mut dyn Writer {
-        self
-    }
+    basevecwriter_writer_impl!();
 }
 
 impl Default for VecWriter {
     fn default() -> Self {
         Self::new()
     }
+}
+
+//=============================================================================
+// BorrowedVecWriter
+//-----------------------------------------------------------------------------
+/// [`BorrowedVecWriter`] implements a [`Writer`] that uses a borrowed Vec<u8>
+/// as its backend.
+///
+/// The borrowed vector is used as is. This means that:
+/// - Any existing data will be overwritten from the initial offset;
+/// - The vector will be extended if required but will never shrink to
+///   accomodate the amount of data written;
+pub struct BorrowedVecWriter<'a> {
+    vector: &'a mut Vec<u8>,
+    initial_offset: usize,
+    offset: usize,
+    read_only: bool,
+}
+
+impl<'a> BorrowedVecWriter<'a> {
+    /// Creates a new instance of this struct. The new struct
+    /// is set as writeable by default.
+    ///
+    /// Arguments:
+    /// - `vector`: The inner vector;
+    pub fn new(vector: &'a mut Vec<u8>) -> Self {
+        Self::with_offset(vector, 0)
+    }
+
+    /// Creates a new instance of this struct. The new struct
+    /// is set as writeable by default.
+    ///
+    /// Arguments:
+    /// - `vector`: The inner vector;
+    /// - `offset`: The initial offset. If it is set to a value larger
+    ///   than vector length, it will assume the vector length;
+    pub fn with_offset(vector: &'a mut Vec<u8>, offset: usize) -> Self {
+        let curr_offs = min(offset, vector.len());
+        Self {
+            vector,
+            initial_offset: curr_offs,
+            offset: curr_offs,
+            read_only: false,
+        }
+    }
+
+    basevecwriter_basic_impl!();
+
+    /// Returns the number of bytes actually written.
+    pub fn bytes_written(&self) -> usize {
+        self.offset - self.initial_offset
+    }
+}
+
+impl<'a> Writer for BorrowedVecWriter<'a> {
+    basevecwriter_writer_impl!();
 }
