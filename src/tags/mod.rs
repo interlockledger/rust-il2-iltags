@@ -76,6 +76,7 @@ use ::std::collections::HashMap;
 pub const MAX_TAG_SIZE: u64 = 1024 * 1024 * 512;
 
 /// Definition of the errors from this package.
+#[derive(Debug)]
 pub enum ErrorKind {
     /// If an unknown tag is found.
     UnknownTag,

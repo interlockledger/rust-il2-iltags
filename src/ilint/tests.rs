@@ -32,6 +32,19 @@
 use super::*;
 use crate::io::array::{ByteArrayReader, VecWriter};
 
+#[test]
+fn test_errorkind_debug() {
+    assert_eq!(format!("{:?}", ErrorKind::InvalidFormat), "InvalidFormat");
+    assert_eq!(format!("{:?}", ErrorKind::ValueOverflow), "ValueOverflow");
+    assert_eq!(
+        format!(
+            "{:?}",
+            ErrorKind::IOError(crate::io::ErrorKind::CorruptedData)
+        ),
+        "IOError(CorruptedData)"
+    );
+}
+
 pub struct SampleILInt {
     pub value: u64,
     pub encoded_size: usize,

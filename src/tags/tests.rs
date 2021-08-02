@@ -34,6 +34,12 @@ use crate::io::array::{ByteArrayReader, VecWriter};
 use crate::io::Writer;
 
 #[test]
+fn test_errorkind_debug() {
+    assert_eq!(format!("{:?}", ErrorKind::CorruptedData), "CorruptedData");
+    assert_eq!(format!("{:?}", ErrorKind::UnknownTag), "UnknownTag");
+}
+
+#[test]
 fn test_constants() {
     assert_eq!(IMPLICIT_ID_MAX, 15);
     assert_eq!(RESERVED_ID_MAX, 31);

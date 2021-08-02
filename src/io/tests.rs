@@ -37,6 +37,15 @@ struct DummyReader {
     pub read_count: usize,
 }
 
+#[test]
+fn test_errorkind_debug() {
+    assert_eq!(format!("{:?}", ErrorKind::CorruptedData), "CorruptedData");
+    assert_eq!(
+        format!("{:?}", ErrorKind::UnableToReadData),
+        "UnableToReadData"
+    );
+}
+
 impl DummyReader {
     pub fn new(available: usize) -> DummyReader {
         DummyReader {
