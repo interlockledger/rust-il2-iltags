@@ -334,7 +334,7 @@ pub trait ILTag: Any + Send {
     fn as_mut_any(&mut self) -> &mut dyn Any;
 }
 
-/// Downcasts a [`ILTag`] to its concrete type.
+/// Downcasts a [`ILTag`] into a reference to its concrete type.
 ///
 /// Arguments:
 /// * `tag`: The tag to be downcast;
@@ -343,11 +343,11 @@ pub trait ILTag: Any + Send {
 /// An option with a reference to the concrete type or None if
 /// the conversion is not possible.
 #[inline]
-pub fn tag_downcast_ref<T: ILTag + Any>(tag: &dyn ILTag) -> Option<&T> {
+pub fn tag_downcast_ref<T: ILTag>(tag: &dyn ILTag) -> Option<&T> {
     tag.as_any().downcast_ref::<T>()
 }
 
-/// Downcasts a [`ILTag`] to its concrete type as a mutable reference.
+/// Downcasts a [`ILTag`] into a mutable a reference to its concrete type.
 ///
 /// Arguments:
 /// * `tag`: The tag to be downcast;
@@ -356,8 +356,46 @@ pub fn tag_downcast_ref<T: ILTag + Any>(tag: &dyn ILTag) -> Option<&T> {
 /// An option with a reference to the concrete type or None if
 /// the conversion is not possible.
 #[inline]
-pub fn tag_downcast_mut<T: ILTag + Any>(tag: &mut dyn ILTag) -> Option<&mut T> {
+pub fn tag_downcast_mut<T: ILTag>(tag: &mut dyn ILTag) -> Option<&mut T> {
     tag.as_mut_any().downcast_mut::<T>()
+}
+
+/// Downcasts a [`ILTag`] into a reference to its concrete type it if matches
+/// the specified tag Id.
+///
+/// Arguments:
+/// * `tag_id`: The expected tag Id;
+/// * `tag`: The tag to be downcast;
+///
+/// Returns:
+/// An option with a reference to the concrete type or None if
+/// the conversion is not possible or the tag id does not match.
+#[inline]
+pub fn tag_downcast_ref_with_id<T: ILTag>(tag_id: u64, tag: &dyn ILTag) -> Option<&T> {
+    if tag.id() == tag_id {
+        tag.as_any().downcast_ref::<T>()
+    } else {
+        None
+    }
+}
+
+/// Downcasts a [`ILTag`] into a mutable a reference to its concrete type if matches
+/// the specified tag Id.
+///
+/// Arguments:
+/// * `tag_id`: The expected tag Id;
+/// * `tag`: The tag to be downcast;
+///
+/// Returns:
+/// An option with a reference to the concrete type or None if
+/// the conversion is not possible or the tag id does not match.
+#[inline]
+pub fn tag_downcast_mut_with_id<T: ILTag>(tag_id: u64, tag: &mut dyn ILTag) -> Option<&mut T> {
+    if tag.id() == tag_id {
+        tag.as_mut_any().downcast_mut::<T>()
+    } else {
+        None
+    }
 }
 
 /// Downcasts a [`ILTag`] to its concrete type. It fails if the tag id or
@@ -371,7 +409,7 @@ pub fn tag_downcast_mut<T: ILTag + Any>(tag: &mut dyn ILTag) -> Option<&mut T> {
 /// - Ok(v): ;
 /// - Err(ErrorKind::UnexpectedTagType): If the conversion is not possible;
 #[inline]
-pub fn tag_id_downcast_ref<T: ILTag + Any>(tag_id: u64, tag: &dyn ILTag) -> Result<&T> {
+pub fn tag_id_downcast_ref<T: ILTag>(tag_id: u64, tag: &dyn ILTag) -> Result<&T> {
     if tag.id() != tag_id {
         Err(ErrorKind::UnexpectedTagType)
     } else {
@@ -393,7 +431,7 @@ pub fn tag_id_downcast_ref<T: ILTag + Any>(tag_id: u64, tag: &dyn ILTag) -> Resu
 /// An option with a reference to the concrete type or None if
 /// the conversion is not possible.
 #[inline]
-pub fn tag_id_downcast_mut<T: ILTag + Any>(tag_id: u64, tag: &mut dyn ILTag) -> Result<&mut T> {
+pub fn tag_id_downcast_mut<T: ILTag>(tag_id: u64, tag: &mut dyn ILTag) -> Result<&mut T> {
     if tag.id() != tag_id {
         Err(ErrorKind::UnexpectedTagType)
     } else {
@@ -402,6 +440,50 @@ pub fn tag_id_downcast_mut<T: ILTag + Any>(tag_id: u64, tag: &mut dyn ILTag) -> 
             None => Err(ErrorKind::UnexpectedTagType),
         }
     }
+}
+
+/// Verifies if a given [`ILTag`] has the given tag Id and implements a specified
+/// concrete type.
+///
+/// Arguments:
+/// - `tag_id`: The expected tag id;
+/// - `tag`: The tag to be downcast;
+/// - `error`: The error to return in case of mismatch;
+///
+/// Returns:
+/// - `Ok(())`: If the tag matches the criteria;
+/// - `Err(error)`: If the tag does not match the criteria;
+#[inline]
+pub fn assert_tag_id_and_type_or_error<T: ILTag>(
+    tag_id: u64,
+    tag: &dyn ILTag,
+    error: ErrorKind,
+) -> Result<()> {
+    if tag.id() != tag_id {
+        Err(error)
+    } else {
+        if tag.as_any().type_id() == std::any::TypeId::of::<T>() {
+            Ok(())
+        } else {
+            Err(error)
+        }
+    }
+}
+
+/// Verifies if a given [`ILTag`] has the given tag Id and implements a specified
+/// concrete type.
+///
+/// Arguments:
+/// - `tag_id`: The expected tag id;
+/// * `tag`: The tag to be downcast;
+///
+/// Returns:
+/// Returns:
+/// - `Ok(())`: If the tag matches the criteria;
+/// - `Err(ErrorKind::UnexpectedTagType)`: If the tag does not match the criteria;
+#[inline]
+pub fn assert_tag_id_and_type<T: ILTag>(tag_id: u64, tag: &dyn ILTag) -> Result<()> {
+    assert_tag_id_and_type_or_error::<T>(tag_id, tag, ErrorKind::UnexpectedTagType)
 }
 
 //=============================================================================

@@ -330,6 +330,13 @@ fn test_tag_downcast_ref() {
         Some(v) => assert_eq!(0, v.get_dummy()),
         None => panic!(),
     }
+
+    let tag = ILRawTag::default_with_id(123);
+    let t: &dyn ILTag = &tag;
+    match tag_downcast_ref::<DummyTag>(t) {
+        None => (),
+        Some(_) => panic!(),
+    }
 }
 
 #[test]
@@ -343,6 +350,62 @@ fn test_tag_downcast_mut() {
             assert_eq!(1234, v.get_dummy())
         }
         None => panic!(),
+    }
+
+    let mut tag = ILRawTag::default_with_id(123);
+    let t: &mut dyn ILTag = &mut tag;
+    match tag_downcast_mut::<DummyTag>(t) {
+        None => (),
+        Some(_) => panic!(),
+    }
+}
+
+#[test]
+fn test_tag_downcast_ref_with_id() {
+    let tag = DummyTag::new(132, 1);
+    let t: &dyn ILTag = &tag;
+
+    match tag_downcast_ref_with_id::<DummyTag>(132, t) {
+        Some(v) => assert_eq!(0, v.get_dummy()),
+        None => panic!(),
+    }
+
+    match tag_downcast_ref_with_id::<DummyTag>(133, t) {
+        None => (),
+        Some(_) => panic!(),
+    }
+
+    let tag = ILRawTag::default_with_id(123);
+    let t: &dyn ILTag = &tag;
+    match tag_downcast_ref_with_id::<DummyTag>(123, t) {
+        None => (),
+        Some(_) => panic!(),
+    }
+}
+
+#[test]
+fn test_tag_downcast_mut_with_id() {
+    let mut tag = DummyTag::new(132, 1);
+    let t: &mut dyn ILTag = &mut tag;
+
+    match tag_downcast_mut_with_id::<DummyTag>(132, t) {
+        Some(v) => {
+            v.set_dummy(1234);
+            assert_eq!(1234, v.get_dummy())
+        }
+        None => panic!(),
+    }
+
+    match tag_downcast_mut_with_id::<DummyTag>(123, t) {
+        None => (),
+        Some(_) => panic!(),
+    }
+
+    let mut tag = ILRawTag::default_with_id(123);
+    let t: &mut dyn ILTag = &mut tag;
+    match tag_downcast_mut_with_id::<DummyTag>(123, t) {
+        None => (),
+        Some(_) => panic!(),
     }
 }
 
@@ -375,6 +438,52 @@ fn test_tag_id_downcast_mut() {
     }
 
     match tag_id_downcast_mut::<DummyTag>(12, t) {
+        Err(ErrorKind::UnexpectedTagType) => (),
+        _ => panic!(),
+    }
+}
+
+#[test]
+fn test_assert_tag_id_and_type_or_error() {
+    let tag = DummyTag::new(132, 1);
+    let t: &dyn ILTag = &tag;
+
+    match assert_tag_id_and_type_or_error::<DummyTag>(132, t, ErrorKind::UnknownTag) {
+        Ok(()) => (),
+        Err(_) => panic!(),
+    }
+
+    match assert_tag_id_and_type_or_error::<DummyTag>(123, t, ErrorKind::UnknownTag) {
+        Err(ErrorKind::UnknownTag) => (),
+        _ => panic!(),
+    }
+
+    let tag = ILRawTag::default_with_id(123);
+    let t: &dyn ILTag = &tag;
+    match assert_tag_id_and_type_or_error::<DummyTag>(123, t, ErrorKind::UnknownTag) {
+        Err(ErrorKind::UnknownTag) => (),
+        _ => panic!(),
+    }
+}
+
+#[test]
+fn test_assert_tag_id_and_type() {
+    let tag = DummyTag::new(132, 1);
+    let t: &dyn ILTag = &tag;
+
+    match assert_tag_id_and_type::<DummyTag>(132, t) {
+        Ok(()) => (),
+        Err(_) => panic!(),
+    }
+
+    match assert_tag_id_and_type::<DummyTag>(123, t) {
+        Err(ErrorKind::UnexpectedTagType) => (),
+        _ => panic!(),
+    }
+
+    let tag = ILRawTag::default_with_id(123);
+    let t: &dyn ILTag = &tag;
+    match assert_tag_id_and_type::<DummyTag>(123, t) {
         Err(ErrorKind::UnexpectedTagType) => (),
         _ => panic!(),
     }
