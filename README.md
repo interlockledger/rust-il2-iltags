@@ -21,6 +21,10 @@ This library is licensed under a 3-Clause BSD license.
 
 ## Version history
 
+- 1.1.1:
+    - Additional `ILTag` downcast functions added;
+    - Base tag for custom payloads added;
+    - All `ErrorKind` defined by this library now implements Debug trait;
 - 1.1.0:
     - `il2_iltags::io::BorrowedVecWriter` added;
     - Adding new traits to the module `il2_iltags::io::data` to make the usage of
