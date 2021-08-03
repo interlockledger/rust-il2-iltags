@@ -60,6 +60,7 @@
 #[macro_use]
 mod macros;
 
+pub mod payload;
 pub mod standard;
 pub mod util;
 
