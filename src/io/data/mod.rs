@@ -36,6 +36,8 @@
 //! All interger types are handled as being encoded as Big Endian values as
 //! defined by the **ILTags** specification.
 #[cfg(test)]
+pub mod test_samples;
+#[cfg(test)]
 mod tests;
 
 use super::{ErrorKind, Reader, Result, Writer};
