@@ -97,19 +97,40 @@ pub trait ILTagPayload: 'static {
 /// This struct implements the trait [`DefaultWithId`] which allows it to be
 /// used in conjuction with the generic [`crate::tags::ILDefaultWithIdTagCreator`].
 ///
-/// For example:
+/// A new tag with a custom payload can be defined as follows:
 ///
 /// ```
+/// use il2_iltags::io::{Reader, Writer};
+/// use il2_iltags::tags::{ErrorKind, ILTagFactory, Result};
+/// use il2_iltags::tags::payload::*;
+///
 /// struct DummyPayload{};
 ///
-/// impl ILTagPayload for DummyPayload {...}
+/// impl ILTagPayload for DummyPayload {
+///     fn serialized_size(&self) -> usize {
+///         // Zero as it has no fields
+///         0
+///     }
+///
+///     fn serialize(&self, writer: &mut dyn Writer) -> Result<()> {
+///         // Nothing to do as it has no fields
+///         Ok(())
+///     }
+///
+///     fn deserialize(&mut self, _factory: &dyn ILTagFactory, value_size: usize, _reader: &mut dyn Reader) -> Result<()> {
+///          // The size must be zero as it has no fields
+///         match value_size {
+///             0 => Ok(()),
+///             _ => Err(ErrorKind::CorruptedData),
+///         }
+///     }
+/// }
 ///
 /// type DummyPayloadTag = ILGenericPayloadTag<DummyPayload>;
 ///
 /// ```
 ///
-/// In this example, the tag uses, as its payload, the `DummyPayload`
-/// implementation.
+/// In this example, the tag uses `DummyPayload` as its payload, defining a new tag type `DummyPayloadTag`.
 ///
 /// Since 1.1.1.
 pub struct ILGenericPayloadTag<T: ILTagPayload + Default> {
