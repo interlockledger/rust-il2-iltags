@@ -211,7 +211,7 @@ fn test_data_reader() {
         _ => panic!(),
     }
     match read_i8(dr) as Result<i8> {
-        Ok(v) => assert_eq!(SAMPLE_VALUES_04_IU8, v),
+        Ok(v) => assert_eq!(SAMPLE_VALUES_04_I8, v),
         _ => panic!(),
     }
     match read_i16(dr) as Result<i16> {
@@ -234,7 +234,7 @@ fn test_data_reader() {
         Ok(v) => assert_eq!(SAMPLE_VALUES_09_F64, v),
         _ => panic!(),
     }
-    match read_string(dr, SAMPLE_VALUES_10_STR.len()) {
+    match read_string(dr, SAMPLE_VALUES_10_STR_LEN) {
         Ok(v) => assert_eq!(SAMPLE_VALUES_10_STR, v),
         _ => panic!(),
     }
@@ -440,7 +440,7 @@ fn test_data_writer() {
         Ok(_) => (),
         Err(_) => panic!(),
     }
-    match write_i8(SAMPLE_VALUES_04_IU8, &mut writer) {
+    match write_i8(SAMPLE_VALUES_04_I8, &mut writer) {
         Ok(_) => (),
         Err(_) => panic!(),
     }
@@ -503,13 +503,13 @@ fn test_datareader_trait_dyn_reader(reader: &mut dyn Reader) {
     test_valuereader_read_value_item!(reader, u16, SAMPLE_VALUES_01_U16);
     test_valuereader_read_value_item!(reader, u32, SAMPLE_VALUES_02_U32);
     test_valuereader_read_value_item!(reader, u64, SAMPLE_VALUES_03_U64);
-    test_valuereader_read_value_item!(reader, i8, SAMPLE_VALUES_04_IU8);
+    test_valuereader_read_value_item!(reader, i8, SAMPLE_VALUES_04_I8);
     test_valuereader_read_value_item!(reader, i16, SAMPLE_VALUES_05_I16);
     test_valuereader_read_value_item!(reader, i32, SAMPLE_VALUES_06_I32);
     test_valuereader_read_value_item!(reader, i64, SAMPLE_VALUES_07_I64);
     test_valuereader_read_value_item!(reader, f32, SAMPLE_VALUES_08_F32);
     test_valuereader_read_value_item!(reader, f64, SAMPLE_VALUES_09_F64);
-    match reader.read_string(SAMPLE_VALUES_10_STR.len()) {
+    match reader.read_string(SAMPLE_VALUES_10_STR_LEN) {
         Ok(v) => assert_eq!(v, SAMPLE_VALUES_10_STR),
         _ => panic!("Unable to read the value"),
     }
@@ -529,7 +529,7 @@ fn test_datareader_trait_dyn_reader(reader: &mut dyn Reader) {
     test_valuereader_read_value_item_error!(reader, i64);
     test_valuereader_read_value_item_error!(reader, f32);
     test_valuereader_read_value_item_error!(reader, f64);
-    match reader.read_string(SAMPLE_VALUES_10_STR.len()) {
+    match reader.read_string(SAMPLE_VALUES_10_STR_LEN) {
         Err(_) => (),
         _ => panic!("Error expected!"),
     }
@@ -551,13 +551,13 @@ fn test_datareader_trait_impl() {
     test_valuereader_read_value_item!(reader, u16, SAMPLE_VALUES_01_U16);
     test_valuereader_read_value_item!(reader, u32, SAMPLE_VALUES_02_U32);
     test_valuereader_read_value_item!(reader, u64, SAMPLE_VALUES_03_U64);
-    test_valuereader_read_value_item!(reader, i8, SAMPLE_VALUES_04_IU8);
+    test_valuereader_read_value_item!(reader, i8, SAMPLE_VALUES_04_I8);
     test_valuereader_read_value_item!(reader, i16, SAMPLE_VALUES_05_I16);
     test_valuereader_read_value_item!(reader, i32, SAMPLE_VALUES_06_I32);
     test_valuereader_read_value_item!(reader, i64, SAMPLE_VALUES_07_I64);
     test_valuereader_read_value_item!(reader, f32, SAMPLE_VALUES_08_F32);
     test_valuereader_read_value_item!(reader, f64, SAMPLE_VALUES_09_F64);
-    match reader.read_string(SAMPLE_VALUES_10_STR.len()) {
+    match reader.read_string(SAMPLE_VALUES_10_STR_LEN) {
         Ok(v) => assert_eq!(v, SAMPLE_VALUES_10_STR),
         _ => panic!("Unable to read the value"),
     }
@@ -577,7 +577,7 @@ fn test_datareader_trait_impl() {
     test_valuereader_read_value_item_error!(reader, i64);
     test_valuereader_read_value_item_error!(reader, f32);
     test_valuereader_read_value_item_error!(reader, f64);
-    match reader.read_string(SAMPLE_VALUES_10_STR.len()) {
+    match reader.read_string(SAMPLE_VALUES_10_STR_LEN) {
         Err(_) => (),
         _ => panic!("Error expected!"),
     }
@@ -610,7 +610,7 @@ fn test_datawriter_trait_dyn_writer(writer: &mut dyn Writer) {
     test_valuewriter_write_value_item!(writer, u16, SAMPLE_VALUES_01_U16);
     test_valuewriter_write_value_item!(writer, u32, SAMPLE_VALUES_02_U32);
     test_valuewriter_write_value_item!(writer, u64, SAMPLE_VALUES_03_U64);
-    test_valuewriter_write_value_item!(writer, i8, SAMPLE_VALUES_04_IU8);
+    test_valuewriter_write_value_item!(writer, i8, SAMPLE_VALUES_04_I8);
     test_valuewriter_write_value_item!(writer, i16, SAMPLE_VALUES_05_I16);
     test_valuewriter_write_value_item!(writer, i32, SAMPLE_VALUES_06_I32);
     test_valuewriter_write_value_item!(writer, i64, SAMPLE_VALUES_07_I64);
@@ -628,7 +628,7 @@ fn test_datawriter_trait_dyn_writer_err(writer: &mut dyn Writer) {
     test_valuewriter_write_value_item_err!(writer, u16, SAMPLE_VALUES_01_U16);
     test_valuewriter_write_value_item_err!(writer, u32, SAMPLE_VALUES_02_U32);
     test_valuewriter_write_value_item_err!(writer, u64, SAMPLE_VALUES_03_U64);
-    test_valuewriter_write_value_item_err!(writer, i8, SAMPLE_VALUES_04_IU8);
+    test_valuewriter_write_value_item_err!(writer, i8, SAMPLE_VALUES_04_I8);
     test_valuewriter_write_value_item_err!(writer, i16, SAMPLE_VALUES_05_I16);
     test_valuewriter_write_value_item_err!(writer, i32, SAMPLE_VALUES_06_I32);
     test_valuewriter_write_value_item_err!(writer, i64, SAMPLE_VALUES_07_I64);
@@ -658,7 +658,7 @@ fn test_datawriter_trait_impl() {
     test_valuewriter_write_value_item!(writer, u16, SAMPLE_VALUES_01_U16);
     test_valuewriter_write_value_item!(writer, u32, SAMPLE_VALUES_02_U32);
     test_valuewriter_write_value_item!(writer, u64, SAMPLE_VALUES_03_U64);
-    test_valuewriter_write_value_item!(writer, i8, SAMPLE_VALUES_04_IU8);
+    test_valuewriter_write_value_item!(writer, i8, SAMPLE_VALUES_04_I8);
     test_valuewriter_write_value_item!(writer, i16, SAMPLE_VALUES_05_I16);
     test_valuewriter_write_value_item!(writer, i32, SAMPLE_VALUES_06_I32);
     test_valuewriter_write_value_item!(writer, i64, SAMPLE_VALUES_07_I64);
@@ -674,7 +674,7 @@ fn test_datawriter_trait_impl() {
     test_valuewriter_write_value_item_err!(writer, u16, SAMPLE_VALUES_01_U16);
     test_valuewriter_write_value_item_err!(writer, u32, SAMPLE_VALUES_02_U32);
     test_valuewriter_write_value_item_err!(writer, u64, SAMPLE_VALUES_03_U64);
-    test_valuewriter_write_value_item_err!(writer, i8, SAMPLE_VALUES_04_IU8);
+    test_valuewriter_write_value_item_err!(writer, i8, SAMPLE_VALUES_04_I8);
     test_valuewriter_write_value_item_err!(writer, i16, SAMPLE_VALUES_05_I16);
     test_valuewriter_write_value_item_err!(writer, i32, SAMPLE_VALUES_06_I32);
     test_valuewriter_write_value_item_err!(writer, i64, SAMPLE_VALUES_07_I64);
