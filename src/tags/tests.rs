@@ -90,14 +90,14 @@ const ILINT_SAMPLE_BIN: [u8; 9] = [0xFF, 0xCB, 0x3A, 0x20, 0x8D, 0x5C, 0x13, 0x6
 fn test_serialize_ilint() {
     let mut writer = VecWriter::new();
 
-    match serialize_ilint(ILINT_SAMPLE, &mut writer) {
+    match writer.serialize_ilint(ILINT_SAMPLE) {
         Ok(()) => (),
         _ => panic!(),
     }
     assert_eq!(writer.as_slice(), &ILINT_SAMPLE_BIN);
 
     writer.set_read_only(true);
-    match serialize_ilint(ILINT_SAMPLE, &mut writer) {
+    match writer.serialize_ilint(ILINT_SAMPLE) {
         Err(ErrorKind::IOError(_)) => (),
         _ => panic!(),
     }
@@ -106,14 +106,14 @@ fn test_serialize_ilint() {
 #[test]
 fn test_deserialize_ilint() {
     let mut reader = ByteArrayReader::new(&ILINT_SAMPLE_BIN);
-    let v = match deserialize_ilint(&mut reader) {
+    let v = match reader.deserialize_ilint() {
         Ok(v) => v,
         _ => panic!(),
     };
     assert_eq!(v, ILINT_SAMPLE);
 
     let mut reader = ByteArrayReader::new(&ILINT_SAMPLE_BIN[..ILINT_SAMPLE_BIN.len() - 1]);
-    match deserialize_ilint(&mut reader) {
+    match reader.deserialize_ilint() {
         Err(ErrorKind::IOError(_)) => (),
         _ => panic!(),
     };
@@ -122,14 +122,14 @@ fn test_deserialize_ilint() {
 #[test]
 fn test_serialize_bytes() {
     let mut writer = VecWriter::new();
-    match serialize_bytes(&ILINT_SAMPLE_BIN, &mut writer) {
+    match writer.serialize_bytes(&ILINT_SAMPLE_BIN) {
         Ok(v) => v,
         _ => panic!(),
     };
     assert_eq!(writer.as_slice(), &ILINT_SAMPLE_BIN);
 
     writer.set_read_only(true);
-    match serialize_bytes(&ILINT_SAMPLE_BIN, &mut writer) {
+    match writer.serialize_bytes(&ILINT_SAMPLE_BIN) {
         Err(ErrorKind::IOError(_)) => (),
         _ => panic!(),
     };
@@ -139,7 +139,7 @@ fn test_serialize_bytes() {
 fn test_deserialize_bytes() {
     for size in 0..ILINT_SAMPLE_BIN.len() {
         let mut reader = ByteArrayReader::new(&ILINT_SAMPLE_BIN);
-        let ret = match deserialize_bytes(size, &mut reader) {
+        let ret = match reader.deserialize_bytes(size) {
             Ok(v) => v,
             _ => panic!(),
         };
@@ -147,7 +147,7 @@ fn test_deserialize_bytes() {
     }
 
     let mut reader = ByteArrayReader::new(&ILINT_SAMPLE_BIN);
-    match deserialize_bytes(ILINT_SAMPLE_BIN.len() + 1, &mut reader) {
+    match reader.deserialize_bytes(ILINT_SAMPLE_BIN.len() + 1) {
         Err(ErrorKind::IOError(_)) => (),
         _ => panic!(),
     };
@@ -159,7 +159,7 @@ fn test_deserialize_bytes_into_vec() {
         let mut reader = ByteArrayReader::new(&ILINT_SAMPLE_BIN);
         let mut vec: Vec<u8> = Vec::new();
         vec.resize(1234, 1); //
-        match deserialize_bytes_into_vec(size, &mut reader, &mut vec) {
+        match reader.deserialize_bytes_into_vec(size, &mut vec) {
             Ok(()) => (),
             _ => panic!(),
         };
@@ -168,7 +168,7 @@ fn test_deserialize_bytes_into_vec() {
 
     let mut reader = ByteArrayReader::new(&ILINT_SAMPLE_BIN);
     let mut vec: Vec<u8> = Vec::new();
-    match deserialize_bytes_into_vec(ILINT_SAMPLE_BIN.len() + 1, &mut reader, &mut vec) {
+    match reader.deserialize_bytes_into_vec(ILINT_SAMPLE_BIN.len() + 1, &mut vec) {
         Err(ErrorKind::IOError(_)) => (),
         _ => panic!(),
     };

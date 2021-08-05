@@ -31,7 +31,7 @@
  */
 use super::*;
 use crate::io::array::{VecReader, VecWriter};
-use crate::io::data::{ValueReader, ValueWriter};
+use crate::tags::serialization::*;
 use crate::tags::tests::UntouchbleTagFactory;
 use crate::tags::{ErrorKind, Result};
 
@@ -78,14 +78,8 @@ impl ILTagPayload for TestTagPayload {
     }
 
     fn serialize(&self, writer: &mut dyn Writer) -> Result<()> {
-        match writer.write_value(self.a) {
-            Ok(()) => (),
-            Err(x) => return Err(ErrorKind::IOError(x)),
-        }
-        match writer.write_value(self.b) {
-            Ok(()) => Ok(()),
-            Err(x) => Err(ErrorKind::IOError(x)),
-        }
+        writer.serialize_value(self.a)?;
+        writer.serialize_value(self.b)
     }
 
     fn deserialize(
@@ -97,14 +91,8 @@ impl ILTagPayload for TestTagPayload {
         if value_size != self.serialized_size() {
             return Err(ErrorKind::CorruptedData);
         }
-        self.a = match reader.read_value() {
-            Ok(v) => v,
-            Err(x) => return Err(ErrorKind::IOError(x)),
-        };
-        self.b = match reader.read_value() {
-            Ok(v) => v,
-            Err(x) => return Err(ErrorKind::IOError(x)),
-        };
+        self.a = reader.deserialize_value()?;
+        self.b = reader.deserialize_value()?;
         Ok(())
     }
 }

@@ -36,13 +36,10 @@ mod tests;
 
 use super::constants::*;
 use super::{DefaultWithId, ErrorKind, ILTag, ILTagFactory, Result};
-use crate::io::data::*;
 use crate::io::{LimitedReader, Reader, Writer};
+use crate::tags::serialization::*;
 use crate::tags::util::limited_reader_ensure_empty;
-use crate::tags::{
-    deserialize_bytes, deserialize_ilint, serialize_bytes, serialize_ilint, tag_size_to_usize,
-    ILRawTag,
-};
+use crate::tags::{tag_size_to_usize, ILRawTag};
 use ::std::any::Any;
 use ::std::collections::HashMap;
 
@@ -211,7 +208,7 @@ impl ILTag for ILStringTag {
     }
 
     fn serialize_value(&self, writer: &mut dyn Writer) -> Result<()> {
-        serialize_bytes(self.value.as_bytes(), writer)
+        writer.serialize_bytes(self.value.as_bytes())
     }
 
     fn deserialize_value(
@@ -220,7 +217,7 @@ impl ILTag for ILStringTag {
         value_size: usize,
         reader: &mut dyn Reader,
     ) -> Result<()> {
-        let tmp = deserialize_bytes(value_size, reader)?;
+        let tmp = reader.deserialize_bytes(value_size)?;
         match ::std::str::from_utf8(tmp.as_slice()) {
             Ok(v) => {
                 self.value.replace_range(.., v);
@@ -259,9 +256,9 @@ pub fn string_tag_size_from_value(s: &str) -> u64 {
 pub fn serialize_string_tag_from_value(s: &str, writer: &mut dyn Writer) -> Result<()> {
     let len = s.len() as u64;
 
-    serialize_ilint(IL_STRING_TAG_ID, writer)?;
-    serialize_ilint(len, writer)?;
-    serialize_bytes(s.as_bytes(), writer)
+    writer.serialize_ilint(IL_STRING_TAG_ID)?;
+    writer.serialize_ilint(len)?;
+    writer.serialize_bytes(s.as_bytes())
 }
 
 /// Extracts a string value from a standard string tag directly from
@@ -281,14 +278,14 @@ pub fn deserialize_string_tag_from_value_into(
     reader: &mut dyn Reader,
     output: &mut String,
 ) -> Result<()> {
-    let id = deserialize_ilint(reader)?;
+    let id = reader.deserialize_ilint()?;
     if id != IL_STRING_TAG_ID {
         return Err(ErrorKind::CorruptedData);
     }
-    let len = deserialize_ilint(reader)?;
+    let len = reader.deserialize_ilint()?;
     // Performs this conversion to ensure that
     let usize_len = tag_size_to_usize(len)?;
-    let tmp = deserialize_bytes(usize_len, reader)?;
+    let tmp = reader.deserialize_bytes(usize_len)?;
     let s = match ::std::str::from_utf8(tmp.as_slice()) {
         Ok(v) => v,
         Err(_) => return Err(ErrorKind::CorruptedData),
@@ -418,10 +415,7 @@ impl ILTag for ILBigDecTag {
     }
 
     fn serialize_value(&self, writer: &mut dyn Writer) -> Result<()> {
-        match write_i32(self.scale(), writer) {
-            Ok(()) => (),
-            Err(e) => return Err(ErrorKind::IOError(e)),
-        }
+        writer.serialize_value(self.scale())?;
         self.inner.serialize_value(writer)
     }
 
@@ -434,10 +428,7 @@ impl ILTag for ILBigDecTag {
         if value_size < 4 {
             return Err(ErrorKind::CorruptedData);
         }
-        self.scale = match read_i32(reader) {
-            Ok(v) => v,
-            Err(e) => return Err(ErrorKind::IOError(e)),
-        };
+        self.scale = reader.deserialize_value()?;
         self.inner
             .deserialize_value(factory, value_size - 4, reader)
     }
@@ -524,15 +515,9 @@ impl ILTag for ILILIntArrayTag {
     }
 
     fn serialize_value(&self, writer: &mut dyn Writer) -> Result<()> {
-        match write_ilint(self.value.len() as u64, writer) {
-            Ok(()) => (),
-            Err(e) => return Err(ErrorKind::IOError(e)),
-        };
+        writer.serialize_ilint(self.value.len() as u64)?;
         for v in self.value.as_slice() {
-            match write_ilint(*v as u64, writer) {
-                Ok(()) => (),
-                Err(e) => return Err(ErrorKind::IOError(e)),
-            };
+            writer.serialize_ilint(*v as u64)?;
         }
         Ok(())
     }
@@ -544,14 +529,14 @@ impl ILTag for ILILIntArrayTag {
         reader: &mut dyn Reader,
     ) -> Result<()> {
         let mut lreader = LimitedReader::new(reader, value_size);
-        let count = deserialize_ilint(&mut lreader)?;
+        let count = lreader.deserialize_ilint()?;
         if count > value_size as u64 {
             return Err(ErrorKind::CorruptedData);
         }
         self.value.clear();
         self.value.reserve(count as usize);
         for _i in 0..count {
-            self.value.push(deserialize_ilint(&mut lreader)?);
+            self.value.push(lreader.deserialize_ilint()?);
         }
         limited_reader_ensure_empty(&lreader, ErrorKind::CorruptedData)
     }
@@ -684,7 +669,7 @@ impl ILTag for ILTagArrayTag {
     }
 
     fn serialize_value(&self, writer: &mut dyn Writer) -> Result<()> {
-        serialize_ilint(self.inner.value.len() as u64, writer)?;
+        writer.serialize_ilint(self.inner.value.len() as u64)?;
         self.inner.serialize_value(writer)
     }
 
@@ -696,7 +681,7 @@ impl ILTag for ILTagArrayTag {
     ) -> Result<()> {
         let mut lreader = LimitedReader::new(reader, value_size);
 
-        let count = deserialize_ilint(&mut lreader)?;
+        let count = lreader.deserialize_ilint()?;
         if count > value_size as u64 {
             return Err(ErrorKind::CorruptedData);
         }
@@ -781,14 +766,8 @@ impl ILTag for ILRangeTag {
     }
 
     fn serialize_value(&self, writer: &mut dyn Writer) -> Result<()> {
-        match write_ilint(self.start, writer) {
-            Ok(()) => (),
-            Err(e) => return Err(ErrorKind::IOError(e)),
-        };
-        match write_u16(self.count, writer) {
-            Ok(()) => Ok(()),
-            Err(e) => Err(ErrorKind::IOError(e)),
-        }
+        writer.serialize_ilint(self.start)?;
+        writer.serialize_value(self.count)
     }
 
     fn deserialize_value(
@@ -798,11 +777,8 @@ impl ILTag for ILRangeTag {
         reader: &mut dyn Reader,
     ) -> Result<()> {
         let mut lreader = LimitedReader::new(reader, value_size);
-        self.start = deserialize_ilint(&mut lreader)?;
-        self.count = match read_u16(&mut lreader) {
-            Ok(v) => v,
-            Err(e) => return Err(ErrorKind::IOError(e)),
-        };
+        self.start = lreader.deserialize_ilint()?;
+        self.count = lreader.deserialize_value()?;
         limited_reader_ensure_empty(&lreader, ErrorKind::CorruptedData)
     }
 }
@@ -921,10 +897,7 @@ impl ILTag for ILVersionTag {
 
     fn serialize_value(&self, writer: &mut dyn Writer) -> Result<()> {
         for v in self.value {
-            match write_i32(v, writer) {
-                Ok(()) => (),
-                Err(e) => return Err(ErrorKind::IOError(e)),
-            };
+            writer.serialize_value(v)?;
         }
         Ok(())
     }
@@ -939,10 +912,7 @@ impl ILTag for ILVersionTag {
             return Err(ErrorKind::CorruptedData);
         }
         for v in &mut self.value {
-            *v = match read_i32(reader) {
-                Ok(v) => v,
-                Err(e) => return Err(ErrorKind::IOError(e)),
-            };
+            *v = reader.deserialize_value()?;
         }
         Ok(())
     }
@@ -1121,7 +1091,7 @@ impl ILTag for ILDictTag {
             keys.push(key);
         }
         keys.sort_unstable();
-        serialize_ilint(self.value.len() as u64, writer)?;
+        writer.serialize_ilint(self.value.len() as u64)?;
         for key in keys {
             let value = match self.value.get(key) {
                 Some(s) => s,
@@ -1140,7 +1110,7 @@ impl ILTag for ILDictTag {
         reader: &mut dyn Reader,
     ) -> Result<()> {
         let mut lreader = LimitedReader::new(reader, value_size);
-        let count = deserialize_ilint(&mut lreader)?;
+        let count = lreader.deserialize_ilint()?;
         self.value.clear();
         for _ in 0..count {
             self.value.insert(
@@ -1269,7 +1239,7 @@ impl ILTag for ILStrDictTag {
             keys.push(key);
         }
         keys.sort_unstable();
-        serialize_ilint(self.value().len() as u64, writer)?;
+        writer.serialize_ilint(self.value().len() as u64)?;
         for key in keys {
             let value = match self.value.get(key) {
                 Some(s) => s,
@@ -1288,7 +1258,7 @@ impl ILTag for ILStrDictTag {
         reader: &mut dyn Reader,
     ) -> Result<()> {
         let mut lreader = LimitedReader::new(reader, value_size);
-        let count = deserialize_ilint(&mut lreader)?;
+        let count = lreader.deserialize_ilint()?;
         self.value.clear();
         for _ in 0..count {
             self.value.insert(

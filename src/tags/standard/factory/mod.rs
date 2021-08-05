@@ -52,9 +52,10 @@ use super::implicit::{
     ILUInt8Tag,
 };
 use crate::io::{LimitedReader, Reader};
+use crate::tags::serialization::*;
 use crate::tags::{
-    deserialize_ilint, is_implicit_tag, tag_size_to_usize, ErrorKind, ILDefaultTagCreator, ILTag,
-    ILTagCreatorEngine, ILTagFactory, Result,
+    is_implicit_tag, tag_size_to_usize, ErrorKind, ILDefaultTagCreator, ILTag, ILTagCreatorEngine,
+    ILTagFactory, Result,
 };
 
 /// This macro is a shortcut to the registration of a new [`ILDefaultTagCreator`] for
@@ -154,11 +155,11 @@ impl ILTagFactory for ILStandardTagFactory {
     }
 
     fn deserialize(&self, reader: &mut dyn Reader) -> Result<Box<dyn ILTag>> {
-        let tag_id = deserialize_ilint(reader)?;
+        let tag_id = reader.deserialize_ilint()?;
         let tag_size = if is_implicit_tag(tag_id) {
             implicit_tag_size(tag_id)
         } else {
-            deserialize_ilint(reader)?
+            reader.deserialize_ilint()?
         };
         let utag_size = tag_size_to_usize(tag_size)?;
         let mut tag = match self.create_tag(tag_id) {

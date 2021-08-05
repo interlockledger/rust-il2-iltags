@@ -31,6 +31,7 @@
  */
 use super::*;
 use crate::io::array::{ByteArrayReader, VecWriter};
+use crate::io::data::*;
 use crate::io::Writer;
 use crate::tags::standard::factory::ILStandardTagFactory;
 use crate::tags::standard::implicit::*;

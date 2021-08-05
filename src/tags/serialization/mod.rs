@@ -36,7 +36,7 @@
 #[cfg(test)]
 mod tests;
 
-use super::{ErrorKind, Result};
+use super::Result;
 use crate::io::data::*;
 use crate::io::{Reader, Writer};
 
@@ -58,20 +58,16 @@ pub trait ValueDeserializer<T: Sized + Copy> {
 impl<T: Sized + Copy> ValueDeserializer<T> for dyn ValueReader<T> + '_ {
     #[inline]
     fn deserialize_value(&mut self) -> Result<T> {
-        match self.read_value() {
-            Ok(v) => Ok(v),
-            Err(e) => Err(ErrorKind::IOError(e)),
-        }
+        let v: T = self.read_value()?;
+        Ok(v)
     }
 }
 
 impl<T: Sized + Copy, R: ValueReader<T>> ValueDeserializer<T> for R {
     #[inline]
     fn deserialize_value(&mut self) -> Result<T> {
-        match self.read_value() {
-            Ok(v) => Ok(v),
-            Err(e) => Err(ErrorKind::IOError(e)),
-        }
+        let v: T = self.read_value()?;
+        Ok(v)
     }
 }
 
@@ -81,10 +77,8 @@ macro_rules! valuedeserializer_def_impl {
         impl ValueDeserializer<$type> for dyn Reader + '_ {
             #[inline]
             fn deserialize_value(&mut self) -> Result<$type> {
-                match $read_func(self) {
-                    Ok(v) => Ok(v),
-                    Err(e) => Err(ErrorKind::IOError(e)),
-                }
+                let v: $type = $read_func(self)?;
+                Ok(v)
             }
         }
     };
@@ -119,30 +113,24 @@ pub trait ILIntDeserializer {
 impl ILIntDeserializer for dyn ILIntReader + '_ {
     #[inline]
     fn deserialize_ilint(&mut self) -> Result<u64> {
-        match self.read_ilint() {
-            Ok(v) => Ok(v),
-            Err(e) => Err(ErrorKind::IOError(e)),
-        }
+        let v: u64 = self.read_ilint()?;
+        Ok(v)
     }
 }
 
 impl<R: ILIntReader> ILIntDeserializer for R {
     #[inline]
     fn deserialize_ilint(&mut self) -> Result<u64> {
-        match self.read_ilint() {
-            Ok(v) => Ok(v),
-            Err(e) => Err(ErrorKind::IOError(e)),
-        }
+        let v: u64 = self.read_ilint()?;
+        Ok(v)
     }
 }
 
 impl ILIntDeserializer for dyn Reader + '_ {
     #[inline]
     fn deserialize_ilint(&mut self) -> Result<u64> {
-        match read_ilint(self) {
-            Ok(v) => Ok(v),
-            Err(e) => Err(ErrorKind::IOError(e)),
-        }
+        let v: u64 = self.read_ilint()?;
+        Ok(v)
     }
 }
 
@@ -167,30 +155,24 @@ pub trait StringDeserializer {
 impl StringDeserializer for dyn StringValueReader + '_ {
     #[inline]
     fn deserialize_string(&mut self, size: usize) -> Result<String> {
-        match self.read_string(size) {
-            Ok(v) => Ok(v),
-            Err(e) => Err(ErrorKind::IOError(e)),
-        }
+        let v: String = self.read_string(size)?;
+        Ok(v)
     }
 }
 
 impl<R: StringValueReader> StringDeserializer for R {
     #[inline]
     fn deserialize_string(&mut self, size: usize) -> Result<String> {
-        match self.read_string(size) {
-            Ok(v) => Ok(v),
-            Err(e) => Err(ErrorKind::IOError(e)),
-        }
+        let v: String = self.read_string(size)?;
+        Ok(v)
     }
 }
 
 impl StringDeserializer for dyn Reader + '_ {
     #[inline]
     fn deserialize_string(&mut self, size: usize) -> Result<String> {
-        match read_string(self, size) {
-            Ok(v) => Ok(v),
-            Err(e) => Err(ErrorKind::IOError(e)),
-        }
+        let v: String = self.read_string(size)?;
+        Ok(v)
     }
 }
 
@@ -240,18 +222,14 @@ impl ByteArrayDeserializer for dyn Reader + '_ {
     #[inline]
     fn deserialize_bytes(&mut self, size: usize) -> Result<Vec<u8>> {
         let mut ret: Vec<u8> = vec![0; size];
-        match self.read_all(ret.as_mut_slice()) {
-            Ok(()) => Ok(ret),
-            Err(e) => Err(ErrorKind::IOError(e)),
-        }
+        self.read_all(ret.as_mut_slice())?;
+        Ok(ret)
     }
 
     #[inline]
     fn deserialize_bytes_into_slice(&mut self, buff: &mut [u8]) -> Result<()> {
-        match self.read_all(buff) {
-            Ok(()) => Ok(()),
-            Err(e) => Err(ErrorKind::IOError(e)),
-        }
+        self.read_all(buff)?;
+        Ok(())
     }
 }
 
@@ -259,18 +237,14 @@ impl<R: Reader> ByteArrayDeserializer for R {
     #[inline]
     fn deserialize_bytes(&mut self, size: usize) -> Result<Vec<u8>> {
         let mut ret: Vec<u8> = vec![0; size];
-        match self.read_all(ret.as_mut_slice()) {
-            Ok(()) => Ok(ret),
-            Err(e) => Err(ErrorKind::IOError(e)),
-        }
+        self.read_all(ret.as_mut_slice())?;
+        Ok(ret)
     }
 
     #[inline]
     fn deserialize_bytes_into_slice(&mut self, buff: &mut [u8]) -> Result<()> {
-        match self.read_all(buff) {
-            Ok(()) => Ok(()),
-            Err(e) => Err(ErrorKind::IOError(e)),
-        }
+        self.read_all(buff)?;
+        Ok(())
     }
 }
 
@@ -295,20 +269,16 @@ pub trait ValueSerializer<T> {
 impl<T> ValueSerializer<T> for dyn ValueWriter<T> + '_ {
     #[inline]
     fn serialize_value(&mut self, value: T) -> Result<()> {
-        match self.write_value(value) {
-            Ok(()) => Ok(()),
-            Err(e) => Err(ErrorKind::IOError(e)),
-        }
+        self.write_value(value)?;
+        Ok(())
     }
 }
 
 impl<T, W: ValueWriter<T>> ValueSerializer<T> for W {
     #[inline]
     fn serialize_value(&mut self, value: T) -> Result<()> {
-        match self.write_value(value) {
-            Ok(()) => Ok(()),
-            Err(e) => Err(ErrorKind::IOError(e)),
-        }
+        self.write_value(value)?;
+        Ok(())
     }
 }
 
@@ -318,10 +288,8 @@ macro_rules! valueserializer_def_impl {
         impl ValueSerializer<$type> for dyn Writer + '_ {
             #[inline]
             fn serialize_value(&mut self, value: $type) -> Result<()> {
-                match $write_func(value, self) {
-                    Ok(()) => Ok(()),
-                    Err(e) => Err(ErrorKind::IOError(e)),
-                }
+                $write_func(value, self)?;
+                Ok(())
             }
         }
     };
@@ -360,30 +328,24 @@ pub trait ILIntSerializer {
 impl ILIntSerializer for dyn ILIntWriter + '_ {
     #[inline]
     fn serialize_ilint(&mut self, value: u64) -> Result<()> {
-        match self.write_ilint(value) {
-            Ok(()) => Ok(()),
-            Err(e) => Err(ErrorKind::IOError(e)),
-        }
+        self.write_ilint(value)?;
+        Ok(())
     }
 }
 
 impl<W: ILIntWriter> ILIntSerializer for W {
     #[inline]
     fn serialize_ilint(&mut self, value: u64) -> Result<()> {
-        match self.write_ilint(value) {
-            Ok(()) => Ok(()),
-            Err(e) => Err(ErrorKind::IOError(e)),
-        }
+        self.write_ilint(value)?;
+        Ok(())
     }
 }
 
 impl ILIntSerializer for dyn Writer + '_ {
     #[inline]
     fn serialize_ilint(&mut self, value: u64) -> Result<()> {
-        match self.write_ilint(value) {
-            Ok(()) => Ok(()),
-            Err(e) => Err(ErrorKind::IOError(e)),
-        }
+        self.write_ilint(value)?;
+        Ok(())
     }
 }
 
@@ -396,6 +358,9 @@ impl ILIntSerializer for dyn Writer + '_ {
 pub trait ByteArraySerializer {
     /// Serializes a byte array as a vector.
     ///
+    /// This method has been deprecated because because it is equivalent to
+    /// [`ByteArraySerializer::serialize_bytes()`].
+    ///
     /// Arguments:
     /// - `value`: The value to write;
     ///
@@ -403,8 +368,10 @@ pub trait ByteArraySerializer {
     /// - Ok(()): For success;
     /// - Err(_): For failure;
     #[inline]
+    #[deprecated]
+    #[allow(clippy::ptr_arg)]
     fn serialize_byte_vec(&mut self, vec: &Vec<u8>) -> Result<()> {
-        self.serialize_bytes(vec.as_slice())
+        self.serialize_bytes(vec)
     }
 
     /// Serializes a byte array as a slice.
@@ -421,20 +388,16 @@ pub trait ByteArraySerializer {
 impl ByteArraySerializer for dyn Writer + '_ {
     #[inline]
     fn serialize_bytes(&mut self, buff: &[u8]) -> Result<()> {
-        match self.write_all(buff) {
-            Ok(v) => Ok(v),
-            Err(e) => Err(ErrorKind::IOError(e)),
-        }
+        self.write_all(buff)?;
+        Ok(())
     }
 }
 
 impl<W: Writer> ByteArraySerializer for W {
     #[inline]
     fn serialize_bytes(&mut self, buff: &[u8]) -> Result<()> {
-        match self.write_all(buff) {
-            Ok(v) => Ok(v),
-            Err(e) => Err(ErrorKind::IOError(e)),
-        }
+        self.write_all(buff)?;
+        Ok(())
     }
 }
 
@@ -476,10 +439,7 @@ pub fn deserialize_ilint(reader: &mut dyn Reader) -> Result<u64> {
 /// - Ok(()): On success;
 /// - Err(e): In case of error;
 pub fn serialize_bytes(bytes: &[u8], writer: &mut dyn Writer) -> Result<()> {
-    match writer.write_all(bytes) {
-        Ok(()) => Ok(()),
-        Err(e) => Err(ErrorKind::IOError(e)),
-    }
+    writer.serialize_bytes(bytes)
 }
 
 /// Deserializes a byte array of a given size.
@@ -492,11 +452,7 @@ pub fn serialize_bytes(bytes: &[u8], writer: &mut dyn Writer) -> Result<()> {
 /// - Ok(v): A vector with the bytes read;
 /// - Err(e): In case of error;
 pub fn deserialize_bytes(size: usize, reader: &mut dyn Reader) -> Result<Vec<u8>> {
-    let mut ret: Vec<u8> = vec![0; size];
-    match reader.read_all(ret.as_mut_slice()) {
-        Ok(()) => Ok(ret),
-        Err(e) => Err(ErrorKind::IOError(e)),
-    }
+    reader.deserialize_bytes(size)
 }
 
 /// Deserializes a byte array of a given size into a vector.
@@ -514,9 +470,5 @@ pub fn deserialize_bytes_into_vec(
     reader: &mut dyn Reader,
     vec: &mut Vec<u8>,
 ) -> Result<()> {
-    vec.resize(size, 0);
-    match reader.read_all(vec.as_mut_slice()) {
-        Ok(()) => Ok(()),
-        Err(e) => Err(ErrorKind::IOError(e)),
-    }
+    reader.deserialize_bytes_into_vec(size, vec)
 }

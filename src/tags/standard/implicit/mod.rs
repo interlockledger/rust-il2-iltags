@@ -36,8 +36,8 @@ mod tests;
 
 use super::constants::*;
 use super::{DefaultWithId, ErrorKind, ILTag, ILTagFactory, Result};
-use crate::io::data::*;
 use crate::io::{Reader, Writer};
+use crate::tags::serialization::*;
 use ::std::any::Any;
 
 /// This macro implements the default of a simple type value tag.
@@ -132,7 +132,7 @@ macro_rules! simple_value_tag_struct_impl {
 /// - `$read_func`: Integer read function from `crate::io::data`;
 /// - `$write_func`: Integer write function from `crate::io::data`;
 macro_rules! int_iltag_impl {
-    ($tag_type: ty, $value_size: expr, $read_func: ident, $write_func: ident) => {
+    ($tag_type: ty, $value_size: expr) => {
         impl ILTag for $tag_type {
             iltag_base_func_impl!();
 
@@ -141,10 +141,7 @@ macro_rules! int_iltag_impl {
             }
 
             fn serialize_value(&self, writer: &mut dyn Writer) -> Result<()> {
-                match $write_func(self.value, writer) {
-                    Ok(()) => Ok(()),
-                    Err(e) => Err(ErrorKind::IOError(e)),
-                }
+                writer.serialize_value(self.value)
             }
 
             fn deserialize_value(
@@ -157,10 +154,7 @@ macro_rules! int_iltag_impl {
                     $value_size => (),
                     _ => return Err(ErrorKind::CorruptedData),
                 };
-                self.value = match $read_func(reader) {
-                    Ok(v) => v,
-                    Err(e) => return Err(ErrorKind::IOError(e)),
-                };
+                self.value = reader.deserialize_value()?;
                 Ok(())
             }
         }
@@ -266,10 +260,7 @@ impl ILTag for ILBoolTag {
     }
 
     fn serialize_value(&self, writer: &mut dyn Writer) -> Result<()> {
-        match write_u8(if self.value { 1 } else { 0 }, writer) {
-            Ok(()) => Ok(()),
-            Err(e) => Err(ErrorKind::IOError(e)),
-        }
+        writer.serialize_value(if self.value { 1 } else { 0 } as u8)
     }
 
     fn deserialize_value(
@@ -282,14 +273,13 @@ impl ILTag for ILBoolTag {
             1 => (),
             _ => return Err(ErrorKind::CorruptedData),
         };
-        match read_u8(reader) {
-            Ok(v) if v == 1 || v == 0 => {
-                self.set_value(v == 1);
-                Ok(())
-            }
-            Ok(_) => Err(ErrorKind::CorruptedData),
-            Err(e) => Err(ErrorKind::IOError(e)),
-        }
+        let v: u8 = reader.deserialize_value()?;
+        self.value = match v {
+            0 => false,
+            1 => true,
+            _ => return Err(ErrorKind::CorruptedData),
+        };
+        Ok(())
     }
 }
 
@@ -308,7 +298,7 @@ pub struct ILInt8Tag {
 
 simple_value_tag_struct_impl!(ILInt8Tag, i8, IL_INT8_TAG_ID);
 
-int_iltag_impl!(ILInt8Tag, 1, read_i8, write_i8);
+int_iltag_impl!(ILInt8Tag, 1);
 
 iltag_default_impl!(ILInt8Tag);
 
@@ -325,7 +315,7 @@ pub struct ILUInt8Tag {
 
 simple_value_tag_struct_impl!(ILUInt8Tag, u8, IL_UINT8_TAG_ID);
 
-int_iltag_impl!(ILUInt8Tag, 1, read_u8, write_u8);
+int_iltag_impl!(ILUInt8Tag, 1);
 
 iltag_default_impl!(ILUInt8Tag);
 
@@ -342,7 +332,7 @@ pub struct ILInt16Tag {
 
 simple_value_tag_struct_impl!(ILInt16Tag, i16, IL_INT16_TAG_ID);
 
-int_iltag_impl!(ILInt16Tag, 2, read_i16, write_i16);
+int_iltag_impl!(ILInt16Tag, 2);
 
 iltag_default_impl!(ILInt16Tag);
 
@@ -359,7 +349,7 @@ pub struct ILUInt16Tag {
 
 simple_value_tag_struct_impl!(ILUInt16Tag, u16, IL_UINT16_TAG_ID);
 
-int_iltag_impl!(ILUInt16Tag, 2, read_u16, write_u16);
+int_iltag_impl!(ILUInt16Tag, 2);
 
 iltag_default_impl!(ILUInt16Tag);
 
@@ -376,7 +366,7 @@ pub struct ILInt32Tag {
 
 simple_value_tag_struct_impl!(ILInt32Tag, i32, IL_INT32_TAG_ID);
 
-int_iltag_impl!(ILInt32Tag, 4, read_i32, write_i32);
+int_iltag_impl!(ILInt32Tag, 4);
 
 iltag_default_impl!(ILInt32Tag);
 
@@ -393,7 +383,7 @@ pub struct ILUInt32Tag {
 
 simple_value_tag_struct_impl!(ILUInt32Tag, u32, IL_UINT32_TAG_ID);
 
-int_iltag_impl!(ILUInt32Tag, 4, read_u32, write_u32);
+int_iltag_impl!(ILUInt32Tag, 4);
 
 iltag_default_impl!(ILUInt32Tag);
 
@@ -410,7 +400,7 @@ pub struct ILInt64Tag {
 
 simple_value_tag_struct_impl!(ILInt64Tag, i64, IL_INT64_TAG_ID);
 
-int_iltag_impl!(ILInt64Tag, 8, read_i64, write_i64);
+int_iltag_impl!(ILInt64Tag, 8);
 
 iltag_default_impl!(ILInt64Tag);
 
@@ -427,7 +417,7 @@ pub struct ILUInt64Tag {
 
 simple_value_tag_struct_impl!(ILUInt64Tag, u64, IL_UINT64_TAG_ID);
 
-int_iltag_impl!(ILUInt64Tag, 8, read_u64, write_u64);
+int_iltag_impl!(ILUInt64Tag, 8);
 
 iltag_default_impl!(ILUInt64Tag);
 
@@ -444,7 +434,7 @@ pub struct ILBin32Tag {
 
 simple_value_tag_struct_impl!(ILBin32Tag, f32, IL_BIN32_TAG_ID);
 
-int_iltag_impl!(ILBin32Tag, 4, read_f32, write_f32);
+int_iltag_impl!(ILBin32Tag, 4);
 
 iltag_default_impl!(ILBin32Tag);
 
@@ -461,7 +451,7 @@ pub struct ILBin64Tag {
 
 simple_value_tag_struct_impl!(ILBin64Tag, f64, IL_BIN64_TAG_ID);
 
-int_iltag_impl!(ILBin64Tag, 8, read_f64, write_f64);
+int_iltag_impl!(ILBin64Tag, 8);
 
 iltag_default_impl!(ILBin64Tag);
 
@@ -588,10 +578,7 @@ impl ILTag for ILILInt64Tag {
     }
 
     fn serialize_value(&self, writer: &mut dyn Writer) -> Result<()> {
-        match write_ilint(self.value, writer) {
-            Ok(()) => Ok(()),
-            Err(e) => Err(ErrorKind::IOError(e)),
-        }
+        writer.serialize_ilint(self.value)
     }
 
     /// This implementation follows the specification of `ILTag::deserialize_value()`
@@ -603,10 +590,7 @@ impl ILTag for ILILInt64Tag {
         _value_size: usize,
         reader: &mut dyn Reader,
     ) -> Result<()> {
-        self.value = match read_ilint(reader) {
-            Ok(v) => v,
-            Err(e) => return Err(ErrorKind::IOError(e)),
-        };
+        self.value = reader.deserialize_ilint()?;
         Ok(())
     }
 }

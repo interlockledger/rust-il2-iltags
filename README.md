@@ -21,6 +21,10 @@ This library is licensed under a 3-Clause BSD license.
 
 ## Version history
 
+- 1.2.1:
+    - Automatic conversion from `il2_iltags::io::ErrorKind` to `il2_iltags::tags::ErrorKind` added;
+    - Applying code cleanup suggested by
+    - Method `il2_iltags::tags::serialization::ByteArraySerializer::serialize_bytes()` has been deprecated;
 - 1.2.0:
     - Version history updated;
     - Documentation of `ILGenericPayloadTag` updated. Now the example presented in the documentation

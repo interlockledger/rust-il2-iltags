@@ -32,6 +32,7 @@
 use super::*;
 use crate::io::array::{ByteArrayReader, VecWriter};
 use crate::io::data::test_samples::*;
+use crate::tags::ErrorKind;
 
 //=============================================================================
 // Deserializer Tests
@@ -282,10 +283,10 @@ fn test_serializer_struct() -> Result<()> {
     let mut writer = VecWriter::new();
     let mut v: Vec<u8> = Vec::with_capacity(SAMPLE_VALUES_BIN_SIZE);
     v.extend_from_slice(&SAMPLE_VALUES_BIN);
-    writer.serialize_byte_vec(&v)?;
+    writer.serialize_bytes(&v)?;
     assert_eq!(writer.as_slice(), &SAMPLE_VALUES_BIN);
     writer.set_read_only(true);
-    match writer.serialize_byte_vec(&v) {
+    match writer.serialize_bytes(&v) {
         Err(ErrorKind::IOError(_)) => (),
         _ => panic!("Error expected."),
     }
@@ -326,13 +327,13 @@ fn test_serializer_dyn_writer() -> Result<()> {
     v.extend_from_slice(&SAMPLE_VALUES_BIN);
     {
         let writer: &mut dyn Writer = &mut actual_writer;
-        writer.serialize_byte_vec(&v)?;
+        writer.serialize_bytes(&v)?;
     }
     assert_eq!(actual_writer.as_slice(), &SAMPLE_VALUES_BIN);
     actual_writer.set_read_only(true);
     {
         let writer: &mut dyn Writer = &mut actual_writer;
-        match writer.serialize_byte_vec(&v) {
+        match writer.serialize_bytes(&v) {
             Err(ErrorKind::IOError(_)) => (),
             _ => panic!("Error expected."),
         }
