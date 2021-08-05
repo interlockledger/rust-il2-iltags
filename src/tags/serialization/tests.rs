@@ -30,9 +30,12 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 use super::*;
-use crate::io::array::ByteArrayReader;
+use crate::io::array::{ByteArrayReader, VecWriter};
 use crate::io::data::test_samples::*;
 
+//=============================================================================
+// Deserializer Tests
+//-----------------------------------------------------------------------------
 macro_rules! test_deserializer_core {
     ($reader: expr) => {
         let r: u8 = $reader.deserialize_value()?;
@@ -61,61 +64,58 @@ macro_rules! test_deserializer_core {
         assert_eq!(r, SAMPLE_VALUES_11_ILINT);
 
         match $reader.deserialize_value() as Result<u8> {
-            Err(_) => (),
+            Err(ErrorKind::IOError(_)) => (),
             _ => panic!("Error expected."),
         }
         match $reader.deserialize_value() as Result<u16> {
-            Err(_) => (),
+            Err(ErrorKind::IOError(_)) => (),
             _ => panic!("Error expected."),
         }
         match $reader.deserialize_value() as Result<u32> {
-            Err(_) => (),
+            Err(ErrorKind::IOError(_)) => (),
             _ => panic!("Error expected."),
         }
         match $reader.deserialize_value() as Result<u64> {
-            Err(_) => (),
+            Err(ErrorKind::IOError(_)) => (),
             _ => panic!("Error expected."),
         }
         match $reader.deserialize_value() as Result<i8> {
-            Err(_) => (),
+            Err(ErrorKind::IOError(_)) => (),
             _ => panic!("Error expected."),
         }
         match $reader.deserialize_value() as Result<i16> {
-            Err(_) => (),
+            Err(ErrorKind::IOError(_)) => (),
             _ => panic!("Error expected."),
         }
         match $reader.deserialize_value() as Result<i32> {
-            Err(_) => (),
+            Err(ErrorKind::IOError(_)) => (),
             _ => panic!("Error expected."),
         }
         match $reader.deserialize_value() as Result<i64> {
-            Err(_) => (),
+            Err(ErrorKind::IOError(_)) => (),
             _ => panic!("Error expected."),
         }
         match $reader.deserialize_value() as Result<f32> {
-            Err(_) => (),
+            Err(ErrorKind::IOError(_)) => (),
             _ => panic!("Error expected."),
         }
         match $reader.deserialize_value() as Result<f64> {
-            Err(_) => (),
+            Err(ErrorKind::IOError(_)) => (),
             _ => panic!("Error expected."),
         }
         match $reader.deserialize_string(SAMPLE_VALUES_10_STR_LEN) {
-            Err(_) => (),
+            Err(ErrorKind::IOError(_)) => (),
             _ => panic!("Error expected."),
         }
         match $reader.deserialize_ilint() {
-            Err(_) => (),
+            Err(ErrorKind::IOError(_)) => (),
             _ => panic!("Error expected."),
         }
     };
 }
 
-//=============================================================================
-// ValueDeserializer
-//-----------------------------------------------------------------------------
 #[test]
-fn test_deserializer_struct_impl() -> Result<()> {
+fn test_deserializer_struct() -> Result<()> {
     let mut reader = ByteArrayReader::new(&SAMPLE_VALUES_BIN);
     test_deserializer_core!(reader);
 
@@ -149,7 +149,7 @@ fn test_deserializer_struct_impl() -> Result<()> {
 }
 
 #[test]
-fn test_deserializer_dyn_reader_impl() -> Result<()> {
+fn test_deserializer_dyn_reader() -> Result<()> {
     let mut actual_reader = ByteArrayReader::new(&SAMPLE_VALUES_BIN);
     let reader: &mut dyn Reader = &mut actual_reader;
 
@@ -182,6 +182,160 @@ fn test_deserializer_dyn_reader_impl() -> Result<()> {
     match reader.deserialize_bytes_into_vec(SAMPLE_VALUES_BIN_SIZE, &mut r) {
         Err(_) => (),
         _ => panic!("Error expected."),
+    }
+    Ok(())
+}
+
+//=============================================================================
+// Serializer Tests
+//-----------------------------------------------------------------------------
+
+macro_rules! test_serializer_core1 {
+    ($writer: expr) => {
+        $writer.serialize_value(SAMPLE_VALUES_00_U8)?;
+        $writer.serialize_value(SAMPLE_VALUES_01_U16)?;
+        $writer.serialize_value(SAMPLE_VALUES_02_U32)?;
+        $writer.serialize_value(SAMPLE_VALUES_03_U64)?;
+        $writer.serialize_value(SAMPLE_VALUES_04_I8)?;
+        $writer.serialize_value(SAMPLE_VALUES_05_I16)?;
+        $writer.serialize_value(SAMPLE_VALUES_06_I32)?;
+        $writer.serialize_value(SAMPLE_VALUES_07_I64)?;
+        $writer.serialize_value(SAMPLE_VALUES_08_F32)?;
+        $writer.serialize_value(SAMPLE_VALUES_09_F64)?;
+        $writer.serialize_value(SAMPLE_VALUES_10_STR)?;
+        $writer.serialize_ilint(SAMPLE_VALUES_11_ILINT)?;
+    };
+}
+
+macro_rules! test_serializer_core2 {
+    ($writer: expr) => {
+        match $writer.serialize_value(SAMPLE_VALUES_00_U8) {
+            Err(ErrorKind::IOError(_)) => (),
+            _ => panic!("Error expected."),
+        }
+        match $writer.serialize_value(SAMPLE_VALUES_01_U16) {
+            Err(ErrorKind::IOError(_)) => (),
+            _ => panic!("Error expected."),
+        }
+        match $writer.serialize_value(SAMPLE_VALUES_02_U32) {
+            Err(ErrorKind::IOError(_)) => (),
+            _ => panic!("Error expected."),
+        }
+        match $writer.serialize_value(SAMPLE_VALUES_03_U64) {
+            Err(ErrorKind::IOError(_)) => (),
+            _ => panic!("Error expected."),
+        }
+        match $writer.serialize_value(SAMPLE_VALUES_04_I8) {
+            Err(ErrorKind::IOError(_)) => (),
+            _ => panic!("Error expected."),
+        }
+        match $writer.serialize_value(SAMPLE_VALUES_05_I16) {
+            Err(ErrorKind::IOError(_)) => (),
+            _ => panic!("Error expected."),
+        }
+        match $writer.serialize_value(SAMPLE_VALUES_06_I32) {
+            Err(ErrorKind::IOError(_)) => (),
+            _ => panic!("Error expected."),
+        }
+        match $writer.serialize_value(SAMPLE_VALUES_07_I64) {
+            Err(ErrorKind::IOError(_)) => (),
+            _ => panic!("Error expected."),
+        }
+        match $writer.serialize_value(SAMPLE_VALUES_08_F32) {
+            Err(ErrorKind::IOError(_)) => (),
+            _ => panic!("Error expected."),
+        }
+        match $writer.serialize_value(SAMPLE_VALUES_09_F64) {
+            Err(ErrorKind::IOError(_)) => (),
+            _ => panic!("Error expected."),
+        }
+        match $writer.serialize_value(SAMPLE_VALUES_10_STR) {
+            Err(ErrorKind::IOError(_)) => (),
+            _ => panic!("Error expected."),
+        }
+        match $writer.serialize_ilint(SAMPLE_VALUES_11_ILINT) {
+            Err(ErrorKind::IOError(_)) => (),
+            _ => panic!("Error expected."),
+        }
+    };
+}
+
+#[test]
+fn test_serializer_struct() -> Result<()> {
+    let mut writer = VecWriter::new();
+
+    test_serializer_core1!(writer);
+    assert_eq!(writer.as_slice(), &SAMPLE_VALUES_BIN);
+
+    writer.set_read_only(true);
+    test_serializer_core2!(writer);
+
+    let mut writer = VecWriter::new();
+    writer.serialize_bytes(&SAMPLE_VALUES_BIN)?;
+    assert_eq!(writer.as_slice(), &SAMPLE_VALUES_BIN);
+    writer.set_read_only(true);
+    match writer.serialize_bytes(&SAMPLE_VALUES_BIN) {
+        Err(ErrorKind::IOError(_)) => (),
+        _ => panic!("Error expected."),
+    }
+
+    let mut writer = VecWriter::new();
+    let mut v: Vec<u8> = Vec::with_capacity(SAMPLE_VALUES_BIN_SIZE);
+    v.extend_from_slice(&SAMPLE_VALUES_BIN);
+    writer.serialize_byte_vec(&v)?;
+    assert_eq!(writer.as_slice(), &SAMPLE_VALUES_BIN);
+    writer.set_read_only(true);
+    match writer.serialize_byte_vec(&v) {
+        Err(ErrorKind::IOError(_)) => (),
+        _ => panic!("Error expected."),
+    }
+    Ok(())
+}
+
+#[test]
+fn test_serializer_dyn_writer() -> Result<()> {
+    let mut actual_writer = VecWriter::new();
+    {
+        let writer: &mut dyn Writer = &mut actual_writer;
+        test_serializer_core1!(writer);
+    }
+    assert_eq!(actual_writer.as_slice(), &SAMPLE_VALUES_BIN);
+    actual_writer.set_read_only(true);
+    {
+        let writer: &mut dyn Writer = &mut actual_writer;
+        test_serializer_core2!(writer);
+    }
+
+    let mut actual_writer = VecWriter::new();
+    {
+        let writer: &mut dyn Writer = &mut actual_writer;
+        writer.serialize_bytes(&SAMPLE_VALUES_BIN)?;
+    }
+    assert_eq!(actual_writer.as_slice(), &SAMPLE_VALUES_BIN);
+    actual_writer.set_read_only(true);
+    {
+        let writer: &mut dyn Writer = &mut actual_writer;
+        match writer.serialize_bytes(&SAMPLE_VALUES_BIN) {
+            Err(ErrorKind::IOError(_)) => (),
+            _ => panic!("Error expected."),
+        }
+    }
+
+    let mut actual_writer = VecWriter::new();
+    let mut v: Vec<u8> = Vec::with_capacity(SAMPLE_VALUES_BIN_SIZE);
+    v.extend_from_slice(&SAMPLE_VALUES_BIN);
+    {
+        let writer: &mut dyn Writer = &mut actual_writer;
+        writer.serialize_byte_vec(&v)?;
+    }
+    assert_eq!(actual_writer.as_slice(), &SAMPLE_VALUES_BIN);
+    actual_writer.set_read_only(true);
+    {
+        let writer: &mut dyn Writer = &mut actual_writer;
+        match writer.serialize_byte_vec(&v) {
+            Err(ErrorKind::IOError(_)) => (),
+            _ => panic!("Error expected."),
+        }
     }
     Ok(())
 }

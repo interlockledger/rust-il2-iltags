@@ -21,6 +21,12 @@ This library is licensed under a 3-Clause BSD license.
 
 ## Version history
 
+- 1.2.0:
+    - Version history updated;
+    - Documentation of `ILGenericPayloadTag` updated. Now the example presented in the documentation
+      is a valid Rust code;
+    - New set of IO wrapper traits added. This should make the implementation of custom tags easier;
+    - Minor adjustments in the unit test code in order to make it easier to be reused within other unit tests;
 - 1.1.1:
     - Additional `ILTag` downcast functions added;
     - Base tag for custom payloads added;
