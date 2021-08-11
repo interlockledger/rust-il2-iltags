@@ -732,3 +732,98 @@ fn test_write_signed_ilint() {
         };
     }
 }
+
+//=============================================================================
+// SignedILIntReader
+//-----------------------------------------------------------------------------
+#[test]
+fn test_signedilintreader_dyn_reader() {
+    for s in SIGNED_SAMPLES {
+        let mut writer = VecWriter::new();
+        assert!(crate::ilint::signed_encode(s, &mut writer).is_ok());
+
+        let mut inner_reader = ByteArrayReader::new(writer.as_slice());
+        let reader: &mut dyn Reader = &mut inner_reader;
+        let r = match reader.read_signed_ilint() {
+            Ok(v) => v,
+            Err(_) => panic!("Unable to read the value."),
+        };
+        assert_eq!(s, r);
+
+        let mut inner_reader =
+            ByteArrayReader::new(&writer.as_slice()[0..writer.as_slice().len() - 1]);
+        let reader: &mut dyn Reader = &mut inner_reader;
+        match reader.read_signed_ilint() {
+            Err(_) => (),
+            _ => panic!("Error expected."),
+        };
+    }
+}
+
+#[test]
+fn test_signedilintreader_reader() {
+    for s in SIGNED_SAMPLES {
+        let mut writer = VecWriter::new();
+        assert!(crate::ilint::signed_encode(s, &mut writer).is_ok());
+
+        let mut reader = ByteArrayReader::new(writer.as_slice());
+        let r = match reader.read_signed_ilint() {
+            Ok(v) => v,
+            Err(_) => panic!("Unable to read the value."),
+        };
+        assert_eq!(s, r);
+
+        let mut reader = ByteArrayReader::new(&writer.as_slice()[0..writer.as_slice().len() - 1]);
+        match reader.read_signed_ilint() {
+            Err(_) => (),
+            _ => panic!("Error expected."),
+        };
+    }
+}
+
+//=============================================================================
+// SignedILIntWriter
+//-----------------------------------------------------------------------------
+#[test]
+fn test_signedilintwriter_dyn_writer() {
+    for s in SIGNED_SAMPLES {
+        let mut inner_writer = VecWriter::new();
+        let writer: &mut dyn Writer = &mut inner_writer;
+        assert!(writer.write_signed_ilint(s).is_ok());
+
+        let mut reader = ByteArrayReader::new(inner_writer.as_slice());
+        let r = match crate::ilint::signed_decode(&mut reader) {
+            Ok(v) => v,
+            Err(_) => panic!("Unable to read the value."),
+        };
+        assert_eq!(s, r);
+
+        inner_writer.set_read_only(true);
+        let writer: &mut dyn Writer = &mut inner_writer;
+        match writer.write_signed_ilint(s) {
+            Err(_) => (),
+            _ => panic!("Error expected."),
+        };
+    }
+}
+
+#[test]
+fn test_signedilintwriter_writer() {
+    for s in SIGNED_SAMPLES {
+        let mut writer = VecWriter::new();
+        assert!(writer.write_signed_ilint(s).is_ok());
+
+        let mut reader = ByteArrayReader::new(writer.as_slice());
+        let r = match crate::ilint::signed_decode(&mut reader) {
+            Ok(v) => v,
+            Err(_) => panic!("Unable to read the value."),
+        };
+        assert_eq!(s, r);
+
+        writer.set_read_only(true);
+        match writer.write_signed_ilint(s) {
+            Err(_) => (),
+            _ => panic!("Error expected."),
+        };
+    }
+}
