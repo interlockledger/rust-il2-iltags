@@ -472,3 +472,84 @@ pub fn deserialize_bytes_into_vec(
 ) -> Result<()> {
     reader.deserialize_bytes_into_vec(size, vec)
 }
+
+//=============================================================================
+// SignedILIntDeserializer
+//-----------------------------------------------------------------------------
+/// This trait adds the ability to deserialize signed ILInt values.
+///
+/// Since 1.2.1.
+pub trait SignedILIntDeserializer {
+    /// Deserializes an ILInt value.
+    ///
+    /// Returns:
+    /// - Ok(v): For success;
+    /// - Err(_): For failure;
+    fn deserialize_signed_ilint(&mut self) -> Result<i64>;
+}
+
+impl SignedILIntDeserializer for dyn SignedILIntReader + '_ {
+    #[inline]
+    fn deserialize_signed_ilint(&mut self) -> Result<i64> {
+        let v: i64 = self.read_signed_ilint()?;
+        Ok(v)
+    }
+}
+
+impl<R: SignedILIntReader> SignedILIntDeserializer for R {
+    #[inline]
+    fn deserialize_signed_ilint(&mut self) -> Result<i64> {
+        let v: i64 = self.read_signed_ilint()?;
+        Ok(v)
+    }
+}
+
+impl SignedILIntDeserializer for dyn Reader + '_ {
+    #[inline]
+    fn deserialize_signed_ilint(&mut self) -> Result<i64> {
+        let v: i64 = self.read_signed_ilint()?;
+        Ok(v)
+    }
+}
+
+//=============================================================================
+// SignedILIntSerializer
+//-----------------------------------------------------------------------------
+/// This trait adds the ability to serialize signed ILInt values.
+///
+/// Since 1.2.0.
+pub trait SignedILIntSerializer {
+    /// Serializes an ILInt value.
+    ///
+    /// Arguments:
+    /// - `value`: The value to write;
+    ///
+    /// Returns:
+    /// - Ok(()): For success;
+    /// - Err(_): For failure;
+    fn serialize_signed_ilint(&mut self, value: i64) -> Result<()>;
+}
+
+impl SignedILIntSerializer for dyn SignedILIntWriter + '_ {
+    #[inline]
+    fn serialize_signed_ilint(&mut self, value: i64) -> Result<()> {
+        self.write_signed_ilint(value)?;
+        Ok(())
+    }
+}
+
+impl<W: SignedILIntWriter> SignedILIntSerializer for W {
+    #[inline]
+    fn serialize_signed_ilint(&mut self, value: i64) -> Result<()> {
+        self.write_signed_ilint(value)?;
+        Ok(())
+    }
+}
+
+impl SignedILIntSerializer for dyn Writer + '_ {
+    #[inline]
+    fn serialize_signed_ilint(&mut self, value: i64) -> Result<()> {
+        self.write_signed_ilint(value)?;
+        Ok(())
+    }
+}
