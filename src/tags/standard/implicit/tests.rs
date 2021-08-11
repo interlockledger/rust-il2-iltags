@@ -201,7 +201,7 @@ fn test_implicit_tag_size() {
     assert_eq!(implicit_tag_size(IL_BIN32_TAG_ID), 4);
     assert_eq!(implicit_tag_size(IL_BIN64_TAG_ID), 8);
     assert_eq!(implicit_tag_size(IL_BIN128_TAG_ID), 16);
-    assert_eq!(implicit_tag_size(14), 0);
+    assert_eq!(implicit_tag_size(IL_SIGNED_ILINT_TAG_ID), 9); // Variable size
     assert_eq!(implicit_tag_size(15), 0);
     assert_eq!(implicit_tag_size(16), 0);
     assert_eq!(implicit_tag_size(32), 0);
@@ -697,6 +697,7 @@ const ILINT_SAMPLE: [u64; 9] = [
     0x01_2345_6789_ABCD,
     0x0123_4567_89AB_CDEF,
 ];
+
 //=============================================================================
 // ILILInt64Tag
 //-----------------------------------------------------------------------------
@@ -709,7 +710,7 @@ fn test_ililint64tag_new() {
 fn test_ililint64tag_iltag_size() {
     for v in &ILINT_SAMPLE {
         let t = ILILInt64Tag::with_value(*v);
-        print!("{:?}\n", crate::ilint::encoded_size(*v));
+        //print!("{:?}\n", crate::ilint::encoded_size(*v));
         assert_eq!(
             t.value_size(),
             crate::ilint::encoded_size(*v) as u64,
@@ -767,6 +768,90 @@ fn test_ililint64tag_iltag_deserialize() {
         assert_eq!(t.value(), *v);
 
         let mut t = ILILInt64Tag::new();
+        let mut reader = ByteArrayReader::new(&exp_writer.vec()[0..exp_size - 1]);
+        match t.deserialize_value(&factory, test_size, &mut reader) {
+            Err(ErrorKind::IOError(_)) => (),
+            _ => panic!(""),
+        }
+        test_size += 123;
+    }
+}
+
+//=============================================================================
+// ILSignedILInt64Tag
+//-----------------------------------------------------------------------------
+#[test]
+fn test_ilsignedilint64tag_new() {
+    test_simple_value_tag_struct_impl_func_impl!(
+        ILSignedILInt64Tag,
+        IL_SIGNED_ILINT_TAG_ID,
+        i64,
+        1234
+    );
+}
+
+#[test]
+fn test_ilsignedilint64tag_iltag_size() {
+    for v in crate::io::data::test_samples::SIGNED_SAMPLES {
+        let t = ILSignedILInt64Tag::with_value(v);
+        //print!("{:?}\n", crate::ilint::signed_encoded_size(v));
+        assert_eq!(
+            t.value_size(),
+            crate::ilint::signed_encoded_size(v) as u64,
+            "Failed for the value {:?}.",
+            v
+        );
+    }
+}
+
+#[test]
+fn test_ilsignedilint64tag_iltag_serialize() {
+    for v in crate::io::data::test_samples::SIGNED_SAMPLES {
+        let mut exp_writer = VecWriter::new();
+        match crate::ilint::signed_encode(v, &mut exp_writer) {
+            Ok(()) => (),
+            _ => panic!(),
+        }
+
+        let t = ILSignedILInt64Tag::with_value(v);
+        let mut writer = VecWriter::new();
+        match t.serialize_value(&mut writer) {
+            Ok(()) => (),
+            _ => panic!(""),
+        }
+        assert_eq!(writer.vec().as_slice(), exp_writer.vec().as_slice());
+    }
+
+    let t = ILSignedILInt64Tag::new();
+    let mut writer = VecWriter::new();
+    writer.set_read_only(true);
+    match t.serialize_value(&mut writer) {
+        Err(ErrorKind::IOError(_)) => (),
+        _ => panic!(""),
+    }
+}
+
+#[test]
+fn test_ilsignedilint64tag_iltag_deserialize() {
+    let factory = UntouchbleTagFactory {};
+    let mut test_size = 0 as usize;
+    for v in crate::io::data::test_samples::SIGNED_SAMPLES {
+        let mut exp_writer = VecWriter::new();
+        match crate::ilint::signed_encode(v, &mut exp_writer) {
+            Ok(()) => (),
+            _ => panic!(),
+        }
+        let exp_size = exp_writer.vec().as_slice().len();
+
+        let mut t = ILSignedILInt64Tag::new();
+        let mut reader = ByteArrayReader::new(exp_writer.vec().as_slice());
+        match t.deserialize_value(&factory, test_size, &mut reader) {
+            Ok(()) => (),
+            _ => panic!(""),
+        }
+        assert_eq!(t.value(), v);
+
+        let mut t = ILSignedILInt64Tag::new();
         let mut reader = ByteArrayReader::new(&exp_writer.vec()[0..exp_size - 1]);
         match t.deserialize_value(&factory, test_size, &mut reader) {
             Err(ErrorKind::IOError(_)) => (),

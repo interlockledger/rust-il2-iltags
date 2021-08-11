@@ -189,6 +189,7 @@ pub fn implicit_tag_size(id: u64) -> u64 {
         IL_BIN32_TAG_ID => 4,
         IL_BIN64_TAG_ID => 8,
         IL_BIN128_TAG_ID => 16,
+        IL_SIGNED_ILINT_TAG_ID => 9,
         _ => 0,
     }
 }
@@ -596,3 +597,46 @@ impl ILTag for ILILInt64Tag {
 }
 
 iltag_default_impl!(ILILInt64Tag);
+
+//=============================================================================
+// ILSignedILint64Tag
+//-----------------------------------------------------------------------------
+/// This struct implements the ILInt standard tag. It is the only implicit tag
+/// which its value size can vary from 1 to 9 bytes.
+///
+/// By default it sets the tag id to [`IL_SIGNED_ILINT_TAG_ID`].
+///
+/// New since 1.2.1.
+pub struct ILSignedILInt64Tag {
+    id: u64,
+    value: i64,
+}
+
+simple_value_tag_struct_impl!(ILSignedILInt64Tag, i64, IL_SIGNED_ILINT_TAG_ID);
+
+impl ILTag for ILSignedILInt64Tag {
+    iltag_base_func_impl!();
+
+    fn value_size(&self) -> u64 {
+        crate::ilint::signed_encoded_size(self.value) as u64
+    }
+
+    fn serialize_value(&self, writer: &mut dyn Writer) -> Result<()> {
+        writer.serialize_signed_ilint(self.value)
+    }
+
+    /// This implementation follows the specification of `ILTag::deserialize_value()`
+    /// except for the fact that it does not check the `value_size` as it may vary
+    /// from 1 to 9 bytes depending on the actual value stored.
+    fn deserialize_value(
+        &mut self,
+        _factory: &dyn ILTagFactory,
+        _value_size: usize,
+        reader: &mut dyn Reader,
+    ) -> Result<()> {
+        self.value = reader.deserialize_signed_ilint()?;
+        Ok(())
+    }
+}
+
+iltag_default_impl!(ILSignedILInt64Tag);

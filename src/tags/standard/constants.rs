@@ -73,6 +73,11 @@ pub const IL_BIN64_TAG_ID: u64 = 12;
 /// Standard 128-bit floating point tag ID.
 pub const IL_BIN128_TAG_ID: u64 = 13;
 
+/// Standard Signed ILInt tag ID.
+///
+/// New since 1.2.1.
+pub const IL_SIGNED_ILINT_TAG_ID: u64 = 14;
+
 /// Standard byte array tag ID.
 pub const IL_BYTES_TAG_ID: u64 = 16;
 
