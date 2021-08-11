@@ -25,6 +25,8 @@ This library is licensed under a 3-Clause BSD license.
     - Automatic conversion from `il2_iltags::io::ErrorKind` to `il2_iltags::tags::ErrorKind` added;
     - Applying code cleanup suggested by clippy;
     - Method `il2_iltags::tags::serialization::ByteArraySerializer::serialize_bytes()` has been deprecated;
+    - Support to the new **ILInt** sign encoding added;
+    - Support to the new **ILIntSigned** tag added;
 - 1.2.0:
     - Version history updated;
     - Documentation of `ILGenericPayloadTag` updated. Now the example presented in the documentation
