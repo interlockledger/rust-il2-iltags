@@ -63,3 +63,16 @@ pub const SAMPLE_VALUES_BIN: [u8; SAMPLE_VALUES_BIN_SIZE] = [
     0x67, 0x75, 0x6d, 0x65, 0x6e, 0x74, 0x6f, 0x73, 0xFF, 0x49, 0x4C, 0x49, 0x6E, 0x74, 0x56, 0x61,
     0x6C,
 ];
+
+// Signed values to be used to test
+pub const SIGNED_SAMPLES: [i64; 9] = [
+    9_223_372_036_854_775_807,
+    4_294_967_295,
+    2,
+    1,
+    0,
+    -1,
+    -2,
+    -4_294_967_295,
+    -9_223_372_036_854_775_808,
+];

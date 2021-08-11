@@ -41,7 +41,7 @@ pub mod test_samples;
 mod tests;
 
 use super::{ErrorKind, Reader, Result, Writer};
-use crate::ilint::{decode, encode};
+use crate::ilint::{decode, encode, signed_decode, signed_encode};
 
 /// Extracts an `u8` from the specified [`Reader`].
 ///
@@ -164,6 +164,24 @@ pub fn read_i64(reader: &mut dyn Reader) -> Result<i64> {
 /// - Err(_): If the value could not be extracted;
 pub fn read_ilint(reader: &mut dyn Reader) -> Result<u64> {
     match decode(reader) {
+        Ok(value) => Ok(value),
+        Err(crate::ilint::ErrorKind::IOError(e)) => Err(e),
+        _ => Err(ErrorKind::CorruptedData),
+    }
+}
+
+/// Extracts a signed ILInt value from the specified [`Reader`].
+///
+/// Arguments:
+/// - `reader`: The [`Reader`];
+///
+/// Returns:
+/// - Ok(v): The value read;
+/// - Err(_): If the value could not be extracted;
+///
+/// New since 1.2.1.
+pub fn read_signed_ilint(reader: &mut dyn Reader) -> Result<i64> {
+    match signed_decode(reader) {
         Ok(value) => Ok(value),
         Err(crate::ilint::ErrorKind::IOError(e)) => Err(e),
         _ => Err(ErrorKind::CorruptedData),
@@ -339,6 +357,25 @@ pub fn write_ilint(v: u64, writer: &mut dyn Writer) -> Result<()> {
     }
 }
 
+/// Writes a signed ILInt value to the specified [`Writer`].
+///
+/// Arguments:
+/// - `v`: The value;
+/// - `writer`: The [`Writer`];
+///
+/// Returns:
+/// - Ok(()): For success;
+/// - Err(_): For failure;
+///
+/// New since 1.2.1
+pub fn write_signed_ilint(v: i64, writer: &mut dyn Writer) -> Result<()> {
+    match signed_encode(v, writer) {
+        Ok(()) => Ok(()),
+        Err(crate::ilint::ErrorKind::IOError(e)) => Err(e),
+        _ => Err(ErrorKind::UnableToWriteData),
+    }
+}
+
 /// Writes an `f32` value to the specified [`Writer`]. It is
 /// always encoded as a `binary32` from *IEEE 754-2008*.
 ///
@@ -453,6 +490,35 @@ impl<T: Reader> ILIntReader for T {
 }
 
 //=============================================================================
+// SignedILIntReader
+//-----------------------------------------------------------------------------
+/// This trait adds the ability to read signed ILInt values.
+///
+/// New since 1.2.1.
+pub trait SignedILIntReader {
+    /// Reads the ILInt.
+    ///
+    /// Returns:
+    /// - Ok(v): For success;
+    /// - Err(_): For failure;
+    fn read_signed_ilint(&mut self) -> Result<i64>;
+}
+
+impl SignedILIntReader for dyn Reader + '_ {
+    #[inline]
+    fn read_signed_ilint(&mut self) -> Result<i64> {
+        read_signed_ilint(self)
+    }
+}
+
+impl<T: Reader> SignedILIntReader for T {
+    #[inline]
+    fn read_signed_ilint(&mut self) -> Result<i64> {
+        read_signed_ilint(self)
+    }
+}
+
+//=============================================================================
 // StringValueReader
 //-----------------------------------------------------------------------------
 /// This trait adds the ability to read UTF-8 String values.
@@ -556,5 +622,37 @@ impl<T: Writer> ILIntWriter for T {
     #[inline]
     fn write_ilint(&mut self, value: u64) -> Result<()> {
         write_ilint(value, self)
+    }
+}
+
+//=============================================================================
+// SignedILIntWriter
+//-----------------------------------------------------------------------------
+/// This trait adds the ability to write signed ILInt values.
+///
+/// New since 1.2.1
+pub trait SignedILIntWriter {
+    /// Writes the ILInt value.
+    ///
+    /// Arguments:
+    /// - `value`: The value to write;
+    ///
+    /// Returns:
+    /// - Ok(()): For success;
+    /// - Err(_): For failure;    
+    fn write_signed_ilint(&mut self, value: i64) -> Result<()>;
+}
+
+impl SignedILIntWriter for dyn Writer + '_ {
+    #[inline]
+    fn write_signed_ilint(&mut self, value: i64) -> Result<()> {
+        write_signed_ilint(value, self)
+    }
+}
+
+impl<T: Writer> SignedILIntWriter for T {
+    #[inline]
+    fn write_signed_ilint(&mut self, value: i64) -> Result<()> {
+        write_signed_ilint(value, self)
     }
 }
