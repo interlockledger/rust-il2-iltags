@@ -214,3 +214,82 @@ pub fn decode(reader: &mut dyn Reader) -> Result<u64> {
         decode_body(&tmp[0..size - 1])
     }
 }
+
+/// Encodes a signed value into an unsiged value suitable
+/// to be encoded as **ILInt**.
+///
+/// Arguments:
+/// - `v`: The value to be encoded;
+///
+/// Returns the signed value ready to be encoded as an **ILInt**.
+///
+/// New since 1.2.1.
+pub fn encode_sign(v: i64) -> u64 {
+    let tmp = v as u64;
+
+    if tmp & 0x8000_0000_0000_0000 == 0 {
+        tmp << 1
+    } else {
+        !(tmp << 1)
+    }
+}
+
+/// Decodes an unsigned value into a siged value.
+///
+/// Arguments:
+/// - `v`: The value to be decoded;
+///
+/// Returns the decoded signed value.
+///
+/// New since 1.2.1.
+pub fn decode_sign(v: u64) -> i64 {
+    if v & 0x1 == 0 {
+        (v >> 1) as i64
+    } else {
+        (!(v >> 1)) as i64
+    }
+}
+
+/// Returns the size of the given signed value encoded as an ILInt.
+///
+/// Arguments:
+/// * `value` : The value to be encoded.
+///
+/// Returns:
+/// * The number of bytes required to encode the value.
+///
+/// New since 1.2.1.
+pub fn signed_encoded_size(value: i64) -> usize {
+    encoded_size(encode_sign(value))
+}
+
+/// Encodes the given signed value into a **ILInt** value.
+///
+/// Arguments:
+/// * `value`: The value to be encoded;
+/// * `writer`: The writer that will receive the encoded value;
+///
+/// Returns:
+/// * `Ok(())`: In case of success.
+/// * `Err(ErrorKind)`: In case of an I/O error.
+///
+/// New since 1.2.1.
+pub fn signed_encode(value: i64, writer: &mut dyn Writer) -> Result<()> {
+    encode(encode_sign(value), writer)
+}
+
+/// Decodes a signed **ILInt** value.
+///
+/// Arguments:
+/// * `reader`: The reader that contains the encoded
+/// value;
+///
+/// Returns:
+/// * `Ok(i64)`: On success, returns the value read.
+/// * `Err(ErrorKind)`: In case of error.  
+///
+/// New since 1.2.1.
+pub fn signed_decode(reader: &mut dyn Reader) -> Result<i64> {
+    let tmp = decode(reader)?;
+    Ok(decode_sign(tmp))
+}

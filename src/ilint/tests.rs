@@ -307,3 +307,102 @@ fn test_decode() {
         }
     }
 }
+
+#[test]
+fn test_encode_sign() {
+    // Unsigned
+    assert_eq!(encode_sign(0), 0);
+    assert_eq!(encode_sign(1), 2);
+    assert_eq!(encode_sign(0x7FFF_FFFF_FFFF_FFFF), 0xFFFF_FFFF_FFFF_FFFE);
+    // Signed
+    assert_eq!(encode_sign(-1), 1);
+    assert_eq!(encode_sign(-2), 3);
+    assert_eq!(
+        encode_sign(-9_223_372_036_854_775_808),
+        0xFFFF_FFFF_FFFF_FFFF
+    );
+}
+
+#[test]
+fn test_decode_sign() {
+    // Unsigned
+    assert_eq!(decode_sign(0), 0);
+    assert_eq!(decode_sign(2), 1);
+    assert_eq!(decode_sign(0xFFFF_FFFF_FFFF_FFFE), 0x7FFF_FFFF_FFFF_FFFF);
+    // Signed
+    assert_eq!(decode_sign(1), -1);
+    assert_eq!(decode_sign(3), -2);
+    assert_eq!(
+        decode_sign(0xFFFF_FFFF_FFFF_FFFF),
+        -9_223_372_036_854_775_808
+    );
+}
+
+const SIGNED_SAMPLES: [i64; 9] = [
+    9_223_372_036_854_775_807,
+    4_294_967_295,
+    2,
+    1,
+    0,
+    -1,
+    -2,
+    -4_294_967_295,
+    -9_223_372_036_854_775_808,
+];
+
+#[test]
+fn test_encode_decode_sign() {
+    for s in SIGNED_SAMPLES {
+        let e = encode_sign(s);
+        assert_eq!(s, decode_sign(e));
+    }
+}
+
+#[test]
+fn test_signed_encoded_size() {
+    // Unsigned
+    assert_eq!(signed_encoded_size(0), encoded_size(encode_sign(0)));
+    assert_eq!(signed_encoded_size(1), encoded_size(encode_sign(1)));
+    assert_eq!(
+        signed_encoded_size(9_223_372_036_854_775_807),
+        encoded_size(encode_sign(9_223_372_036_854_775_807))
+    );
+    assert_eq!(signed_encoded_size(-1), encoded_size(encode_sign(-1)));
+    assert_eq!(signed_encoded_size(-2), encoded_size(encode_sign(-2)));
+    assert_eq!(
+        signed_encoded_size(-9_223_372_036_854_775_808),
+        encoded_size(encode_sign(-9_223_372_036_854_775_808))
+    );
+}
+
+#[test]
+fn test_signed_encode() {
+    for s in SIGNED_SAMPLES {
+        let mut writer = VecWriter::new();
+        assert!(signed_encode(s, &mut writer).is_ok());
+        let mut exp = VecWriter::new();
+        assert!(encode(encode_sign(s), &mut exp).is_ok());
+        assert_eq!(exp.as_slice(), writer.as_slice());
+    }
+}
+
+#[test]
+fn test_signed_decode() {
+    for s in SIGNED_SAMPLES {
+        let mut exp = VecWriter::new();
+        assert!(encode(encode_sign(s), &mut exp).is_ok());
+
+        let mut reader = ByteArrayReader::new(exp.as_slice());
+        let r: i64 = match signed_decode(&mut reader) {
+            Ok(v) => v,
+            _ => panic!("Reading error"),
+        };
+        assert_eq!(s, r);
+
+        let mut reader = ByteArrayReader::new(&exp.as_slice()[..exp.as_slice().len() - 1]);
+        match signed_decode(&mut reader) {
+            Err(ErrorKind::IOError(_)) => (),
+            _ => panic!("Reading error"),
+        };
+    }
+}
