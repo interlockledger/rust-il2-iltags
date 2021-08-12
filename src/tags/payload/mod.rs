@@ -133,6 +133,16 @@ pub trait ILTagPayload: 'static {
 ///
 /// In this example, the tag uses `DummyPayload` as its payload, defining a new tag type `DummyPayloadTag`.
 ///
+/// ## Easier access to the payload with Deref and DerefMut
+///
+/// Although it this struct is not a smart pointer per se, it is a container for the inner payload
+/// implementation and has no other purposed. Given that, the most of the operatons will happen
+/// around the payload, not around the tag methods.
+///
+/// Given that, we decided to implement [`std::ops::Deref`] and [`std::ops::DerefMut`]
+/// in order to make the access to the methods of the inner payload easier even if this practice
+/// is not recommended for non smart pointer containers.
+///
 /// Since 1.1.1.
 pub struct ILGenericPayloadTag<T: ILTagPayload + Default> {
     id: u64,
