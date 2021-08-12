@@ -218,6 +218,14 @@ pub fn decode(reader: &mut dyn Reader) -> Result<u64> {
 /// Encodes a signed value into an unsiged value suitable
 /// to be encoded as **ILInt**.
 ///
+/// This transformation is designed to minimize the encoding
+/// of both negative and positive values with small modules
+/// using the **ILInt** enconding rules. See
+/// [ILInt Specification](https://github.com/interlockledger/specification/tree/master/ILInt).
+/// for further information about how this encoding works.
+///
+/// This operation can be undone by [`decode_sign()`].
+///
 /// Arguments:
 /// - `v`: The value to be encoded;
 ///
@@ -234,7 +242,9 @@ pub fn encode_sign(v: i64) -> u64 {
     }
 }
 
-/// Decodes an unsigned value into a siged value.
+/// Decodes an unsigned value into a signed value.
+///
+/// This operation can be undone by [`encode_sign()`].
 ///
 /// Arguments:
 /// - `v`: The value to be decoded;

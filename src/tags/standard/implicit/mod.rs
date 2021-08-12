@@ -560,8 +560,8 @@ iltag_default_impl!(ILBin128Tag);
 //=============================================================================
 // ILILint64Tag
 //-----------------------------------------------------------------------------
-/// This struct implements the ILInt standard tag. It is the only implicit tag
-/// which its value size can vary from 1 to 9 bytes.
+/// This struct implements the ILInt standard tag.  This tag and [`ILSignedILInt64Tag`]
+/// are the only implicit tags whose its value size can vary from 1 to 9 bytes.
 ///
 /// By default it sets the tag id to [`IL_ILINT_TAG_ID`].
 pub struct ILILInt64Tag {
@@ -601,8 +601,8 @@ iltag_default_impl!(ILILInt64Tag);
 //=============================================================================
 // ILSignedILint64Tag
 //-----------------------------------------------------------------------------
-/// This struct implements the ILInt standard tag. It is the only implicit tag
-/// which its value size can vary from 1 to 9 bytes.
+/// This struct implements the ILInt standard tag. This tag and [`ILILInt64Tag`]
+/// are the only implicit tags whose its value size can vary from 1 to 9 bytes.
 ///
 /// By default it sets the tag id to [`IL_SIGNED_ILINT_TAG_ID`].
 ///
