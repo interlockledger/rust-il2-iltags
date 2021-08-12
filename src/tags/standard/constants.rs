@@ -75,7 +75,7 @@ pub const IL_BIN128_TAG_ID: u64 = 13;
 
 /// Standard Signed ILInt tag ID.
 ///
-/// New since 1.2.1.
+/// New since 1.3.0.
 pub const IL_SIGNED_ILINT_TAG_ID: u64 = 14;
 
 /// Standard byte array tag ID.

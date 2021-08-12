@@ -179,7 +179,7 @@ pub fn read_ilint(reader: &mut dyn Reader) -> Result<u64> {
 /// - Ok(v): The value read;
 /// - Err(_): If the value could not be extracted;
 ///
-/// New since 1.2.1.
+/// New since 1.3.0.
 pub fn read_signed_ilint(reader: &mut dyn Reader) -> Result<i64> {
     match signed_decode(reader) {
         Ok(value) => Ok(value),
@@ -494,7 +494,7 @@ impl<T: Reader> ILIntReader for T {
 //-----------------------------------------------------------------------------
 /// This trait adds the ability to read signed ILInt values.
 ///
-/// New since 1.2.1.
+/// New since 1.3.0.
 pub trait SignedILIntReader {
     /// Reads the ILInt.
     ///

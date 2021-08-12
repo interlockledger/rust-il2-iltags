@@ -606,7 +606,7 @@ iltag_default_impl!(ILILInt64Tag);
 ///
 /// By default it sets the tag id to [`IL_SIGNED_ILINT_TAG_ID`].
 ///
-/// New since 1.2.1.
+/// New since 1.3.0.
 pub struct ILSignedILInt64Tag {
     id: u64,
     value: i64,

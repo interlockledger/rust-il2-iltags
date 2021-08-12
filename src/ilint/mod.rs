@@ -223,7 +223,7 @@ pub fn decode(reader: &mut dyn Reader) -> Result<u64> {
 ///
 /// Returns the signed value ready to be encoded as an **ILInt**.
 ///
-/// New since 1.2.1.
+/// New since 1.3.0.
 pub fn encode_sign(v: i64) -> u64 {
     let tmp = v as u64;
 
@@ -241,7 +241,7 @@ pub fn encode_sign(v: i64) -> u64 {
 ///
 /// Returns the decoded signed value.
 ///
-/// New since 1.2.1.
+/// New since 1.3.0.
 pub fn decode_sign(v: u64) -> i64 {
     if v & 0x1 == 0 {
         (v >> 1) as i64
@@ -258,7 +258,7 @@ pub fn decode_sign(v: u64) -> i64 {
 /// Returns:
 /// * The number of bytes required to encode the value.
 ///
-/// New since 1.2.1.
+/// New since 1.3.0.
 pub fn signed_encoded_size(value: i64) -> usize {
     encoded_size(encode_sign(value))
 }
@@ -273,7 +273,7 @@ pub fn signed_encoded_size(value: i64) -> usize {
 /// * `Ok(())`: In case of success.
 /// * `Err(ErrorKind)`: In case of an I/O error.
 ///
-/// New since 1.2.1.
+/// New since 1.3.0.
 pub fn signed_encode(value: i64, writer: &mut dyn Writer) -> Result<()> {
     encode(encode_sign(value), writer)
 }
@@ -288,7 +288,7 @@ pub fn signed_encode(value: i64, writer: &mut dyn Writer) -> Result<()> {
 /// * `Ok(i64)`: On success, returns the value read.
 /// * `Err(ErrorKind)`: In case of error.  
 ///
-/// New since 1.2.1.
+/// New since 1.3.0.
 pub fn signed_decode(reader: &mut dyn Reader) -> Result<i64> {
     let tmp = decode(reader)?;
     Ok(decode_sign(tmp))

@@ -478,7 +478,7 @@ pub fn deserialize_bytes_into_vec(
 //-----------------------------------------------------------------------------
 /// This trait adds the ability to deserialize signed ILInt values.
 ///
-/// Since 1.2.1.
+/// New since 1.3.0.
 pub trait SignedILIntDeserializer {
     /// Deserializes an ILInt value.
     ///
