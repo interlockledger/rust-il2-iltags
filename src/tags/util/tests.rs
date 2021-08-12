@@ -137,3 +137,38 @@ fn test_limited_reader_ensure_empty() {
         _ => panic!("Error not expected."),
     }
 }
+
+//=============================================================================
+// UntouchbleTagFactory
+//-----------------------------------------------------------------------------
+
+#[test]
+#[should_panic(expected = "UntouchbleTagFactory touched.")]
+fn test_untouchbletagfactory_create_tag() {
+    let f = UntouchbleTagFactory::new();
+
+    f.create_tag(0);
+}
+
+#[test]
+#[should_panic(expected = "UntouchbleTagFactory touched.")]
+#[allow(unused_must_use)]
+fn test_untouchbletagfactory_deserialize() {
+    let f = UntouchbleTagFactory::new();
+    let empty: [u8; 0] = [];
+
+    let mut reader = ByteArrayReader::new(&empty);
+    f.deserialize(&mut reader);
+}
+
+#[test]
+#[should_panic(expected = "UntouchbleTagFactory touched.")]
+#[allow(unused_must_use)]
+fn test_untouchbletagfactory_deserialize_into() {
+    let f = UntouchbleTagFactory::new();
+    let empty: [u8; 0] = [];
+
+    let mut reader = ByteArrayReader::new(&empty);
+    let mut tag = ILRawTag::new(1234);
+    f.deserialize_into(&mut reader, &mut tag);
+}

@@ -32,7 +32,7 @@
 use super::*;
 use crate::io::array::{ByteArrayReader, VecReader, VecWriter};
 use crate::tags::standard::constants::*;
-use crate::tags::tests::UntouchbleTagFactory;
+use crate::tags::util::UntouchbleTagFactory;
 use crate::tags::{DefaultWithId, ErrorKind, ILTag};
 
 //=============================================================================

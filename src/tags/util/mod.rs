@@ -39,7 +39,7 @@ use super::standard::factory::ILStandardTagFactory;
 use super::ErrorKind;
 use super::{ILTag, ILTagFactory, Result};
 use crate::io::array::{ByteArrayReader, VecWriter};
-use crate::io::LimitedReader;
+use crate::io::{LimitedReader, Reader};
 
 /// This function compares ILTag instances by serializing them and
 /// compare if the serialization matches.
@@ -133,5 +133,40 @@ pub fn limited_reader_ensure_empty(reader: &LimitedReader, on_error_kind: ErrorK
         Ok(())
     } else {
         Err(on_error_kind)
+    }
+}
+
+//=============================================================================
+// UntouchbleTagFactory
+//-----------------------------------------------------------------------------
+/// This struct implements a [`ILTagFactory`] that can be used to test tag
+/// serialization implementations that are supposed to use the an
+/// [`ILTagFactory`] instance.
+///
+/// All methods implemented by this [`ILTagFactory`] panics with the message
+/// "UntouchbleTagFactory touched.". Because of that, is is strongly
+/// recommended to keep the use of this struct for testing only.
+///
+/// New since 1.3.0.
+pub struct UntouchbleTagFactory {}
+
+impl UntouchbleTagFactory {
+    /// Creates a new `UntouchbleTagFactory`.
+    pub fn new() -> Self {
+        Self {}
+    }
+}
+
+impl ILTagFactory for UntouchbleTagFactory {
+    fn create_tag(&self, _tag_id: u64) -> Option<Box<dyn ILTag>> {
+        panic!("UntouchbleTagFactory touched.");
+    }
+
+    fn deserialize(&self, _reader: &mut dyn Reader) -> Result<Box<dyn ILTag>> {
+        panic!("UntouchbleTagFactory touched.");
+    }
+
+    fn deserialize_into(&self, _reader: &mut dyn Reader, _tag: &mut dyn ILTag) -> Result<()> {
+        panic!("UntouchbleTagFactory touched.");
     }
 }

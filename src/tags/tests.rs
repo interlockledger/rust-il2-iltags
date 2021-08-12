@@ -32,6 +32,7 @@
 use super::*;
 use crate::io::array::{ByteArrayReader, VecWriter};
 use crate::io::Writer;
+use crate::tags::util::UntouchbleTagFactory;
 
 #[test]
 fn test_errorkind_debug() {
@@ -486,31 +487,6 @@ fn test_assert_tag_id_and_type() {
     match assert_tag_id_and_type::<DummyTag>(123, t) {
         Err(ErrorKind::UnexpectedTagType) => (),
         _ => panic!(),
-    }
-}
-
-//=============================================================================
-// UntouchbleTagFactory
-//-----------------------------------------------------------------------------
-pub struct UntouchbleTagFactory {}
-
-impl UntouchbleTagFactory {
-    pub fn new() -> Self {
-        Self {}
-    }
-}
-
-impl ILTagFactory for UntouchbleTagFactory {
-    fn create_tag(&self, _tag_id: u64) -> Option<Box<dyn ILTag>> {
-        panic!();
-    }
-
-    fn deserialize(&self, _reader: &mut dyn Reader) -> Result<Box<dyn ILTag>> {
-        panic!();
-    }
-
-    fn deserialize_into(&self, _reader: &mut dyn Reader, _tag: &mut dyn ILTag) -> Result<()> {
-        panic!();
     }
 }
 

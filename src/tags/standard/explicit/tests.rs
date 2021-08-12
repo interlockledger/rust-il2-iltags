@@ -35,7 +35,7 @@ use crate::io::data::*;
 use crate::io::Writer;
 use crate::tags::standard::factory::ILStandardTagFactory;
 use crate::tags::standard::implicit::*;
-use crate::tags::tests::UntouchbleTagFactory;
+use crate::tags::util::UntouchbleTagFactory;
 use crate::tags::util::*;
 
 /// Test the functions defined by std_byte_array_tag_func_impl macro.

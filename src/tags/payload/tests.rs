@@ -32,7 +32,7 @@
 use super::*;
 use crate::io::array::{VecReader, VecWriter};
 use crate::tags::serialization::*;
-use crate::tags::tests::UntouchbleTagFactory;
+use crate::tags::util::UntouchbleTagFactory;
 use crate::tags::{ErrorKind, Result};
 
 //=============================================================================
