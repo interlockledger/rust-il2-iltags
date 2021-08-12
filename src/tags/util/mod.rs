@@ -170,3 +170,9 @@ impl ILTagFactory for UntouchbleTagFactory {
         panic!("UntouchbleTagFactory touched.");
     }
 }
+
+impl Default for UntouchbleTagFactory {
+    fn default() -> Self {
+        Self {}
+    }
+}
