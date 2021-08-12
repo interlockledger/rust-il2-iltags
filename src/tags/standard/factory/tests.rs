@@ -77,6 +77,7 @@ macro_rules! test_engine_standard_registration {
         test_engine_created_tag!($engine, IL_BIN32_TAG_ID, ILBin32Tag);
         test_engine_created_tag!($engine, IL_BIN64_TAG_ID, ILBin64Tag);
         test_engine_created_tag!($engine, IL_BIN128_TAG_ID, ILBin128Tag);
+        test_engine_created_tag!($engine, IL_SIGNED_ILINT_TAG_ID, ILSignedILInt64Tag);
 
         // Explict
         test_engine_created_tag!($engine, IL_BYTES_TAG_ID, ILByteArrayTag);
@@ -96,7 +97,6 @@ macro_rules! test_engine_standard_registration {
 
 macro_rules! test_engine_standard_registration_non_strict {
     ($engine: expr) => {
-        test_engine_created_tag_expect_none!($engine, 14);
         test_engine_created_tag_expect_none!($engine, 15);
         test_engine_created_tag!($engine, 26, ILRawTag);
         test_engine_created_tag!($engine, 27, ILRawTag);
@@ -109,7 +109,6 @@ macro_rules! test_engine_standard_registration_non_strict {
 
 macro_rules! test_engine_standard_registration_strict {
     ($engine: expr) => {
-        test_engine_created_tag_expect_none!($engine, 14);
         test_engine_created_tag_expect_none!($engine, 15);
         test_engine_created_tag_expect_none!($engine, 26);
         test_engine_created_tag_expect_none!($engine, 27);
@@ -211,6 +210,18 @@ fn test_ilstandardtagfactory_iltagfactory_deserialize_non_strict() {
     test_deserialize_tag!(f, ILInt16Tag::new(), ILInt16Tag);
     test_deserialize_tag!(f, ILILInt64Tag::with_value(127), ILILInt64Tag);
     test_deserialize_tag!(f, ILILInt64Tag::with_value(12345), ILILInt64Tag);
+    test_deserialize_tag!(f, ILSignedILInt64Tag::with_value(1), ILSignedILInt64Tag);
+    test_deserialize_tag!(f, ILSignedILInt64Tag::with_value(-1), ILSignedILInt64Tag);
+    test_deserialize_tag!(
+        f,
+        ILSignedILInt64Tag::with_value(9_223_372_036_854_775_807),
+        ILSignedILInt64Tag
+    );
+    test_deserialize_tag!(
+        f,
+        ILSignedILInt64Tag::with_value(-9_223_372_036_854_775_808),
+        ILSignedILInt64Tag
+    );
 
     // Invalid implicit tag
     test_deserialize_tag_expect_none!(f, ILNullTag::with_id(15));
@@ -241,6 +252,18 @@ fn test_ilstandardtagfactory_iltagfactory_deserialize_strict() {
     test_deserialize_tag!(f, ILInt16Tag::new(), ILInt16Tag);
     test_deserialize_tag!(f, ILILInt64Tag::with_value(127), ILILInt64Tag);
     test_deserialize_tag!(f, ILILInt64Tag::with_value(12345), ILILInt64Tag);
+    test_deserialize_tag!(f, ILSignedILInt64Tag::with_value(1), ILSignedILInt64Tag);
+    test_deserialize_tag!(f, ILSignedILInt64Tag::with_value(-1), ILSignedILInt64Tag);
+    test_deserialize_tag!(
+        f,
+        ILSignedILInt64Tag::with_value(9_223_372_036_854_775_807),
+        ILSignedILInt64Tag
+    );
+    test_deserialize_tag!(
+        f,
+        ILSignedILInt64Tag::with_value(-9_223_372_036_854_775_808),
+        ILSignedILInt64Tag
+    );
 
     // Invalid implicit tag
     test_deserialize_tag_expect_none!(f, ILNullTag::with_id(15));

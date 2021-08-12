@@ -38,9 +38,9 @@ use super::constants::{
     IL_BDEC_TAG_ID, IL_BIN128_TAG_ID, IL_BIN32_TAG_ID, IL_BIN64_TAG_ID, IL_BINT_TAG_ID,
     IL_BOOL_TAG_ID, IL_BYTES_TAG_ID, IL_DICTIONARY_TAG_ID, IL_ILINTARRAY_TAG_ID, IL_ILINT_TAG_ID,
     IL_ILTAGARRAY_TAG_ID, IL_ILTAGSEQ_TAG_ID, IL_INT16_TAG_ID, IL_INT32_TAG_ID, IL_INT64_TAG_ID,
-    IL_INT8_TAG_ID, IL_NULL_TAG_ID, IL_OID_TAG_ID, IL_RANGE_TAG_ID, IL_STRING_DICTIONARY_TAG_ID,
-    IL_STRING_TAG_ID, IL_UINT16_TAG_ID, IL_UINT32_TAG_ID, IL_UINT64_TAG_ID, IL_UINT8_TAG_ID,
-    IL_VERSION_TAG_ID,
+    IL_INT8_TAG_ID, IL_NULL_TAG_ID, IL_OID_TAG_ID, IL_RANGE_TAG_ID, IL_SIGNED_ILINT_TAG_ID,
+    IL_STRING_DICTIONARY_TAG_ID, IL_STRING_TAG_ID, IL_UINT16_TAG_ID, IL_UINT32_TAG_ID,
+    IL_UINT64_TAG_ID, IL_UINT8_TAG_ID, IL_VERSION_TAG_ID,
 };
 use super::explicit::{
     ILBigDecTag, ILBigIntTag, ILByteArrayTag, ILDictTag, ILILIntArrayTag, ILOIDTag, ILRangeTag,
@@ -48,8 +48,8 @@ use super::explicit::{
 };
 use super::implicit::{
     implicit_tag_size, ILBin128Tag, ILBin32Tag, ILBin64Tag, ILBoolTag, ILILInt64Tag, ILInt16Tag,
-    ILInt32Tag, ILInt64Tag, ILInt8Tag, ILNullTag, ILUInt16Tag, ILUInt32Tag, ILUInt64Tag,
-    ILUInt8Tag,
+    ILInt32Tag, ILInt64Tag, ILInt8Tag, ILNullTag, ILSignedILInt64Tag, ILUInt16Tag, ILUInt32Tag,
+    ILUInt64Tag, ILUInt8Tag,
 };
 use crate::io::{LimitedReader, Reader};
 use crate::tags::serialization::*;
@@ -101,6 +101,7 @@ pub fn create_std_engine(strict: bool) -> ILTagCreatorEngine {
     engine_register_macro!(engine, IL_BIN32_TAG_ID, ILBin32Tag);
     engine_register_macro!(engine, IL_BIN64_TAG_ID, ILBin64Tag);
     engine_register_macro!(engine, IL_BIN128_TAG_ID, ILBin128Tag);
+    engine_register_macro!(engine, IL_SIGNED_ILINT_TAG_ID, ILSignedILInt64Tag);
     // Standard
     engine_register_macro!(engine, IL_BYTES_TAG_ID, ILByteArrayTag);
     engine_register_macro!(engine, IL_STRING_TAG_ID, ILStringTag);
@@ -166,7 +167,7 @@ impl ILTagFactory for ILStandardTagFactory {
             Some(t) => t,
             None => return Err(ErrorKind::UnknownTag),
         };
-        if tag_id == IL_ILINT_TAG_ID {
+        if tag_id == IL_ILINT_TAG_ID || tag_id == IL_SIGNED_ILINT_TAG_ID {
             tag.deserialize_value(self, utag_size, reader)?;
         } else {
             let mut lreader = LimitedReader::new(reader, utag_size);
