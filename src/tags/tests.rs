@@ -722,6 +722,9 @@ fn test_ilrawtag_mut_value() {
     let mut t = ILRawTag::new(16);
     t.mut_value().extend_from_slice(&SAMPLE);
     assert_eq!(t.value().as_slice(), &SAMPLE);
+
+    t.set_value(&SAMPLE[0..3]);
+    assert_eq!(t.value().as_slice(), &SAMPLE[0..3]);
 }
 
 #[test]

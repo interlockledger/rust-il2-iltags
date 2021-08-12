@@ -693,6 +693,17 @@ impl ILRawTag {
     pub fn mut_value(&mut self) -> &mut Vec<u8> {
         &mut self.value
     }
+
+    /// Sets the value of this tag.
+    ///
+    /// Arguments:
+    /// - `value`: The value;
+    ///
+    /// New since 1.3.1.
+    pub fn set_value(&mut self, value: &[u8]) {
+        self.value.resize(0, 0);
+        self.value.extend_from_slice(value);
+    }
 }
 
 impl ILTag for ILRawTag {
