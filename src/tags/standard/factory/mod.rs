@@ -148,6 +148,32 @@ impl ILStandardTagFactory {
     pub fn engine(&mut self) -> &mut ILTagCreatorEngine {
         &mut self.engine
     }
+
+    #[inline]
+    fn deserialize_tag_size(tag_id: u64, reader: &mut dyn Reader) -> Result<usize> {
+        let tag_size = if is_implicit_tag(tag_id) {
+            implicit_tag_size(tag_id)
+        } else {
+            reader.deserialize_ilint()?
+        };
+        let size = tag_size_to_usize(tag_size)?;
+        Ok(size)
+    }
+
+    #[inline]
+    fn deserialize_tag_value_into(
+        &self,
+        tag_size: usize,
+        reader: &mut dyn Reader,
+        tag: &mut dyn ILTag,
+    ) -> Result<()> {
+        let mut lreader = LimitedReader::new(reader, tag_size);
+        tag.deserialize_value(self, tag_size, &mut lreader)?;
+        if tag.id() != IL_ILINT_TAG_ID && tag.id() != IL_SIGNED_ILINT_TAG_ID && !lreader.empty() {
+            return Err(ErrorKind::CorruptedData);
+        }
+        Ok(())
+    }
 }
 
 impl ILTagFactory for ILStandardTagFactory {
@@ -157,25 +183,22 @@ impl ILTagFactory for ILStandardTagFactory {
 
     fn deserialize(&self, reader: &mut dyn Reader) -> Result<Box<dyn ILTag>> {
         let tag_id = reader.deserialize_ilint()?;
-        let tag_size = if is_implicit_tag(tag_id) {
-            implicit_tag_size(tag_id)
-        } else {
-            reader.deserialize_ilint()?
-        };
-        let utag_size = tag_size_to_usize(tag_size)?;
+        let tag_size = Self::deserialize_tag_size(tag_id, reader)?;
         let mut tag = match self.create_tag(tag_id) {
             Some(t) => t,
             None => return Err(ErrorKind::UnknownTag),
         };
-        if tag_id == IL_ILINT_TAG_ID || tag_id == IL_SIGNED_ILINT_TAG_ID {
-            tag.deserialize_value(self, utag_size, reader)?;
-        } else {
-            let mut lreader = LimitedReader::new(reader, utag_size);
-            tag.deserialize_value(self, utag_size, &mut lreader)?;
-            if !lreader.empty() {
-                return Err(ErrorKind::CorruptedData);
-            }
-        }
+        self.deserialize_tag_value_into(tag_size, reader, tag.as_mut())?;
         Ok(tag)
+    }
+
+    fn deserialize_into(&self, reader: &mut dyn Reader, tag: &mut dyn ILTag) -> Result<()> {
+        let tag_id = reader.deserialize_ilint()?;
+        if tag_id != tag.id() {
+            return Err(ErrorKind::UnexpectedTagType);
+        }
+        let tag_size = Self::deserialize_tag_size(tag_id, reader)?;
+        self.deserialize_tag_value_into(tag_size, reader, tag)?;
+        Ok(())
     }
 }

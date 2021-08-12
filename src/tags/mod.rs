@@ -450,6 +450,19 @@ pub trait ILTagFactory: Send {
     /// Retunrs:
     /// The boxed deserialized tag or an error in case of failure.
     fn deserialize(&self, reader: &mut dyn Reader) -> Result<Box<dyn ILTag>>;
+
+    /// Deserializes a tag from a reader and put the result into an existing tag
+    /// instance if possible.
+    ///
+    /// Arguments:
+    /// - `reader`: The reader that contains the tag;
+    /// - `tag`: The tag instance that will receive the deserialized tag;
+    ///
+    /// Retunrs:
+    /// - Ok(()): On success;
+    /// - Err(ErrorKind::UnexpectedTagType): If the tag types don't match.
+    /// - Err(_): In case of failure;
+    fn deserialize_into(&self, reader: &mut dyn Reader, tag: &mut dyn ILTag) -> Result<()>;
 }
 
 //=============================================================================

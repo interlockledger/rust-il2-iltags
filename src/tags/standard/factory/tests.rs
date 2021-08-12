@@ -202,6 +202,149 @@ macro_rules! test_deserialize_tag_expect_none {
 }
 
 #[test]
+fn test_ilstandardtagfactory_iltagfactory_deserialize_tag_size() {
+    let empty: [u8; 0] = [];
+    let mut reader = ByteArrayReader::new(&empty);
+
+    // Implicit
+    for tag_id in 0..16 {
+        let size = match ILStandardTagFactory::deserialize_tag_size(tag_id, &mut reader) {
+            Ok(v) => v,
+            _ => panic!("Unexpected error."),
+        };
+        assert_eq!(implicit_tag_size(tag_id), size as u64);
+    }
+
+    // Explicit
+    let sizes: [u64; 4] = [0, 10, 1234, crate::tags::MAX_TAG_SIZE];
+    for exp_size in sizes {
+        let mut writer = VecWriter::new();
+        assert!(writer.serialize_ilint(exp_size).is_ok());
+        let mut reader = ByteArrayReader::new(writer.as_slice());
+        let size = match ILStandardTagFactory::deserialize_tag_size(12345, &mut reader) {
+            Ok(v) => v,
+            _ => panic!("Unexpected error {:?}.", exp_size),
+        };
+        assert_eq!(exp_size, size as u64);
+
+        let mut reader = ByteArrayReader::new(&writer.as_slice()[0..writer.as_slice().len() - 1]);
+        match ILStandardTagFactory::deserialize_tag_size(12345, &mut reader) {
+            Err(_) => (),
+            _ => panic!("Error expected."),
+        };
+    }
+
+    // Too large
+    let mut writer = VecWriter::new();
+    assert!(writer
+        .serialize_ilint(crate::tags::MAX_TAG_SIZE + 1)
+        .is_ok());
+    let mut reader = ByteArrayReader::new(writer.as_slice());
+    match ILStandardTagFactory::deserialize_tag_size(12345, &mut reader) {
+        Err(ErrorKind::TagTooLarge) => (),
+        _ => panic!("Error expected."),
+    };
+}
+
+#[test]
+fn test_ilstandardtagfactory_iltagfactory_deserialize_tag_value_into_fixed() {
+    let factory = ILStandardTagFactory::new(true);
+
+    let t = ILInt64Tag::with_value(1234);
+    let mut tr = ILInt64Tag::default();
+    let mut writer = VecWriter::new();
+    assert!(t.serialize_value(&mut writer).is_ok());
+    assert!(writer.serialize_value(0 as u8).is_ok());
+
+    // Correct
+    let mut reader = ByteArrayReader::new(writer.as_slice());
+    assert!(factory
+        .deserialize_tag_value_into(8, &mut reader, &mut tr)
+        .is_ok());
+    assert!(crate::tags::util::iltag_are_equal(&t, &tr));
+
+    // Too large
+    let mut reader = ByteArrayReader::new(writer.as_slice());
+    match factory.deserialize_tag_value_into(9, &mut reader, &mut tr) {
+        Err(ErrorKind::CorruptedData) => (),
+        _ => panic!("Error expected."),
+    }
+
+    // Too small
+    let mut reader = ByteArrayReader::new(&writer.as_slice()[0..7]);
+    match factory.deserialize_tag_value_into(8, &mut reader, &mut tr) {
+        Err(_) => (),
+        _ => panic!("Error expected."),
+    }
+}
+
+#[test]
+fn test_ilstandardtagfactory_iltagfactory_deserialize_tag_value_into_ilint() {
+    let factory = ILStandardTagFactory::new(true);
+
+    let t = ILILInt64Tag::with_value(12346);
+    let mut tr = ILILInt64Tag::default();
+    let mut writer = VecWriter::new();
+    assert!(t.serialize_value(&mut writer).is_ok());
+    assert!(writer.serialize_value(0 as u8).is_ok());
+    let value_size = writer.as_slice().len();
+
+    // Correct
+    let mut reader = ByteArrayReader::new(writer.as_slice());
+    assert!(factory
+        .deserialize_tag_value_into(value_size - 1, &mut reader, &mut tr)
+        .is_ok());
+    assert!(crate::tags::util::iltag_are_equal(&t, &tr));
+
+    // Too large
+    let mut reader = ByteArrayReader::new(writer.as_slice());
+    assert!(factory
+        .deserialize_tag_value_into(value_size, &mut reader, &mut tr)
+        .is_ok());
+    assert!(crate::tags::util::iltag_are_equal(&t, &tr));
+
+    // Too small
+    let mut reader = ByteArrayReader::new(&writer.as_slice()[0..value_size - 2]);
+    match factory.deserialize_tag_value_into(value_size, &mut reader, &mut tr) {
+        Err(_) => (),
+        _ => panic!("Error expected."),
+    }
+}
+
+#[test]
+fn test_ilstandardtagfactory_iltagfactory_deserialize_tag_value_into_signed_ilint() {
+    let factory = ILStandardTagFactory::new(true);
+
+    let t = ILSignedILInt64Tag::with_value(12346);
+    let mut tr = ILSignedILInt64Tag::default();
+    let mut writer = VecWriter::new();
+    assert!(t.serialize_value(&mut writer).is_ok());
+    assert!(writer.serialize_value(0 as u8).is_ok());
+    let value_size = writer.as_slice().len();
+
+    // Correct
+    let mut reader = ByteArrayReader::new(writer.as_slice());
+    assert!(factory
+        .deserialize_tag_value_into(value_size - 1, &mut reader, &mut tr)
+        .is_ok());
+    assert!(crate::tags::util::iltag_are_equal(&t, &tr));
+
+    // Too large
+    let mut reader = ByteArrayReader::new(writer.as_slice());
+    assert!(factory
+        .deserialize_tag_value_into(value_size, &mut reader, &mut tr)
+        .is_ok());
+    assert!(crate::tags::util::iltag_are_equal(&t, &tr));
+
+    // Too small
+    let mut reader = ByteArrayReader::new(&writer.as_slice()[0..value_size - 2]);
+    match factory.deserialize_tag_value_into(value_size, &mut reader, &mut tr) {
+        Err(_) => (),
+        _ => panic!("Error expected."),
+    }
+}
+
+#[test]
 fn test_ilstandardtagfactory_iltagfactory_deserialize_non_strict() {
     let f = ILStandardTagFactory::new(false);
 
@@ -282,5 +425,113 @@ fn test_ilstandardtagfactory_iltagfactory_deserialize_strict() {
     match f.deserialize(&mut reader) {
         Err(ErrorKind::IOError(_)) => (),
         _ => panic!("IO Error expected"),
+    }
+}
+
+#[test]
+fn test_ilstandardtagfactory_iltagfactory_deserialize_into_implicit_fixed() {
+    let f = ILStandardTagFactory::new(true);
+
+    let t = ILInt64Tag::with_value(1345);
+    let mut tr = ILInt64Tag::default();
+    let mut writer = VecWriter::new();
+    assert!(t.serialize(&mut writer).is_ok());
+
+    let mut reader = ByteArrayReader::new(writer.as_slice());
+    assert!(f.deserialize_into(&mut reader, &mut tr).is_ok());
+    assert!(crate::tags::util::iltag_are_equal(&t, &tr));
+
+    let mut reader = ByteArrayReader::new(&writer.as_slice()[0..writer.as_slice().len() - 1]);
+    match f.deserialize_into(&mut reader, &mut tr) {
+        Err(_) => (),
+        _ => panic!("Error expected!"),
+    }
+
+    let mut tr = ILInt64Tag::with_id(123);
+    let mut reader = ByteArrayReader::new(writer.as_slice());
+    match f.deserialize_into(&mut reader, &mut tr) {
+        Err(ErrorKind::UnexpectedTagType) => (),
+        _ => panic!("Error expected!"),
+    }
+}
+
+#[test]
+fn test_ilstandardtagfactory_iltagfactory_deserialize_into_implicit_ilint() {
+    let f = ILStandardTagFactory::new(true);
+
+    let t = ILILInt64Tag::with_value(1231312313);
+    let mut tr = ILILInt64Tag::default();
+    let mut writer = VecWriter::new();
+    assert!(t.serialize(&mut writer).is_ok());
+
+    let mut reader = ByteArrayReader::new(writer.as_slice());
+    assert!(f.deserialize_into(&mut reader, &mut tr).is_ok());
+    assert!(crate::tags::util::iltag_are_equal(&t, &tr));
+
+    let mut reader = ByteArrayReader::new(&writer.as_slice()[0..writer.as_slice().len() - 1]);
+    match f.deserialize_into(&mut reader, &mut tr) {
+        Err(_) => (),
+        _ => panic!("Error expected!"),
+    }
+
+    let mut tr = ILILInt64Tag::with_id(123);
+    let mut reader = ByteArrayReader::new(writer.as_slice());
+    match f.deserialize_into(&mut reader, &mut tr) {
+        Err(ErrorKind::UnexpectedTagType) => (),
+        _ => panic!("Error expected!"),
+    }
+}
+
+#[test]
+fn test_ilstandardtagfactory_iltagfactory_deserialize_into_implicit_signed_ilint() {
+    let f = ILStandardTagFactory::new(true);
+
+    let t = ILSignedILInt64Tag::with_value(1231312313);
+    let mut tr = ILSignedILInt64Tag::default();
+    let mut writer = VecWriter::new();
+    assert!(t.serialize(&mut writer).is_ok());
+
+    let mut reader = ByteArrayReader::new(writer.as_slice());
+    assert!(f.deserialize_into(&mut reader, &mut tr).is_ok());
+    assert!(crate::tags::util::iltag_are_equal(&t, &tr));
+
+    let mut reader = ByteArrayReader::new(&writer.as_slice()[0..writer.as_slice().len() - 1]);
+    match f.deserialize_into(&mut reader, &mut tr) {
+        Err(_) => (),
+        _ => panic!("Error expected!"),
+    }
+
+    let mut tr = ILSignedILInt64Tag::with_id(123);
+    let mut reader = ByteArrayReader::new(writer.as_slice());
+    match f.deserialize_into(&mut reader, &mut tr) {
+        Err(ErrorKind::UnexpectedTagType) => (),
+        _ => panic!("Error expected!"),
+    }
+}
+
+#[test]
+fn test_ilstandardtagfactory_iltagfactory_deserialize_into_explicit() {
+    let f = ILStandardTagFactory::new(true);
+
+    let t = ILStringTag::with_value("test me");
+    let mut tr = ILStringTag::default();
+    let mut writer = VecWriter::new();
+    assert!(t.serialize(&mut writer).is_ok());
+
+    let mut reader = ByteArrayReader::new(writer.as_slice());
+    assert!(f.deserialize_into(&mut reader, &mut tr).is_ok());
+    assert!(crate::tags::util::iltag_are_equal(&t, &tr));
+
+    let mut reader = ByteArrayReader::new(&writer.as_slice()[0..writer.as_slice().len() - 1]);
+    match f.deserialize_into(&mut reader, &mut tr) {
+        Err(_) => (),
+        _ => panic!("Error expected!"),
+    }
+
+    let mut tr = ILStringTag::with_id(123);
+    let mut reader = ByteArrayReader::new(writer.as_slice());
+    match f.deserialize_into(&mut reader, &mut tr) {
+        Err(ErrorKind::UnexpectedTagType) => (),
+        _ => panic!("Error expected!"),
     }
 }

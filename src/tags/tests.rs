@@ -508,6 +508,10 @@ impl ILTagFactory for UntouchbleTagFactory {
     fn deserialize(&self, _reader: &mut dyn Reader) -> Result<Box<dyn ILTag>> {
         panic!();
     }
+
+    fn deserialize_into(&self, _reader: &mut dyn Reader, _tag: &mut dyn ILTag) -> Result<()> {
+        panic!();
+    }
 }
 
 //=============================================================================
