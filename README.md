@@ -27,6 +27,8 @@ This library is licensed under a 3-Clause BSD license.
     - Method `il2_iltags::tags::serialization::ByteArraySerializer::serialize_bytes()` has been deprecated;
     - Support to the new **ILInt** sign encoding added;
     - Support to the new **ILIntSigned** tag added;
+    - Method `ILTagFactory.deserialize_into()` added;
+    - Exposing `UntouchbleTagFactory` to the public API;
 - 1.2.0:
     - Version history updated;
     - Documentation of `ILGenericPayloadTag` updated. Now the example presented in the documentation
