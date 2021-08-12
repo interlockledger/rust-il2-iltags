@@ -163,9 +163,9 @@ macro_rules! int_iltag_impl {
 
 /// Returns the size of the implicit tag.
 ///
-/// With the exception of `ILILInt64Tag`, all implicity tags
-/// have fixed size. For `ILILInt64Tag`, it will always
-/// return its maximum size which is 9.
+/// With the exception of [`ILILInt64Tag`] and [`ILSignedILInt64Tag`],
+/// all implicity tags have fixed size. For those two tags, it will
+/// always return the maximum size which is 9.
 ///
 /// Arguments:
 /// - id: The tag id;

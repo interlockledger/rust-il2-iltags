@@ -462,6 +462,8 @@ pub trait ILTagFactory: Send {
     /// - Ok(()): On success;
     /// - Err(ErrorKind::UnexpectedTagType): If the tag types don't match.
     /// - Err(_): In case of failure;
+    ///
+    /// New since 1.3.0.
     fn deserialize_into(&self, reader: &mut dyn Reader, tag: &mut dyn ILTag) -> Result<()>;
 }
 
