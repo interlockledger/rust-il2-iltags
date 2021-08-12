@@ -38,6 +38,7 @@ mod tests;
 use crate::io::{Reader, Writer};
 use crate::tags::{DefaultWithId, ILTag, ILTagFactory, Result};
 use std::any::Any;
+use std::ops::{Deref, DerefMut};
 
 //=============================================================================
 // ILTagPayload
@@ -189,5 +190,20 @@ impl<T: ILTagPayload + Send + Default> ILTag for ILGenericPayloadTag<T> {
 impl<T: ILTagPayload + Send + Default> DefaultWithId for ILGenericPayloadTag<T> {
     fn default_with_id(id: u64) -> Self {
         Self::new(id)
+    }
+}
+
+impl<T: ILTagPayload + Send + Default> Deref for ILGenericPayloadTag<T> {
+    type Target = T;
+
+    #[must_use]
+    fn deref(&self) -> &Self::Target {
+        self.payload()
+    }
+}
+
+impl<T: ILTagPayload + Send + Default> DerefMut for ILGenericPayloadTag<T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        self.mut_payload()
     }
 }
