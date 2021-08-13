@@ -166,7 +166,7 @@ impl<T: ILTagPayload + Send + Default> ILGenericPayloadTag<T> {
     }
 }
 
-impl<T: ILTagPayload + Send + Default> ILTag for ILGenericPayloadTag<T> {
+impl<T: ILTagPayload + Send + Default + Sync> ILTag for ILGenericPayloadTag<T> {
     fn id(&self) -> u64 {
         self.id
     }

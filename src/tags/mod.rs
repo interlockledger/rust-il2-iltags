@@ -176,7 +176,7 @@ pub fn tag_size_to_usize(size: u64) -> Result<usize> {
 ///
 /// The actual manipulation of the information inside the tags must be handled
 /// directly by each tag implementation by the use of [`std::any::Any`] trait.
-pub trait ILTag: Any + Send {
+pub trait ILTag: Any + Send + Sync {
     /// Returns the ID of the tag.
     fn id(&self) -> u64;
 
@@ -431,7 +431,7 @@ pub trait DefaultWithId {
 /// This trait must be implemented by all tag factories. Factories are used
 /// to deserialize tags into the most appropriate concreate implemetation that
 /// will handle a given tag id.
-pub trait ILTagFactory: Send {
+pub trait ILTagFactory: Send + Sync {
     /// Creates an empty tag for the given id.
     ///
     /// Arguments:
@@ -472,7 +472,7 @@ pub trait ILTagFactory: Send {
 //-----------------------------------------------------------------------------
 /// This trait must be implemented by all tag creators. A tag creator is used
 ///  by [`ILTagCreatorEngine`] to create new tag instances.
-pub trait ILTagCreator: Send {
+pub trait ILTagCreator: Send + Sync {
     /// Creates a new boxed instance of the the class.
     ///
     /// Arguments:
@@ -489,11 +489,11 @@ pub trait ILTagCreator: Send {
 //-----------------------------------------------------------------------------
 /// This template struct is used to implement the `ILTagCreator` trait for all
 /// `ILTags` that also implement `Default`.
-pub struct ILDefaultTagCreator<T: ILTag + Default> {
+pub struct ILDefaultTagCreator<T: ILTag + Default + Sync> {
     phantom: ::std::marker::PhantomData<T>,
 }
 
-impl<T: ILTag + Default> ILDefaultTagCreator<T> {
+impl<T: ILTag + Default + Sync> ILDefaultTagCreator<T> {
     /// Creates a new instance of this struct.
     pub fn new() -> Self {
         Self {
@@ -502,13 +502,13 @@ impl<T: ILTag + Default> ILDefaultTagCreator<T> {
     }
 }
 
-impl<T: ILTag + Default> Default for ILDefaultTagCreator<T> {
+impl<T: ILTag + Default + Sync> Default for ILDefaultTagCreator<T> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<T: ILTag + Default> ILTagCreator for ILDefaultTagCreator<T> {
+impl<T: ILTag + Default + Sync> ILTagCreator for ILDefaultTagCreator<T> {
     fn create_empty_tag(&self, tag_id: u64) -> Box<dyn ILTag> {
         let ret = Box::new(T::default());
         assert!(ret.id() == tag_id); // Just to detect potential errors
@@ -521,11 +521,11 @@ impl<T: ILTag + Default> ILTagCreator for ILDefaultTagCreator<T> {
 //-----------------------------------------------------------------------------
 /// This template struct is used to implement the `ILTagCreator` trait for all
 /// `ILTags` that also implement `DefaultWithId`.
-pub struct ILDefaultWithIdTagCreator<T: ILTag + DefaultWithId> {
+pub struct ILDefaultWithIdTagCreator<T: ILTag + DefaultWithId + Sync> {
     phantom: ::std::marker::PhantomData<T>,
 }
 
-impl<T: ILTag + DefaultWithId> ILDefaultWithIdTagCreator<T> {
+impl<T: ILTag + DefaultWithId + Sync> ILDefaultWithIdTagCreator<T> {
     /// Creates a new instance of this struct.
     pub fn new() -> Self {
         Self {
@@ -534,13 +534,13 @@ impl<T: ILTag + DefaultWithId> ILDefaultWithIdTagCreator<T> {
     }
 }
 
-impl<T: ILTag + DefaultWithId> Default for ILDefaultWithIdTagCreator<T> {
+impl<T: ILTag + DefaultWithId + Sync> Default for ILDefaultWithIdTagCreator<T> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<T: ILTag + DefaultWithId> ILTagCreator for ILDefaultWithIdTagCreator<T> {
+impl<T: ILTag + DefaultWithId + Sync> ILTagCreator for ILDefaultWithIdTagCreator<T> {
     fn create_empty_tag(&self, tag_id: u64) -> Box<dyn ILTag> {
         Box::new(T::default_with_id(tag_id))
     }
