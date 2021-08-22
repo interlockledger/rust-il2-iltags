@@ -21,6 +21,13 @@ This library is licensed under a 3-Clause BSD license.
 
 ## Version history
 
+- 1.4.0:
+    - `il2_iltags::io::array:ByteArrayWriter` is back;
+    - Some traits are now enforcing `Sync`;
+    - `ILSignedILInt64Tag` and `IL_SIGNED_ILINT_TAG_ID` are now reexported by `il2_iltags::tags::standard`;
+    - `ILRawTag.set_value()` added;
+    - `Deref` and `DerefMut` implemented for `ILGenericPayloadTag` as an experimental feature for now;
+    - Documentation updated;
 - 1.3.0:
     - Automatic conversion from `il2_iltags::io::ErrorKind` to `il2_iltags::tags::ErrorKind` added;
     - Applying code cleanup suggested by clippy;
