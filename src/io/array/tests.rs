@@ -601,3 +601,110 @@ fn test_borrowedvecwriter_writer_write_all() {
     exp[8..16].copy_from_slice(&src2);
     assert_eq!(exp, w.as_slice());
 }
+
+//=============================================================================
+// ByteArrayWriter
+//-----------------------------------------------------------------------------
+
+#[test]
+fn test_bytearraywriter_impl_new() {
+    let mut backend: [u8; 16] = [0; 16];
+
+    let w = ByteArrayWriter::new(&mut backend);
+    assert_eq!(w.get_offset(), 0);
+    assert_eq!(w.available(), 16);
+    drop(w);
+}
+
+#[test]
+fn test_bytearraywriter_impl_offset_available() {
+    let mut backend: [u8; 16] = [0; 16];
+
+    let mut w = ByteArrayWriter::new(&mut backend);
+    assert_eq!(w.get_offset(), 0);
+    assert_eq!(w.available(), 16);
+    w.set_offset(1);
+    assert_eq!(w.get_offset(), 1);
+    assert_eq!(w.available(), 15);
+
+    w.set_offset(16);
+    assert_eq!(w.get_offset(), 16);
+    assert_eq!(w.available(), 0);
+
+    w.set_offset(17);
+    assert_eq!(w.get_offset(), 16);
+    assert_eq!(w.available(), 0);
+}
+
+#[test]
+fn test_bytearraywriter_impl_can_write() {
+    let mut backend: [u8; 16] = [0; 16];
+
+    let mut w = ByteArrayWriter::new(&mut backend);
+    w.can_write(0).unwrap();
+    w.can_write(1).unwrap();
+    w.can_write(16).unwrap();
+    match w.can_write(17) {
+        Err(ErrorKind::UnableToWriteData) => (),
+        _ => panic!(),
+    }
+
+    w.set_offset(10);
+    w.can_write(0).unwrap();
+    w.can_write(1).unwrap();
+    w.can_write(6).unwrap();
+    match w.can_write(7) {
+        Err(ErrorKind::UnableToWriteData) => (),
+        _ => panic!(),
+    }
+
+    w.set_offset(16);
+    w.can_write(0).unwrap();
+    match w.can_write(7) {
+        Err(ErrorKind::UnableToWriteData) => (),
+        _ => panic!(),
+    }
+}
+
+#[test]
+fn test_bytearraywriter_writer_write() {
+    let mut backend: [u8; 16] = [0; 16];
+    let mut exp: [u8; 16] = [0; 16];
+
+    let mut w = ByteArrayWriter::new(&mut backend);
+    for i in 0..16 as u8 {
+        assert_eq!(w.get_offset(), i as usize);
+        w.write(i).unwrap();
+        exp[i as usize] = i;
+        assert_eq!(w.get_offset(), (i + 1) as usize)
+    }
+    match w.write(17) {
+        Err(ErrorKind::UnableToWriteData) => (),
+        _ => panic!(),
+    }
+    drop(w);
+    assert_eq!(&backend, &exp);
+}
+
+#[test]
+fn test_bytearraywriter_writer_all() {
+    let mut backend: [u8; 16] = [0; 16];
+    let exp: [u8; 16] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
+
+    let mut w = ByteArrayWriter::new(&mut backend);
+    assert_eq!(w.get_offset(), 0);
+    w.write_all(&exp[0..1]).unwrap();
+    assert_eq!(w.get_offset(), 1);
+
+    w.write_all(&exp[1..5]).unwrap();
+    assert_eq!(w.get_offset(), 5);
+
+    w.write_all(&exp[5..16]).unwrap();
+    assert_eq!(w.get_offset(), 16);
+    match w.write_all(&exp[0..1]) {
+        Err(ErrorKind::UnableToWriteData) => (),
+        _ => panic!(),
+    }
+    drop(w);
+    assert_eq!(&backend, &exp);
+}

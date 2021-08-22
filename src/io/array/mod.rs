@@ -420,3 +420,78 @@ impl<'a> BorrowedVecWriter<'a> {
 impl<'a> Writer for BorrowedVecWriter<'a> {
     basevecwriter_writer_impl!();
 }
+
+//=============================================================================
+// ByteArrayWriter
+//-----------------------------------------------------------------------------
+/// [`ByteArrayWriter`] implements a [`Writer`] that uses a borrowed byte slice
+/// as its backend.
+///
+/// New since 1.3.1.
+pub struct ByteArrayWriter<'a> {
+    array: &'a mut [u8],
+    offset: usize,
+}
+
+impl<'a> ByteArrayWriter<'a> {
+    /// Creates a new instance of this struct.
+    ///
+    /// Arguments:
+    /// - `array`: The borrowed array;
+    pub fn new(array: &'a mut [u8]) -> Self {
+        Self { array, offset: 0 }
+    }
+
+    /// Returns the current writing position.
+    ///
+    /// Returns:
+    /// - The current offset. It is guaranteed to be at most
+    /// the total size of the data.
+    pub fn get_offset(&self) -> usize {
+        self.offset
+    }
+
+    /// Sets the current writing position.
+    ///
+    /// Arguments:
+    /// - `offset`: The new position. It if is larger
+    ///   than the total length, it will assume the
+    ///   total length;
+    pub fn set_offset(&mut self, offset: usize) {
+        self.offset = std::cmp::min(offset, self.array.len());
+    }
+
+    /// Return the number of bytes available.
+    #[inline]
+    pub fn available(&self) -> usize {
+        self.array.len() - self.offset
+    }
+
+    fn can_write(&self, len: usize) -> Result<()> {
+        if self.available() >= len {
+            Ok(())
+        } else {
+            Err(ErrorKind::UnableToWriteData)
+        }
+    }
+}
+
+impl<'a> Writer for ByteArrayWriter<'a> {
+    fn write(&mut self, value: u8) -> Result<()> {
+        self.can_write(1)?;
+        self.array[self.offset] = value;
+        self.offset += 1;
+        Ok(())
+    }
+
+    fn write_all(&mut self, buff: &[u8]) -> Result<()> {
+        self.can_write(buff.len())?;
+        self.array[self.offset..self.offset + buff.len()].copy_from_slice(buff);
+        self.offset += buff.len();
+        Ok(())
+    }
+
+    fn as_writer(&mut self) -> &mut dyn Writer {
+        self
+    }
+}
