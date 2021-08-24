@@ -73,6 +73,68 @@ impl<'a> Reader for DummyReader {
 }
 
 //=============================================================================
+// SkipTestReader
+//-----------------------------------------------------------------------------
+struct SkipTestReader {
+    offset: u64,
+    size: u64,
+}
+
+impl SkipTestReader {
+    pub fn new(size: u64) -> Self {
+        Self { offset: 0, size }
+    }
+}
+
+impl Reader for SkipTestReader {
+    fn read(&mut self) -> Result<u8> {
+        if self.offset < self.size {
+            let b = self.offset as u8;
+            self.offset += 1;
+            Ok(b)
+        } else {
+            Err(ErrorKind::UnableToReadData)
+        }
+    }
+
+    fn skip(&mut self, count: usize) -> Result<()> {
+        let final_offset = self.offset + count as u64;
+        if final_offset <= self.size {
+            self.offset = final_offset;
+            Ok(())
+        } else {
+            Err(ErrorKind::UnableToReadData)
+        }
+    }
+}
+
+#[test]
+fn test_skiptestreader_skip() {
+    let mut r = SkipTestReader::new(16);
+    r.skip(15).unwrap();
+    r.skip(1).unwrap();
+    assert!(matches!(r.skip(1), Err(ErrorKind::UnableToReadData)));
+
+    let mut r = SkipTestReader::new(16);
+    assert!(matches!(r.skip(17), Err(ErrorKind::UnableToReadData)));
+}
+
+#[test]
+fn test_skiptestreader_skip_u64() {
+    let mut r = SkipTestReader::new(16);
+    r.skip_u64(15).unwrap();
+    r.skip_u64(1).unwrap();
+    assert!(matches!(r.skip_u64(1), Err(ErrorKind::UnableToReadData)));
+
+    let mut r = SkipTestReader::new(16);
+    assert!(matches!(r.skip_u64(17), Err(ErrorKind::UnableToReadData)));
+
+    let mut r = SkipTestReader::new((usize::MAX / 2) as u64 + 2);
+    r.skip_u64((usize::MAX / 2) as u64 + 2).unwrap();
+    assert!(matches!(r.skip_u64(1), Err(ErrorKind::UnableToReadData)));
+}
+
+//=============================================================================
 // LimitedReader
 //-----------------------------------------------------------------------------
 #[test]

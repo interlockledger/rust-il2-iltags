@@ -28,6 +28,7 @@ This library is licensed under a 3-Clause BSD license.
     - `ILRawTag.set_value()` added;
     - `Deref` and `DerefMut` implemented for `ILGenericPayloadTag` as an experimental feature for now;
     - Documentation updated;
+    - Method `Reader::skip_u64()` added;
 - 1.3.0:
     - Automatic conversion from `il2_iltags::io::ErrorKind` to `il2_iltags::tags::ErrorKind` added;
     - Applying code cleanup suggested by clippy;

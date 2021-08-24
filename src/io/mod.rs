@@ -111,6 +111,34 @@ pub trait Reader {
         }
         Ok(())
     }
+
+    /// Skips some bytes from the source using a u64 as its size. On
+    /// 64-bit systems, this is equivalent to [`Self::skip()`] as
+    /// usize is a 64-bit value.
+    ///
+    /// This method will make a difference in 32-bit systems where
+    /// usize is actually a 32-bit value.
+    ///
+    /// This implementation calls [`Self::skip()`] as may times
+    /// as necessary to skip the required number of bytes.
+    ///
+    /// Arguments:
+    /// * `count`: Number of byte to skip;
+    ///
+    /// Returns:
+    /// * `Ok(())`: On success;
+    /// * `Err(ErrorKind)`: In case of error;
+    ///
+    /// New since 1.4.0.    
+    fn skip_u64(&mut self, count: u64) -> Result<()> {
+        let mut remaining = count;
+        while remaining > 0 {
+            let skip = std::cmp::min(remaining, usize::MAX as u64);
+            self.skip(skip as usize)?;
+            remaining -= skip;
+        }
+        Ok(())
+    }
 }
 
 /// The [`Writer`] trait allows the addition of bytes into the destination.
