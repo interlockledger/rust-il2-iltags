@@ -365,6 +365,13 @@ impl Default for VecWriter {
     }
 }
 
+/// New since 1.4.0.
+impl std::convert::Into<Vec<u8>> for VecWriter {
+    fn into(self) -> Vec<u8> {
+        self.vector
+    }
+}
+
 //=============================================================================
 // BorrowedVecWriter
 //-----------------------------------------------------------------------------
