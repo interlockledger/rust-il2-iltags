@@ -351,3 +351,70 @@ impl<'a> Writer for WriteWriter<'a> {
         self
     }
 }
+
+//=============================================================================
+// Reader for std::io::Read + std::io::Seek
+//-----------------------------------------------------------------------------
+// New since 1.4.0.
+impl<T> Reader for T
+where
+    T: std::io::Read + std::io::Seek,
+{
+    fn read(&mut self) -> Result<u8> {
+        let mut buff: [u8; 1] = [0];
+        self.read_all(&mut buff)?;
+        Ok(buff[0])
+    }
+
+    fn read_all(&mut self, buff: &mut [u8]) -> Result<()> {
+        match std::io::Read::read_exact(self, buff) {
+            Ok(()) => Ok(()),
+            Err(_) => Err(ErrorKind::UnableToReadData),
+        }
+    }
+
+    fn skip(&mut self, count: usize) -> Result<()> {
+        self.skip_u64(count as u64)
+    }
+
+    fn skip_u64(&mut self, count: u64) -> Result<()> {
+        let new_pos = match self.seek(std::io::SeekFrom::Current(count as i64)) {
+            Ok(p) => p,
+            Err(_) => return Err(ErrorKind::UnableToReadData),
+        };
+        let end_pos = match self.seek(std::io::SeekFrom::End(0)) {
+            Ok(p) => p,
+            Err(_) => return Err(ErrorKind::UnableToReadData),
+        };
+        if new_pos <= end_pos && self.seek(std::io::SeekFrom::Start(new_pos)).is_ok() {
+            Ok(())
+        } else {
+            Err(ErrorKind::UnableToReadData)
+        }
+    }
+}
+
+//=============================================================================
+// Writer for std::io::Write + std::io::Seek
+//-----------------------------------------------------------------------------
+// New since 1.4.0.
+impl<T> Writer for T
+where
+    T: ::std::io::Write + ::std::io::Seek,
+{
+    fn write(&mut self, value: u8) -> Result<()> {
+        let mut buff: [u8; 1] = [value];
+        Writer::write_all(self, &mut buff)
+    }
+
+    fn write_all(&mut self, buff: &[u8]) -> Result<()> {
+        match std::io::Write::write_all(self, buff) {
+            Ok(()) => Ok(()),
+            Err(_) => Err(ErrorKind::UnableToWriteData),
+        }
+    }
+
+    fn as_writer(&mut self) -> &mut dyn Writer {
+        self
+    }
+}
