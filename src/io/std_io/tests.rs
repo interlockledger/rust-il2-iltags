@@ -271,3 +271,256 @@ fn test_limitedreader_read_all() {
         _ => panic!("Unexpected error"),
     }
 }
+
+//=============================================================================
+// ReadReader
+//-----------------------------------------------------------------------------
+#[test]
+fn test_readreader_new() {
+    let mut sample: [u8; 10] = [0; 10];
+    fill_sample(&mut sample);
+    let mut mem_reader = std::io::Cursor::new(&sample);
+    let mut reader = ReadReader::new(&mut mem_reader);
+    match reader.read() {
+        Ok(v) => assert_eq!(v, 0),
+        _ => panic!("Unexpected error!"),
+    }
+}
+
+#[test]
+fn test_readreader_read() {
+    let mut sample: [u8; 10] = [0; 10];
+    fill_sample(&mut sample);
+    let mut mem_reader = std::io::Cursor::new(&sample);
+    let mut reader = ReadReader::new(&mut mem_reader);
+    for i in 0..10 {
+        match reader.read() {
+            Ok(v) => assert_eq!(v, i as u8),
+            _ => panic!("Unexpected error!"),
+        }
+    }
+    match reader.read() {
+        Err(ErrorKind::IOError(_)) => (),
+        _ => panic!("Unexpected error!"),
+    }
+}
+
+#[test]
+fn test_readreader_read_all() {
+    let mut sample: [u8; 10] = [0; 10];
+    fill_sample(&mut sample);
+    let mut mem_reader = std::io::Cursor::new(&sample);
+    let mut read_buff: [u8; 15] = [0; 15];
+    let mut reader = ReadReader::new(&mut mem_reader);
+    match reader.read_all(&mut read_buff[0..0]) {
+        Ok(()) => (),
+        _ => panic!("Unexpected error!"),
+    }
+    match reader.read_all(&mut read_buff[0..5]) {
+        Ok(()) => assert_sequence(&read_buff[0..5], 5),
+        _ => panic!("Unexpected error!"),
+    }
+    match reader.read_all(&mut read_buff[5..9]) {
+        Ok(()) => assert_sequence(&read_buff[0..9], 9),
+        _ => panic!("Unexpected error!"),
+    }
+    match reader.read_all(&mut read_buff[9..11]) {
+        Err(ErrorKind::IOError(_)) => (),
+        _ => panic!("Unexpected error!"),
+    }
+    match reader.read_all(&mut read_buff[9..10]) {
+        Ok(()) => assert_sequence(&read_buff[0..10], 10),
+        _ => panic!("Unexpected error!"),
+    }
+    match reader.read_all(&mut read_buff[0..0]) {
+        Ok(()) => (),
+        _ => panic!("Unexpected error!"),
+    }
+    match reader.read_all(&mut read_buff[0..1]) {
+        Err(ErrorKind::IOError(_)) => (),
+        _ => panic!("Unexpected error!"),
+    }
+}
+
+//=============================================================================
+// WriteWriter
+//-----------------------------------------------------------------------------
+#[test]
+fn test_writewriter_new() {
+    let mut buff: Vec<u8> = Vec::new();
+    let mut cursor = std::io::Cursor::new(&mut buff);
+    let mut writer = WriteWriter::new(&mut cursor);
+
+    match writer.write(0) {
+        Ok(()) => (),
+        _ => panic!("Unexpected error."),
+    }
+    assert_eq!(&buff, &[0 as u8])
+}
+
+#[test]
+fn test_writewriter_write() {
+    let mut sample: [u8; 10] = [0; 10];
+    fill_sample(&mut sample);
+    let mut buff: Vec<u8> = Vec::new();
+    let mut cursor = std::io::Cursor::new(&mut buff);
+    let mut writer = WriteWriter::new(&mut cursor);
+
+    for x in &sample {
+        match writer.write(*x) {
+            Ok(()) => (),
+            _ => panic!("Unexpected error."),
+        }
+    }
+    assert_eq!(&buff, &sample)
+}
+
+#[test]
+fn test_writewriter_write_all() {
+    let mut sample: [u8; 10] = [0; 10];
+    fill_sample(&mut sample);
+    let mut buff: Vec<u8> = Vec::new();
+    let mut cursor = std::io::Cursor::new(&mut buff);
+    let mut writer = WriteWriter::new(&mut cursor);
+
+    match writer.write_all(&sample[0..1]) {
+        Ok(()) => (),
+        _ => panic!("Unexpected error."),
+    }
+    match writer.write_all(&sample[1..9]) {
+        Ok(()) => (),
+        _ => panic!("Unexpected error."),
+    }
+    match writer.write_all(&sample[9..10]) {
+        Ok(()) => (),
+        _ => panic!("Unexpected error."),
+    }
+    assert_eq!(&buff, &sample)
+}
+
+//=============================================================================
+// Reader for std::io::Read + std::io::Seek
+//-----------------------------------------------------------------------------
+#[test]
+fn test_reader_for_read_seek_read() {
+    let buff: [u8; 4] = [1, 2, 3, 4];
+    let mut read = std::io::Cursor::new(&buff);
+
+    assert_eq!(read.read().unwrap(), 1);
+    assert_eq!(read.read().unwrap(), 2);
+    assert_eq!(read.read().unwrap(), 3);
+    assert_eq!(read.read().unwrap(), 4);
+    assert!(matches!(read.read(), Err(ErrorKind::UnableToReadData)));
+}
+
+#[test]
+fn test_reader_for_read_seek_read_all() {
+    let buff: [u8; 4] = [1, 2, 3, 4];
+    let mut r: [u8; 4] = [0; 4];
+
+    let mut inner_read = std::io::Cursor::new(&buff);
+    let read = &mut inner_read;
+
+    read.read_all(&mut r).unwrap();
+    assert_eq!(buff, r);
+    read.read_all(&mut r[0..0]).unwrap();
+    assert!(matches!(
+        read.read_all(&mut r[0..1]),
+        Err(ErrorKind::UnableToReadData)
+    ));
+
+    let mut r: [u8; 4] = [0; 4];
+    let mut inner_read = std::io::Cursor::new(&buff);
+    let read = &mut inner_read;
+    read.read_all(&mut r[0..2]).unwrap();
+    read.read_all(&mut r[2..4]).unwrap();
+    assert_eq!(buff, r);
+    assert!(matches!(
+        read.read_all(&mut r[0..1]),
+        Err(ErrorKind::UnableToReadData)
+    ));
+
+    let mut r: [u8; 5] = [0; 5];
+    let mut inner_read = std::io::Cursor::new(&buff);
+    let read = &mut inner_read;
+    assert!(matches!(
+        read.read_all(&mut r),
+        Err(ErrorKind::UnableToReadData)
+    ));
+}
+
+#[test]
+fn test_reader_for_read_seek_skip() {
+    let buff: [u8; 4] = [1, 2, 3, 4];
+
+    let mut inner_read = std::io::Cursor::new(&buff);
+    let read = &mut inner_read;
+    read.skip(2).unwrap();
+    assert_eq!(read.read().unwrap(), 3);
+    read.skip(1).unwrap();
+    assert!(matches!(read.skip(1), Err(ErrorKind::EndOfData)));
+
+    let buff: [u8; 1] = [1];
+    let mut inner_read = std::io::Cursor::new(&buff);
+    let read = &mut inner_read;
+    assert!(matches!(read.skip(2), Err(ErrorKind::UnableToReadData)));
+}
+
+#[test]
+fn test_reader_for_read_seek_skip_u64() {
+    let buff: [u8; 4] = [1, 2, 3, 4];
+
+    let mut inner_read = std::io::Cursor::new(&buff);
+    let read = &mut inner_read;
+    read.skip_u64(2).unwrap();
+    assert_eq!(read.read().unwrap(), 3);
+    read.skip_u64(1).unwrap();
+    assert!(matches!(read.skip_u64(1), Err(ErrorKind::EndOfData)));
+
+    let buff: [u8; 1] = [1];
+    let mut inner_read = std::io::Cursor::new(&buff);
+    let read = &mut inner_read;
+    assert!(matches!(read.skip_u64(2), Err(ErrorKind::UnableToReadData)));
+}
+
+//=============================================================================
+// Writer for std::io::Write + std::io::Seek
+//-----------------------------------------------------------------------------
+#[test]
+fn test_writer_write_seek_write() {
+    let exp: [u8; 4] = [1, 2, 3, 4];
+    let mut buff = Vec::<u8>::new();
+
+    let mut inner_write = std::io::Cursor::new(&mut buff);
+    let write = &mut inner_write;
+
+    write.write(1).unwrap();
+    write.write(2).unwrap();
+    write.write(3).unwrap();
+    write.write(4).unwrap();
+
+    assert_eq!(buff.as_slice(), &exp);
+}
+
+#[test]
+fn test_writer_write_seek_write_all() {
+    let exp: [u8; 4] = [1, 2, 3, 4];
+    let mut buff = Vec::<u8>::new();
+
+    let mut inner_write = std::io::Cursor::new(&mut buff);
+    let write = &mut inner_write;
+    write.write_all(&exp).unwrap();
+    assert_eq!(buff.as_slice(), &exp);
+}
+
+#[test]
+fn test_writer_write_seek_as_writer() {
+    let exp: [u8; 4] = [1, 2, 3, 4];
+    let mut buff = Vec::<u8>::new();
+
+    let mut inner_write = std::io::Cursor::new(&mut buff);
+    let write = &mut inner_write;
+    let w = write.as_writer();
+    w.write_all(&exp).unwrap();
+    assert_eq!(buff.as_slice(), &exp);
+}

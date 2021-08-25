@@ -33,6 +33,72 @@ use super::*;
 use crate::tests::fill_sample;
 
 //=============================================================================
+// DummyMemoryReader
+//-----------------------------------------------------------------------------
+struct DummyMemoryReader {
+    offset: usize,
+    len: usize,
+}
+
+impl DummyMemoryReader {
+    pub fn new(offset: usize, len: usize) -> Self {
+        Self { offset, len }
+    }
+}
+
+impl Reader for DummyMemoryReader {
+    fn read(&mut self) -> Result<u8> {
+        self.assert_can_read(1)?;
+        let r = self.offset as u8;
+        self.offset += 1;
+        Ok(r)
+    }
+}
+
+impl MemoryReader for DummyMemoryReader {
+    fn len(&self) -> usize {
+        self.len
+    }
+
+    fn offset(&self) -> usize {
+        self.offset
+    }
+
+    fn set_offset(&mut self, offset: usize) {
+        self.offset = std::cmp::min(self.len, offset);
+    }
+}
+
+//=============================================================================
+// MemoryReader
+//-----------------------------------------------------------------------------
+#[test]
+fn test_memoryreader() {
+    let r = DummyMemoryReader::new(0, 0);
+    assert!(r.is_empty());
+    assert_eq!(r.available(), 0);
+    r.assert_can_read(0).unwrap();
+    assert!(matches!(r.assert_can_read(3), Err(ErrorKind::EndOfData)));
+
+    let r = DummyMemoryReader::new(0, 2);
+    assert!(!r.is_empty());
+    assert_eq!(r.available(), 2);
+    r.assert_can_read(0).unwrap();
+    r.assert_can_read(1).unwrap();
+    r.assert_can_read(2).unwrap();
+    assert!(matches!(
+        r.assert_can_read(3),
+        Err(ErrorKind::UnableToReadData)
+    ));
+
+    let r = DummyMemoryReader::new(2, 2);
+    assert!(!r.is_empty());
+    assert_eq!(r.available(), 0);
+    r.assert_can_read(0).unwrap();
+    assert!(matches!(r.assert_can_read(3), Err(ErrorKind::EndOfData)));
+}
+
+//=============================================================================
 // ByteArrayReader
 //-----------------------------------------------------------------------------
 //Tests for ByteArrayReader
@@ -162,7 +228,7 @@ fn test_bytearrayreader_skip() {
         _ => panic!(),
     }
     match ba.skip(1) {
-        Err(ErrorKind::UnableToReadData) => (),
+        Err(ErrorKind::EndOfData) => (),
         _ => panic!(),
     }
 }
@@ -297,7 +363,7 @@ fn test_vecreader_skip() {
         _ => panic!(),
     }
     match ba.skip(1) {
-        Err(ErrorKind::UnableToReadData) => (),
+        Err(ErrorKind::EndOfData) => (),
         _ => panic!(),
     }
 }

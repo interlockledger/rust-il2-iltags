@@ -30,7 +30,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 use super::*;
-use crate::io::array::{ByteArrayReader, VecWriter};
+use crate::io::array::{ByteArrayReader, MemoryReader, VecWriter};
 
 #[test]
 fn test_errorkind_debug() {

@@ -32,8 +32,8 @@
 //=============================================================================
 //! This module contains helper struct and functions that allows the parsing of
 //! a serialized sequence of tags. It allows the extraction tag information
-//! from any sequence of bytes without the need to convert it into an [`ILTag`]
-//! instance.
+//! from any sequence of bytes without the need to convert it into an
+//! [`crate::tags::ILTag`] instance.
 //!
 //! It is expected that
 //!

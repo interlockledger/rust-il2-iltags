@@ -702,7 +702,7 @@ impl ILRawTag {
     ///
     /// New since 1.3.1.
     pub fn set_value(&mut self, value: &[u8]) {
-        self.value.resize(0, 0);
+        self.value.clear();
         self.value.extend_from_slice(value);
     }
 }

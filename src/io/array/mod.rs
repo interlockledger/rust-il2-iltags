@@ -31,11 +31,60 @@
  */
 //! This module contains the implementation of [`Reader`] and [`Writer`] for
 //! arrays, slices and vectors.
-use super::{ErrorKind, Reader, Result, Writer};
+use super::*;
 use std::cmp::min;
 
 #[cfg(test)]
 mod tests;
+
+//=============================================================================
+// MemoryReader
+//-----------------------------------------------------------------------------
+/// This trait provides an extension to [`Reader`] for memory backed readers.
+///
+/// New since 1.4.0.
+pub trait MemoryReader: Reader {
+    /// Returns the current size of the data.
+    fn len(&self) -> usize;
+
+    /// Returns true if this reader is empty.
+    fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
+    /// Returns the current offset of the data.
+    fn offset(&self) -> usize;
+
+    /// Sets the current offset. If offset is larger than the length, it will
+    /// set the offset to to the length of the data.
+    fn set_offset(&mut self, offset: usize);
+
+    /// Returns the number of bytes available in the reader.
+    fn available(&self) -> usize {
+        self.len() - self.offset()
+    }
+
+    /// This method verifies if a certain amount of bytes can be read/extracted.
+    ///
+    /// Arguments:
+    /// - `count`: Number of bytes to read;
+    ///
+    /// Retunrs:
+    /// - `Ok(())`: If it is possible to read the specified amout of bytes;
+    /// - `Err(ErrorKind::UnableToReadData)`: If there is not enough bytes to read;
+    /// - `Err(ErrorKind::EndOfData)`: If there is no more data to read;
+    fn assert_can_read(&self, count: usize) -> Result<()> {
+        if count == 0 {
+            Ok(())
+        } else {
+            match self.available() {
+                0 => Err(ErrorKind::EndOfData),
+                x if x < count => Err(ErrorKind::UnableToReadData),
+                _ => Ok(()),
+            }
+        }
+    }
+}
 
 //=============================================================================
 // ByteArrayReader
@@ -55,34 +104,10 @@ impl<'a> ByteArrayReader<'a> {
         }
     }
 
-    /// Returns the current reading position.
-    ///
-    /// Returns:
-    /// - The current offset. It is guaranteed to be at most
-    /// the total size of the data.
-    pub fn offset(&self) -> usize {
-        self.offset
-    }
-
-    /// Sets the current reading position.
-    ///
-    /// Arguments:
-    /// - `offset`: The new position. It if is larger
-    ///   than the total length, it will assume the
-    ///   total length;
-    pub fn set_offset(&mut self, offset: usize) {
-        self.offset = std::cmp::min(offset, self.array.len());
-    }
-
     /// Returns a reference to the inner data as a
     /// slice.
     pub fn as_slice(&self) -> &[u8] {
         self.array
-    }
-
-    /// Returns the remanining number of bytes.
-    pub fn available(&self) -> usize {
-        self.array.len() - self.offset
     }
 
     /// Verifies if the specified number of bytes can be
@@ -94,11 +119,21 @@ impl<'a> ByteArrayReader<'a> {
     /// - `Result(ErrorKind::UnableToReadData)`: If it is not
     ///   possible to read the specified number of bytes;
     pub fn can_read(&self, count: usize) -> Result<()> {
-        if self.available() < count {
-            Err(ErrorKind::UnableToReadData)
-        } else {
-            Ok(())
-        }
+        self.assert_can_read(count)
+    }
+}
+
+impl<'a> MemoryReader for ByteArrayReader<'a> {
+    fn len(&self) -> usize {
+        self.array.len()
+    }
+
+    fn offset(&self) -> usize {
+        self.offset
+    }
+
+    fn set_offset(&mut self, offset: usize) {
+        self.offset = std::cmp::min(offset, self.array.len());
     }
 }
 
@@ -149,30 +184,6 @@ impl VecReader {
         }
     }
 
-    /// Returns the current reading position.
-    ///
-    /// Returns:
-    /// - The current offset. It is guaranteed to be at most
-    /// the total size of the data.
-    pub fn offset(&self) -> usize {
-        self.offset
-    }
-
-    /// Sets the current reading position.
-    ///
-    /// Arguments:
-    /// - `offset`: The new position. It if is larger
-    ///   than the total length, it will assume the
-    ///   total length;
-    pub fn set_offset(&mut self, offset: usize) {
-        self.offset = std::cmp::min(offset, self.vector.len());
-    }
-
-    /// Returns the remanining number of bytes.    
-    pub fn available(&self) -> usize {
-        self.vector.len() - self.offset
-    }
-
     /// Verifies if the specified number of bytes can be
     /// read from this struct.
     ///
@@ -182,11 +193,7 @@ impl VecReader {
     /// - `Result(ErrorKind::UnableToReadData)`: If it is not
     ///   possible to read the specified number of bytes;
     pub fn can_read(&self, count: usize) -> Result<()> {
-        if self.available() < count {
-            Err(ErrorKind::UnableToReadData)
-        } else {
-            Ok(())
-        }
+        self.assert_can_read(count)
     }
 
     /// Returns a reference to the inner data as a
@@ -198,6 +205,24 @@ impl VecReader {
     /// Returns aread-only reference to the inner vector.
     pub fn vec(&self) -> &Vec<u8> {
         &self.vector
+    }
+}
+
+impl<'a> MemoryReader for VecReader {
+    fn len(&self) -> usize {
+        self.vector.len()
+    }
+
+    fn offset(&self) -> usize {
+        self.offset
+    }
+
+    fn set_offset(&mut self, offset: usize) {
+        self.offset = std::cmp::min(offset, self.vector.len());
+    }
+
+    fn available(&self) -> usize {
+        self.vector.len() - self.offset
     }
 }
 
@@ -366,6 +391,7 @@ impl Default for VecWriter {
 }
 
 /// New since 1.4.0.
+#[allow(clippy::from_over_into)]
 impl std::convert::Into<Vec<u8>> for VecWriter {
     fn into(self) -> Vec<u8> {
         self.vector
