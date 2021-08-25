@@ -29,6 +29,9 @@ This library is licensed under a 3-Clause BSD license.
     - `Deref` and `DerefMut` implemented for `ILGenericPayloadTag` as an experimental feature for now;
     - Documentation updated;
     - Method `Reader::skip_u64()` added;
+    - Implementation of `Reader` for `std::io::Read` + `std::io::Seek` added;
+    - Implementation of `Writer` for `std::io::Write` + `std::io::Seek` added;    
+    - Implementation of `std::convert::Into<Vec<u8>>` for `VecWriter`added; 
 - 1.3.0:
     - Automatic conversion from `il2_iltags::io::ErrorKind` to `il2_iltags::tags::ErrorKind` added;
     - Applying code cleanup suggested by clippy;

@@ -61,6 +61,7 @@
 mod macros;
 
 pub mod payload;
+pub mod raw;
 pub mod serialization;
 pub mod standard;
 pub mod util;
