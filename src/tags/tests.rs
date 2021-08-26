@@ -323,6 +323,13 @@ fn test_iltag_serialize() {
 }
 
 #[test]
+fn test_iltag_to_bytes() {
+    let tag = DummyTag::new(15, 4);
+    let serialized = tag.to_bytes().unwrap();
+    assert_eq!(serialized.as_slice(), &[0x0F, 0x00, 0x01, 0x02, 0x03]);
+}
+
+#[test]
 fn test_tag_downcast_ref() {
     let tag = DummyTag::new(132, 1);
     let t: &dyn ILTag = &tag;

@@ -535,3 +535,13 @@ fn test_ilstandardtagfactory_iltagfactory_deserialize_into_explicit() {
         _ => panic!("Error expected!"),
     }
 }
+
+#[test]
+fn test_ilstandardtagfactory_iltagfactory_from_bytes() {
+    let f = ILStandardTagFactory::new(true);
+
+    let t = ILStringTag::with_value("test me");
+    let s = t.to_bytes().unwrap();
+    let t2 = f.from_bytes(s.as_slice()).unwrap();
+    assert!(crate::tags::util::iltag_are_equal(&t, t2.as_ref()));
+}

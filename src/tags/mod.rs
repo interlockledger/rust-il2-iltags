@@ -259,6 +259,15 @@ pub trait ILTag: Any + Send + Sync {
 
     /// Returns a mutable reference as Any.
     fn as_mut_any(&mut self) -> &mut dyn Any;
+
+    /// Serializes the given tag into an array of bytes.
+    ///
+    /// New since 1.4.0.
+    fn to_bytes(&self) -> Result<Vec<u8>> {
+        let mut writer = crate::io::array::VecWriter::with_capacity(self.size() as usize);
+        self.serialize(&mut writer)?;
+        Ok(writer.into())
+    }
 }
 
 /// Downcasts a [`ILTag`] into a reference to its concrete type.
@@ -466,6 +475,26 @@ pub trait ILTagFactory: Send + Sync {
     ///
     /// New since 1.3.0.
     fn deserialize_into(&self, reader: &mut dyn Reader, tag: &mut dyn ILTag) -> Result<()>;
+
+    /// Deserializes a tag from its serialized bytes. Internally it calls
+    /// [`Self::deserialize()`] to perform this operation.
+    ///
+    /// Arguments:
+    /// - `raw_tag`: The raw tag.
+    ///
+    /// Returns the deserialized tag or an error if the deserialization is
+    /// not possible or the deserialization does not use all bytes from raw.
+    ///
+    /// New since 1.4.0.
+    fn from_bytes(&self, raw_tag: &[u8]) -> Result<Box<dyn ILTag>> {
+        let mut reader = crate::io::array::ByteArrayReader::new(raw_tag);
+        let ret = self.deserialize(&mut reader)?;
+        if crate::io::array::MemoryReader::available(&reader) == 0 {
+            Ok(ret)
+        } else {
+            Err(ErrorKind::CorruptedData)
+        }
+    }
 }
 
 //=============================================================================

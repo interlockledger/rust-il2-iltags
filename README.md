@@ -34,6 +34,8 @@ This library is licensed under a 3-Clause BSD license.
     - Implementation of `std::convert::Into<Vec<u8>>` for `VecWriter`added; 
     - Module `il2_iltags::tags::raw` added. It allow the manipulation of tags over byte sequences;
     - Integration with for `std::io` moved to the module `il2_iltags::io::std_io`;
+    - Method `ILTag::to_bytes()` added;
+    - Method `ILTagFactory::from_bytes()` added;
 - 1.3.0:
     - Automatic conversion from `il2_iltags::io::ErrorKind` to `il2_iltags::tags::ErrorKind` added;
     - Applying code cleanup suggested by clippy;
