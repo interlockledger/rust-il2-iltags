@@ -154,32 +154,3 @@ fn test_rawragscanner() {
     }
     assert_eq!(serialized.len() as u64, offs);
 }
-
-//=============================================================================
-// RawTagView
-//-----------------------------------------------------------------------------
-#[test]
-fn test_rawwagview() {
-    let tags = create_sample_tag_seq();
-    let serialized = serialize_tag_seq(&tags);
-    let mut reader = ByteArrayReader::new(serialized.as_slice());
-    let mut index = Vec::<RawTagOffset>::new();
-
-    let mut scanner = RawTagScanner::new(&mut reader);
-    for _ in 0..tags.len() {
-        // Check the scanner
-        let t = scanner.find_next().unwrap().unwrap();
-        index.push(t);
-    }
-
-    for i in 0..tags.len() {
-        // Get the values from te source
-        let idx = &index[i];
-        let t = &tags[i];
-        let s = serialize_tag(t.as_ref());
-
-        let v = RawTagView::new(serialized.as_slice(), *idx).unwrap();
-        assert_eq!(v.tag(), s.0.as_slice());
-        assert_eq!(v.value(), s.1.as_slice());
-    }
-}
