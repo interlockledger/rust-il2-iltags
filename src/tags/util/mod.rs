@@ -56,17 +56,15 @@ use crate::io::{LimitedReader, Reader};
 /// - true if the tags are equal or false otherwise or in case the comparison
 ///   cannot be performed (due to errors in the serialization).
 pub fn iltag_are_equal(a: &dyn ILTag, b: &dyn ILTag) -> bool {
-    let mut writer_a = VecWriter::default();
-    match a.serialize(&mut writer_a) {
-        Ok(()) => (),
+    let sa = match a.to_bytes() {
+        Ok(a) => a,
         _ => return false,
-    }
-    let mut writer_b = VecWriter::default();
-    match b.serialize(&mut writer_b) {
-        Ok(()) => (),
+    };
+    let sb = match b.to_bytes() {
+        Ok(b) => b,
         _ => return false,
-    }
-    writer_a.vec().as_slice() == writer_b.vec().as_slice()
+    };
+    sa.as_slice() == sb.as_slice()
 }
 
 /// Clones the given tag using a serialization/deserialization process.
@@ -90,10 +88,8 @@ pub fn iltag_clone_with_factory(
     factory: &dyn ILTagFactory,
     tag: &dyn ILTag,
 ) -> Result<Box<dyn ILTag>> {
-    let mut writer = VecWriter::default();
-    tag.serialize(&mut writer)?;
-    let mut reader = ByteArrayReader::new(writer.vec().as_slice());
-    factory.deserialize(&mut reader)
+    let s = tag.to_bytes()?;
+    factory.from_bytes(s.as_slice())
 }
 
 /// Clones the given tag using a serialization/deserialization process.
