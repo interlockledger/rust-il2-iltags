@@ -188,6 +188,17 @@ impl RawTagOffset {
     }
 }
 
+impl Default for RawTagOffset {
+    fn default() -> Self {
+        Self {
+            id: 0,
+            offset: 0,
+            header_size: 0,
+            value_size: 0,
+        }
+    }
+}
+
 //=============================================================================
 // RawTagScanner
 //-----------------------------------------------------------------------------
