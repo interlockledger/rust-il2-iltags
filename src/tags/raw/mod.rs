@@ -51,6 +51,9 @@ use crate::tags::{is_implicit_tag, ErrorKind, Result};
 /// This struct implements the raw tag offset information. It stores the
 /// information about a tag, such as its id and the location of its parts
 /// inside a sequence of bytes.
+///
+/// It does not store references to the original byte stream, just the
+/// information about a tags inside it.
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct RawTagOffset {
     id: u64,
@@ -98,6 +101,90 @@ impl RawTagOffset {
     /// Returns the offset of the next tag.
     pub fn next_tag_offset(&self) -> u64 {
         self.offset + self.size()
+    }
+
+    /// Returns the initial offset of this tag's value. It is usefull to
+    /// create slices on the raw data.
+    #[inline]
+    pub fn value_start(&self) -> usize {
+        self.value_offset() as usize
+    }
+
+    /// Returns the end offset of the value. It is usefull to
+    /// create slices on the raw data.
+    #[inline]
+    pub fn value_end(&self) -> usize {
+        self.next_tag_offset() as usize
+    }
+
+    /// Returns the start offset of the tag. It is usefull to
+    /// create slices on the raw data.
+    #[inline]
+    pub fn tag_start(&self) -> usize {
+        self.offset() as usize
+    }
+
+    /// Returns the end offset of the tag.
+    #[inline]
+    pub fn tag_end(&self) -> usize {
+        self.value_end()
+    }
+
+    /// Returns a slice within `raw` that points to the value of the
+    /// tag pointed by this instance.
+    ///
+    /// Arguments:
+    /// - `raw`: The array that contains the tag indexe by this instance;
+    ///
+    /// Returns a immutable slice within the raw that contains the value of the tag.
+    pub fn tag_slice<'a>(&self, raw: &'a [u8]) -> &'a [u8] {
+        &raw[self.tag_start()..self.tag_end()]
+    }
+
+    /// Returns a slice within `raw` that points to the value of the
+    /// tag pointed by this instance.
+    ///
+    /// Arguments:
+    /// - `raw`: The array that contains the tag indexe by this instance;
+    ///
+    /// Returns a immutable slice within the raw that contains the value of the tag.
+    pub fn value_slice<'a>(&self, raw: &'a [u8]) -> &'a [u8] {
+        &raw[self.value_start()..self.value_end()]
+    }
+
+    /// Creates a new instance of this struct that maps the offsets to the
+    /// same space of the parent. It assumes that this instance is contained
+    /// by the parent (is within its value) and assumes 0 as the start of
+    /// the parent's value.
+    ///
+    /// For example:
+    /// - Parent's value offset = 10;
+    /// - This offset = 5;
+    ///
+    /// The result will be a new instance that maps the beginning of this
+    /// tag to 15. This allows the extraction of the tag directly from the
+    /// byte sequence where the parent resides.
+    ///
+    /// This method will perform only basic validations to ensure that
+    /// this instace an indeed fit inside the parent but if those two
+    /// instances are unrelated, the behavior of this method is undefined.
+    ///
+    /// Arguments:
+    /// - `parent`: The parent of this instance;
+    ///
+    /// Returns a new instance of [`Self`] that points to the same tag
+    /// value but relative to the offset space of the parent.
+    pub fn map_to_parent_space(&self, parent: &Self) -> Result<Self> {
+        if self.next_tag_offset() > parent.value_size() {
+            Err(ErrorKind::CorruptedData)
+        } else {
+            Ok(Self {
+                id: self.id,
+                offset: parent.value_offset() + self.offset,
+                header_size: self.header_size,
+                value_size: self.value_size,
+            })
+        }
     }
 }
 

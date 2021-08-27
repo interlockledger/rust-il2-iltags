@@ -30,6 +30,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 use super::*;
+use crate::io::array::ByteArrayReader;
 use crate::tags::standard::constants::IL_STRING_TAG_ID;
 use crate::tags::standard::explicit::ILStringTag;
 use crate::tags::{ILDefaultWithIdTagCreator, ILRawTag};

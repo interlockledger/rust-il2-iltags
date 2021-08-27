@@ -35,6 +35,17 @@ use crate::tags::standard::*;
 use crate::tags::*;
 
 //=============================================================================
+// Helper functions
+//-----------------------------------------------------------------------------
+fn serialize_tag_seq(tags: &Vec<Box<dyn ILTag>>) -> Vec<u8> {
+    let mut writer = VecWriter::new();
+    for t in tags {
+        t.as_ref().serialize(&mut writer).unwrap();
+    }
+    writer.into()
+}
+
+//=============================================================================
 // RawTagOffset
 //-----------------------------------------------------------------------------
 #[test]
@@ -45,12 +56,77 @@ fn test_rawragoffset_impl() {
     assert_eq!(t.offset(), 5);
     assert_eq!(t.header_size, 7);
     assert_eq!(t.value_size(), 11);
-
     assert_eq!(t.size(), 7 + 11);
     assert_eq!(t.value_size(), 11);
-
     assert_eq!(t.value_offset(), 5 + 7);
     assert_eq!(t.next_tag_offset(), 5 + 7 + 11);
+    assert_eq!(t.tag_start(), t.offset() as usize);
+    assert_eq!(t.tag_end(), t.next_tag_offset() as usize);
+    assert_eq!(t.value_start(), t.value_offset() as usize);
+    assert_eq!(t.value_end(), t.next_tag_offset() as usize);
+}
+
+#[test]
+fn test_rawragoffset_impl_to_parent_space() {
+    // Best fit - child is the sole payload of parent
+    let parent = RawTagOffset::new(3, 5, 7, 10);
+    let child = RawTagOffset::new(4, 0, 2, 8);
+    let m = child.map_to_parent_space(&parent).unwrap();
+    assert_eq!(m.id, child.id);
+    assert_eq!(m.header_size, child.header_size);
+    assert_eq!(m.value_size, child.value_size);
+    assert_eq!(m.offset, child.offset + parent.value_offset());
+    assert_eq!(m.offset(), parent.value_offset());
+    assert_eq!(m.next_tag_offset(), parent.next_tag_offset());
+
+    // A little bit larger...
+    let parent = RawTagOffset::new(3, 5, 7, 11);
+    let child = RawTagOffset::new(4, 0, 2, 8);
+    let m = child.map_to_parent_space(&parent).unwrap();
+    assert_eq!(m.id, child.id);
+    assert_eq!(m.header_size, child.header_size);
+    assert_eq!(m.value_size, child.value_size);
+    assert_eq!(m.offset, child.offset + parent.value_offset());
+    assert_eq!(m.offset(), parent.value_offset());
+    assert_eq!(m.next_tag_offset() + 1, parent.next_tag_offset());
+
+    // Not at the begining
+    let parent = RawTagOffset::new(3, 5, 7, 11);
+    let child = RawTagOffset::new(4, 1, 2, 8);
+    let m = child.map_to_parent_space(&parent).unwrap();
+    assert_eq!(m.id, child.id);
+    assert_eq!(m.header_size, child.header_size);
+    assert_eq!(m.value_size, child.value_size);
+    assert_eq!(m.offset, child.offset + parent.value_offset());
+    assert_eq!(m.offset() - 1, parent.value_offset());
+    assert_eq!(m.next_tag_offset(), parent.next_tag_offset());
+
+    // Too large for the payload
+    let parent = RawTagOffset::new(3, 5, 7, 10);
+    let child = RawTagOffset::new(4, 0, 2, 9);
+    assert!(matches!(
+        child.map_to_parent_space(&parent),
+        Err(ErrorKind::CorruptedData)
+    ));
+
+    // Same size but lands outside of the parent
+    let parent = RawTagOffset::new(3, 5, 7, 10);
+    let child = RawTagOffset::new(4, 1, 2, 8);
+    assert!(matches!(
+        child.map_to_parent_space(&parent),
+        Err(ErrorKind::CorruptedData)
+    ));
+}
+
+#[test]
+fn test_rawragoffset_impl_value_slice() {
+    let raw: Vec<u8> = vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+
+    let p = RawTagOffset::new(3, 1, 2, 3);
+    let s = p.tag_slice(raw.as_slice());
+    assert_eq!(s, &raw[1..6]);
+    let s = p.value_slice(raw.as_slice());
+    assert_eq!(s, &raw[3..6]);
 }
 
 //=============================================================================
@@ -96,23 +172,6 @@ fn create_sample_tag_seq() -> Vec<Box<dyn ILTag>> {
 fn test_create_sample_tag_seq() {
     let tags = create_sample_tag_seq();
     assert_eq!(tags.len(), 17);
-}
-
-fn serialize_tag_seq(tags: &Vec<Box<dyn ILTag>>) -> Vec<u8> {
-    let mut writer = VecWriter::new();
-    for t in tags {
-        t.as_ref().serialize(&mut writer).unwrap();
-    }
-    writer.into()
-}
-
-fn serialize_tag(tag: &dyn ILTag) -> (Vec<u8>, Vec<u8>) {
-    let mut writer = VecWriter::new();
-    let mut value = VecWriter::new();
-
-    tag.serialize(&mut writer).unwrap();
-    tag.serialize_value(&mut value).unwrap();
-    (writer.into(), value.into())
 }
 
 #[test]

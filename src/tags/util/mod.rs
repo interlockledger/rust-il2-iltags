@@ -38,7 +38,6 @@ mod tests;
 use super::standard::factory::ILStandardTagFactory;
 use super::ErrorKind;
 use super::{ILTag, ILTagFactory, Result};
-use crate::io::array::{ByteArrayReader, VecWriter};
 use crate::io::{LimitedReader, Reader};
 
 /// This function compares ILTag instances by serializing them and
