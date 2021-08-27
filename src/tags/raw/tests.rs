@@ -191,7 +191,7 @@ fn test_serialize_tag_seq() {
 // RawTagScanner
 //-----------------------------------------------------------------------------
 #[test]
-fn test_rawragscanner() {
+fn test_rawragscanner_next_tag() {
     let tags = create_sample_tag_seq();
     let serialized = serialize_tag_seq(&tags);
     let mut reader = ByteArrayReader::new(serialized.as_slice());
@@ -203,7 +203,7 @@ fn test_rawragscanner() {
         let next_offs = offs + exp.size();
 
         // Check the scanner
-        let t = scanner.find_next().unwrap().unwrap();
+        let t = scanner.next_tag().unwrap().unwrap();
         assert_eq!(t.id(), exp.id());
         assert_eq!(t.offset(), offs);
         assert_eq!(t.next_tag_offset(), next_offs);
@@ -212,4 +212,36 @@ fn test_rawragscanner() {
         offs = next_offs;
     }
     assert_eq!(serialized.len() as u64, offs);
+}
+
+#[test]
+fn test_rawragscanner_next_tag_if_id() {
+    let tags = create_sample_tag_seq();
+    let serialized = serialize_tag_seq(&tags);
+    let mut reader = ByteArrayReader::new(serialized.as_slice());
+
+    let mut scanner = RawTagScanner::new(&mut reader);
+    let mut offs = 0 as u64;
+    for exp in tags {
+        // Collect the values
+        let next_offs = offs + exp.size();
+
+        // Check the scanner
+        let t = scanner.next_tag_if_id(exp.id()).unwrap().unwrap();
+        assert_eq!(t.id(), exp.id());
+        assert_eq!(t.offset(), offs);
+        assert_eq!(t.next_tag_offset(), next_offs);
+        assert_eq!(t.value_size(), t.value_size());
+
+        offs = next_offs;
+    }
+    assert_eq!(serialized.len() as u64, offs);
+
+    // Force an error
+    let mut reader = ByteArrayReader::new(serialized.as_slice());
+    let mut scanner = RawTagScanner::new(&mut reader);
+    assert!(matches!(
+        scanner.next_tag_if_id(1313123),
+        Err(ErrorKind::UnexpectedTagType)
+    ));
 }

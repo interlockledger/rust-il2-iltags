@@ -219,9 +219,8 @@ impl<'a> RawTagScanner<'a> {
         Self { offset: 0, reader }
     }
 
-    /// Returns the information about the next tag in the reader and skips to
-    /// the beginning of the next tag.
-    pub fn find_next(&mut self) -> Result<Option<RawTagOffset>> {
+    /// Returns the information about the next tag.
+    pub fn next_tag(&mut self) -> Result<Option<RawTagOffset>> {
         let id: u64 = self.reader.deserialize_ilint()?;
         let size_info = self.extract_tag_size(id)?;
         let header_size: u64 = crate::ilint::encoded_size(id) as u64 + size_info.0;
@@ -236,6 +235,22 @@ impl<'a> RawTagScanner<'a> {
             header_size,
             value_size,
         }))
+    }
+
+    /// Returns the information about the next tag. It works just like
+    /// [`Self::next_tag()`] but returns an error if the tag id does not match the
+    /// specified id.
+    pub fn next_tag_if_id(&mut self, expected_id: u64) -> Result<Option<RawTagOffset>> {
+        match self.next_tag()? {
+            Some(t) => {
+                if t.id == expected_id {
+                    Ok(Some(t))
+                } else {
+                    Err(ErrorKind::UnexpectedTagType)
+                }
+            }
+            None => Ok(None),
+        }
     }
 
     /// Extracts the size of the tag from the reader.
