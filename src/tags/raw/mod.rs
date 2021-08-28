@@ -207,15 +207,15 @@ impl Default for RawTagOffset {
 ///
 /// Only the top level tags will be considered as it does not parse the
 /// value of the tags.
-pub struct RawTagScanner<'a> {
+pub struct RawTagScanner<'a, T: Reader> {
     offset: u64,
-    reader: &'a mut dyn Reader,
+    reader: &'a mut T,
 }
 
-impl<'a> RawTagScanner<'a> {
+impl<'a, T: Reader> RawTagScanner<'a, T> {
     /// Creates a new instance of [`RawTagScanner`]. It assumes the current
     /// offset of the provided reader as being 0.
-    pub fn new(reader: &'a mut dyn Reader) -> Self {
+    pub fn new(reader: &'a mut T) -> Self {
         Self { offset: 0, reader }
     }
 
