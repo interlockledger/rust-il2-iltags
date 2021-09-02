@@ -460,7 +460,7 @@ impl<'a> Writer for BorrowedVecWriter<'a> {
 /// [`ByteArrayWriter`] implements a [`Writer`] that uses a borrowed byte slice
 /// as its backend.
 ///
-/// New since 1.3.1.
+/// New since 1.4.0.
 pub struct ByteArrayWriter<'a> {
     array: &'a mut [u8],
     offset: usize,

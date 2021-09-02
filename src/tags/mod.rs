@@ -729,7 +729,7 @@ impl ILRawTag {
     /// Arguments:
     /// - `value`: The value;
     ///
-    /// New since 1.3.1.
+    /// New since 1.4.0.
     pub fn set_value(&mut self, value: &[u8]) {
         self.value.clear();
         self.value.extend_from_slice(value);
