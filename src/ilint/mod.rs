@@ -100,19 +100,16 @@ pub fn encode(value: u64, writer: &mut dyn Writer) -> Result<()> {
             Err(e) => return Err(ErrorKind::IOError(e)),
         }
     } else {
-        // Header
-        match writer.write((ILINT_BASE + ((size - 2) as u8)) as u8) {
+        let mut tmp: [u8; 9] = [0; 9];
+        tmp[0] = (ILINT_BASE + ((size - 2) as u8)) as u8;
+        let mut v = value - ILINT_BASE_U64;
+        for i in (1..size).rev() {
+            tmp[i] = (v & 0xFF) as u8;
+            v = v >> 8;
+        }
+        match writer.write_all(&tmp[..size]) {
             Ok(()) => (),
             Err(e) => return Err(ErrorKind::IOError(e)),
-        }
-        let v = value - ILINT_BASE_U64;
-        let mut shift = 8 * (size - 1);
-        for _i in 1..size {
-            shift -= 8;
-            match writer.write(((v >> shift) & 0xFF) as u8) {
-                Ok(()) => (),
-                Err(e) => return Err(ErrorKind::IOError(e)),
-            }
         }
     }
     Ok(())
