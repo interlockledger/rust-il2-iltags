@@ -55,6 +55,8 @@ use ::std::any::Any;
 /// As such, it can be used as follows:
 ///
 /// ```
+/// use crate::tags::standard::IL_INT8_TAG_ID;
+/// 
 /// pub struct ILInt8 {
 ///     id: u64,
 ///     value: u8,

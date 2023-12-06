@@ -133,7 +133,7 @@ pub fn decoded_size(header: u8) -> usize {
 }
 
 /// Decodes the body of a multi-byte **ILInt**. This function
-/// is usefull if the header was already used to determine the
+/// is useful if the header was already used to determine the
 /// size of the body.
 ///
 /// Arguments:
@@ -212,12 +212,12 @@ pub fn decode(reader: &mut dyn Reader) -> Result<u64> {
     }
 }
 
-/// Encodes a signed value into an unsiged value suitable
+/// Encodes a signed value into an unsigned value suitable
 /// to be encoded as **ILInt**.
 ///
 /// This transformation is designed to minimize the encoding
 /// of both negative and positive values with small modules
-/// using the **ILInt** enconding rules. See
+/// using the **ILInt** encoding rules. See
 /// [ILInt Specification](https://github.com/interlockledger/specification/tree/master/ILInt).
 /// for further information about how this encoding works.
 ///

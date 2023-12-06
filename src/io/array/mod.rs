@@ -162,7 +162,7 @@ impl<'a> Reader for ByteArrayReader<'a> {
 //=============================================================================
 // VecReader
 //-----------------------------------------------------------------------------
-/// [`VecReader`] implements a [`Writer`] that uses a Vec<u8> a its backend.
+/// [`VecReader`] implements a [`Writer`] that uses a `Vec<u8>` a its backend.
 ///
 /// It differs from [`ByteArrayReader`] by the fact that it copies the data
 /// into a vector owned by it instead of borrowing the data from a byte array
@@ -346,7 +346,7 @@ macro_rules! basevecwriter_writer_impl {
 //=============================================================================
 // VecWriter
 //-----------------------------------------------------------------------------
-/// [`VecWriter`] implements a [`Writer`] that uses a Vec<u8> a its backend.
+/// [`VecWriter`] implements a [`Writer`] that uses a `Vec<u8>` a its backend.
 pub struct VecWriter {
     vector: Vec<u8>,
     offset: usize,
@@ -401,7 +401,7 @@ impl std::convert::Into<Vec<u8>> for VecWriter {
 //=============================================================================
 // BorrowedVecWriter
 //-----------------------------------------------------------------------------
-/// [`BorrowedVecWriter`] implements a [`Writer`] that uses a borrowed Vec<u8>
+/// [`BorrowedVecWriter`] implements a [`Writer`] that uses a borrowed `Vec<u8>`
 /// as its backend.
 ///
 /// The borrowed vector is used as is. This means that:
